@@ -1,0 +1,172 @@
+\begin{DIFnomarkup}
+\hypertarget{error}{}\section{Core Runtime API Error Behavior
+}\label{error}
+\end{DIFnomarkup}
+
+Errors handling in the core runtime can broadly be classified into
+two categories: synchronous error handling and asynchronous error
+handling. Synchronous errors are always reported when the API
+returns,
+in some cases that warrant an application abort, even
+before the API returns and control is returned to the application.
+Asynchronous errors can occur because HSA system because the HSA
+system supports asynchronous execution and they can be triggered by
+activity in packet processor, executing kernels, their actions and
+memory accesses. Asynchronous errors can also occur when an error
+is detected during the execution of a kernel, the completion signal
+(if present) will be signaled with an error indication value. 
+
+
+\begin{DIFnomarkup}
+\hypertarget{error}{}\subsection{Synchronous Errors }\label{syncerror}
+\end{DIFnomarkup}
+
+When a core runtime API is called and does not execute successfully
+(each API call discussed in this chapter defines what constitutes a
+successful execution), the core runtime returns a status that can
+potentially help user determine the cause of the such unsuccessful
+execution.  While a few error conditions can be generalized to a
+certain degree (e.g. failure in allocating system memory) many
+errors can have system/implementation specific explanation. In
+addition to being a mechanism for reporting successful or erroneous
+execution, the status returned by the core runtime API calls will also
+be used for providing \emphld{information} (not as an exception in
+expected behavior but by definition) and this information may not
+necessarily indicate an error. For example, a timeout may be an
+acceptable response for a wait API but is not indicative of a
+failure.  
+
+The HSA core runtime API defines an enumeration that captures the
+result of any API function that has been executed (the only
+exception to this behavior are setter/getter API that access core
+runtime structures). This enumeration is of the type
+\dbtt{hsa\_status\_t} and enumerates four categories of the
+results: \emphld{success}, \emphld{info}, \emphld{error} and
+\emphld{implementation specific}. 
+
+\emphld{Success} status is a single value,
+\dbtt{HSA\_STATUS\_SUCCESS}.  Description of every core runtime
+API call that returns \dbtt{hsa\_status\_t} explains what a
+successful behavior is. 
+
+\emphld{Info} status requires users interpretation. Consider the
+example where a user calls the initialize API to initialize the core
+runtime and the return status is
+\dbtt{HSA\_STATUS\_INFO\_ALREADY\_INITIALIZED} (to indicate that
+the core runtime has already been initialized). This result may be
+interpreted differently in different usage scenarios.  The constants
+used for info status are restricted to a particular range of values
+with in the \dbtt{hsa\_status\_t} enumeration.  They start at a
+value greater than \dbtt{HSA\_STATUS\_INFO\_BEGIN} and end at a
+value less than \dbtt{HSA\_STATUS\_INFO\_END}. Either of the
+\dbtt{HSA\_STATUS\_INFO\_BEGIN} or \dbtt{HSA\_STATUS\_INFO\_END}
+constants will not deliberately be returned as a status for any API
+by the core runtime. Name of any constant that indicates info status
+is prefixed by \dbtt{HSA\_STATUS\_INFO}.
+
+\emphld{Error} status could be due to user input/actions that are not
+allowed (e.g. negative value in a size for allocation) or systemic
+errors (e.g. an asynchronous activity leads to a failure).
+The constants used for error status are restricted to a particular
+range of values with in the \dbtt{hsa\_status\_t} enumeration. 
+They start at a value greater than
+\dbtt{HSA\_STATUS\_ERROR\_BEGIN} and end at a value less than
+\dbtt{HSA\_STATUS\_ERROR\_END}. Either of the
+\dbtt{HSA\_STATUS\_ERROR\_BEGIN} or
+\dbtt{HSA\_STATUS\_ERROR\_END} constants will not deliberately be
+returned as a status for any API by the core runtime.  Name of any
+constant that indicates error status is prefixed by
+\dbtt{HSA\_STATUS\_ERROR}.
+
+\emphld{Implementation Specific}, or \emphld{other} status can be either
+info or error but is implementation defined. The implementation
+specific status starts at a constant value
+\dbtt{HSA\_STATUS\_OTHER\_BEGIN} and ends at
+\dbtt{HSA\_STATUS\_OTHER\_END} -- both these constants will not
+deliberately be returned as a status for any API by the core
+runtime.
+
+While the name of the constant in itself is informative for success,
+info or error status, there may be scenarios where the user may
+request more information about the meaning of this status. In
+the case of implementation specific status, the number returned will
+need to be decoded by the user. To support this, the core runtime
+defines the following API:
+
+\input{APIhsa_status_query}
+
+This API returns \dbtt{HSA\_STATUS\_SUCCESS} if one or both of the
+{\itshape status\_info} and {\itshape status\_info\_string} have been 
+successfully updated with information regarding the input
+{\itshape input\_status}. Otherwise it returns one of the following errors:
+
+\begin{easylist}
+& \dbtt{HSA\_STATUS\_INFO\_NONE} when no additional information is
+available regarding the status user requested. 
+& \dbtt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} if a NULL value is
+passed for either of the arguments
+\end{easylist}
+
+\begin{DIFnomarkup}
+\hypertarget{asyncerror}{}\subsection{Asynchronous Errors }\label{asyncerror}
+\end{DIFnomarkup}
+
+The HSA system can have several queues in operation and
+several kernels executing from these queues asynchronously.
+When any asynchronous activity generates an error, the action that
+initiated the activity may have concluded. In order to deal with
+asynchronous errors, the core runtime defines error message queues.
+Error message queues are message queues of fixed size, created by the user
+or the runtime in order to communicate asynchronous error
+information. Each element that can be in the error message queue
+represents an error. It has information on the type of error,
+identification information on which packet on which queue caused it
+and a platform clock value (see Section~\ref{topology}) indicating
+when the error was placed on the queue. The structure that
+represents an individual error in the error message queue is defined
+as follows:
+
+\input{STRerror_message}
+
+The user can create and destroy a message queue using the following API:
+
+\input{APIemq_create}
+
+Size of the queue represents the number of asynchronous messages
+this queue can handle. When the error message queue is full, new
+asynchronous messages will be ignored until user has the opportunity
+to consume the old ones. Note that the
+{\itshape message\_queue\_handle} is a pointer to
+\dbtt{hsa\_error\_message\_queue\_handle\_t} -- this is an opaque
+handle to the message queue and is an input to all message queue
+related operations.
+
+This API returns \dbtt{HSA\_STATUS\_SUCCESS} if an error message
+queue of a requested size has been successfully created. At the time
+of creation, the error message queue has no association to any
+particular kind of asynchronous activities. Details on how
+association of this queue to asynchronous activities are discussed
+in Sections~\ref{init} and \ref{architected_queue}. This API can
+return one of the following errors:
+
+\begin{easylist}
+& \dbtt{HSA\_STATUS\_ERROR\_OUT\_OF\_RESOURCES} if there is a failure
+in allocation of an internal structure required by the core runtime
+library in the context of the message queue creation. This error may
+also occur when the core runtime library needs to spawn threads or
+create internal OS-specific events. 
+& \dbtt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} if {\itshape size}
+is zero or if {\itshape message\_queue\_handle} is NULL.
+\end{easylist}
+
+The API to wait on a message queue for error is defined as follows:
+\input{APIemq_wait}
+
+Note that that the {\itshape error\_message} is user
+allocated, and an output to the
+\ttbf{hsa\_error\_message\_queue\_create} API.  The wait API is a
+blocking API. When errors occur, the first error in the message
+queue is copied into the {\itshape error\_message} before the status
+is returned.
+
+Error message queues can work across different components.

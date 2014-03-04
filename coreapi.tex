@@ -1,0 +1,320 @@
+%\input{coreapierror070.tex}
+%\input{coreapiopen070.tex}
+%\input{coreapitopo070.tex}
+%\input{coreapisignal070.tex}
+%\input{coreapiqueue070.tex}
+%\input{coreapiaql070.tex}
+\input{coreapierror.tex}
+\input{coreapiopen.tex}
+\input{coreapitopo.tex}
+\input{coreapisignal.tex}
+\input{coreapiqueue.tex}
+\input{coreapiaql.tex}
+\input{coreapimemory.tex}
+
+\hypertarget{coreapi_coredebug}{}\section{Execution Control At the Core Level}\label{coreapi_coredebug}
+
+As per the systems architecture specification, the H\-S\-A system must
+support debugging of a H\-S\-A\-I\-L kernel. The H\-S\-A
+Programmers Reference Manual (P\-R\-M) describes that the
+\char`\"{}block\char`\"{} section could hold debug data and such a
+section can be placed within a function. This allows the
+high-\/level compiler that generates H\-S\-A\-I\-L to embed debug
+specific information. This information makes its way into the
+\char`\"{}.\-debug\char`\"{} section in the brig. This information
+can be used for associating a H\-S\-A\-I\-L level instruction to the
+higher level functionality. In addition to this, the P\-R\-M also
+discusses the \ttbf{debugtrap\_u32} that halts the current wavefront
+and transfers control to the agent.  The single operand to
+\ttbf{debugtrap\_u32}, \char`\"{}src\char`\"{} is passed to the
+agent and can be used to identify the trap.
+
+To support this infrastructure in the runtime, the Core A\-P\-I
+defines a structure that can be used to exchange information between
+the kernel executing on the H\-S\-A component and the agent. 
+
+The core runtime defines a structure, mailbox, whose purpose is to
+exchange information as a part of execution control. Mailbox is a
+synchronous communication mechanism between the H\-S\-A component
+and any agents. The H\-S\-A component indicates a \ttbf{
+debugtrap\_u32} or syscall activity by sending a signal indicating
+it has written to some location in the mailbox.
+
+The HSA PRM defines:
+
+\begin{description}
+\item \ttbf{queueactivegroupcount\_global\_u32}  {\itshape dest, address}
+Returns the maximum number of work-groups that can be executed in
+parallel for dispatches executed on the User Mode Queue with
+address.
+
+\item \ttbf{activegroupid} index that ranges from 0 through
+\ttbf{queueactivegroupcount\_global\_u32}-1.
+\end{description}
+
+The mailbox is an array of structures of size
+\ttbf{queueactivegroupcount\_global\_u32}. Since
+\ttbf{activegroupid} is always unique within a queue for any
+concurrent execution of kernels in that queue, indexing into the
+mailbox by different work items happens without conflicts. When a
+workgroup encounters a syscall or a \ttbf{debugtrap\_u32}, the
+component indexes into its mailbox by accessing it via
+\ttbf{activegroupid} from within the \ttbf{queueptr}. Once the
+corresponding mailbox is accessed, pertinent information (see
+structure below) for each work group is populated.  Subsequently the
+component sets the full flag, sends a signal to agent by accessing the
+{\itshape mailbox\_signal} inside the queue structure (see
+Section~\ref{architected_queue}), and waits for the full flag to be
+emptied. The mailbox structure is defined as follows.
+\input{ENUinterrupt_condition}
+\input{STRexecution_info}
+
+The Agent waits on the signal, processes the mailbox, and clears
+the full flag.
+
+If this kernel had a debugtrap\-\_\-u32, a simple check for
+debugtrap can be written the following way\-:
+
+\begin{framed}
+\lstinputlisting{mailbox_simple.c}
+\end{framed}
+
+\hypertarget{coreapi_agent}{}\section{Agent Dispatch Support at the
+Core Level}\label{coreapi_agent} The core runtime supports agent
+dispatches from an HSA component/Agent. The runtime defines a
+default service queue for every user mode queue created by the user.
+This default service queue is available to the HSAIL program HSAIL
+programs and the user applications may submit agent dispatch packets
+to the service queue or any user mode queue.  The service queue
+shares the same structure as the regular HSA queue.  The default
+service queues are monitored by the runtime.
+
+\input{APIagent_dispatch}
+
+
+\hypertarget{extensions}{}\section{Extensions to the 
+Core Runtime API}\label{extensions}
+
+When an implementor of the core runtime specification is not
+supporting any of the extension API, they will return
+\texttt{HSA\_STATUS\_ERROR\_EXTENSION\_NOT\_SUPPORTED} as a return
+status for that API. 
+ 
+Individual vendors may define vendor extensions to HSA core runtime,
+or multiple vendors may collaborate to define an extension. The
+difference is in the naming scheme used for the symbols (defines,
+structures, functions, etc.\ ) associated with the function:
+
+\begin{itemize}
+\item Symbols for single-vendor extensions that are defined in the
+global namespace must use the following naming convention:
+  \begin{itemize}
+    \item \emph{hsa\_svext\_\textless COMPANY\_NAME \textgreater\_}.
+    For example, a company ``ACME'' defining a single-vendor extension
+    would use the prefix \emph{hsa\_ext\_acme\_}. Company names must
+    be registered with the HSA Foundation, must be unique, and may be
+    abbreviated to improve the readability of the symbols. 
+  \end{itemize}
+\item Symbols for multi-vendor extensions that are defined in the
+global namespace must use the following naming convention:
+  \begin{itemize}
+    \item \emph{hsa\_ext\_} For example, if another company
+    embraces extension in the example above from Company ``ACME'', the
+    resulting symbols would use the prefix \emph{hsa\_mvext\_}.
+  \end{itemize}
+\end{itemize}
+ 
+Any constant definitions in the extension (\#define/enumerations) use
+the same naming convention, except using all capital letters. So,
+using the single-vendor extension example from above, the associated
+defines and enumerations would have the prefix
+\texttt{HSA\_EXT\_ACME\_}.
+ 
+The symbols for all vendor extensions (both single-vendor and
+multi-vendor) are captured in the file {\bf hsa/vendor\_extensions.h}.
+This file is maintained by the HSA Foundation.  This file includes
+the enumeration \texttt{hsa\_vendor\_extension\_t} which defines a
+unique code for each vendor extension and multi-vendor extension.
+Vendors can reserve enumeration encodings through the HSA
+Foundation. Multi-vendor enumerations begin at the value of
+1000000. For example, using the examples above, the
+\texttt{hsa\_vendor\_extension\_t} enumeration might be:
+
+\input{ENUvendor_ext}
+ 
+HSA defines the following query function for vendor extensions:
+
+\input{APIquery_vendorextension} 
+ 
+This API returns \texttt{HSA\_STATUS\_SUCCESS} if the extension is
+supported.  Additionally, {\itshape extension\_structure} is written
+with extension-specific information such as version information,
+function pointers, and data values.  {\bf hsa/vendor\_extension.h} defines
+a unique structure for each extension.  If the vendor extension is
+not supported, \texttt{HSA\_STATUS\_ERROR\_EXTENSION\_UNSUPPORTED}
+is returned, and \texttt{extension\_structure} is not modified.
+
+\subsection{Example Definition And Usage of an Extension} 
+An example that shows a hypothetical single-vendor extension ``Foo''
+registered by company ``ACME''.  The example includes four defines
+and two API functions.  Note the use of the structure
+\texttt{hsa\_svext\_acme\_foo\_t} and how this interacts with the
+\ttbf{hsa\_query\_vendor\_extension} API call.
+
+\lstinputlisting{extension.c}
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%An enumeration, \texttt{HsaSignalSyncType} allows the user to specify the
+%synchronization type for a particular send or wait operation on a
+%signal. It is defined as follows:
+%
+%\begin{framed}
+%  \begin{lstlisting}
+%    typedef enum {
+%            kHsaNone=0,
+%            kHsaAcquire=1,
+%            kHsaRelease=2,
+%            kHsaAcquireRelease=3
+%    }HsaSignalSyncType ;
+%  \end{lstlisting}
+%
+%\diffblock{
+%  \begin{description} [font=\tt]
+%    \item[kHsaNone] \hfill \\
+%            indicates that none of the below synchronization methods
+%            are desired
+%    \item[kHsaAcquire] \hfill \\
+%            acquire, applies to wait and atomic send
+%    \item[kHsaRelease] \hfill \\
+%            release, applies to send and atomic send
+%    \item[kHsaAcquireRelease] \hfill \\
+%            applies to send, wait and atomic send
+%  \end{description}
+%}
+%
+%\end{framed}
+
+%An enumeration, \texttt{HsaSignalAction} allows the user to
+%specify what to do with the \emph{value} in the
+%\texttt{HsaSignalSend} API. The enumeration is defined as follows:
+%
+%\begin{framed}
+%  \begin{lstlisting}
+%    typedef enum {
+%            kHsaSignalSet=0,
+%            kHsaSignalAtomicAnd=1,
+%            kHsaSignalAtomicOr=2,
+%            kHsaSignalAtomicXor=3,
+%            kHsaSignalAtomicExch=4,
+%            kHsaSignalAtomicAdd=5,
+%            kHsaSignalAtomicSub=6,
+%            kHsaSignalAtomicInc=7,
+%            kHsaSignalAtomicDec=8,
+%            kHsaSignalAtomicMax=9,
+%            kHsaSignalAtomicMin=10,
+%            kHsaSignalAtomicCas=11
+%    }HsaSignalAction ;
+%  \end{lstlisting}
+%\diffblock{
+%  \begin{description} [font=\tt]
+%    \item[kHsaSet] \hfill \\
+%            basic set signal with release, no atomics 
+%    \item[kHsaSignalAtomicAnd] \hfill \\
+%            atomic AND, signal.value \&= value
+%    \item[kHsaSignalAtomicOr] \hfill \\
+%            atomic OR, signal.value OR= value
+%    \item[kHsaSignalAtomicXor=3,] \hfill \\
+%            atomic XOR, signal.value XOR= value
+%    \item[kHsaSignalAtomicExch] \hfill \\
+%            atomic Exch
+%    \item[kHsaSignalAtomicAdd] \hfill \\
+%            atomic add, signal.value += value
+%    \item[kHsaSignalAtomicSub] \hfill \\
+%            atomic subtract, signal.value -= value
+%    \item[kHsaSignalAtomicInc] \hfill \\
+%            atomic increment, signal.value++, value is ignored
+%    \item[kHsaSignalAtomicDec] \hfill \\
+%            atomic increment, signal.value--, value is ignored
+%    \item[kHsaSignalAtomicMax] \hfill \\
+%            atomic maximum, MAX(signal.value,value) 
+%    \item[kHsaSignalAtomicMin] \hfill \\
+%            atomic minimum, MIN(signal.value,value) 
+%    \item[kHsaSignalAtomicCas] \hfill \\
+%            atomic compare and swap, if(signal.value == value2)
+%            signal.value = value2
+%  \end{description}
+%}
+%\end{framed}
+
+% \input{signal_send_release}
+% \input{signal_send_acquire_release}
+% \input{signal_and_release}
+% \input{signal_or_release}
+% \input{signal_xor_release}
+% \input{signal_exch_release}
+% \input{signal_exch_acquire_release}
+% \input{signal_add_release}
+% \input{signal_sub_release}
+% \input{signal_inc_release}
+% \input{signal_dec_release}
+% \input{signal_max_none}
+% \input{signal_min_none}
+% \input{signal_cas_release}
+
+%To just signal using a set (no atomics), action
+%\texttt{kHsaSignalSet} may be used. However, only
+%\texttt{kHsaRelease} and \texttt{kHsaAcquireRelease} synchronization
+%types apply to the \texttt{kHsaSignalSet} action. 
+
+%The Table \ref{actionandsync} shows which synchronization operations
+%apply to which signal actions. The implementation of the
+%\texttt{HsaSignalSend} will return a failure if correct combinations
+%are not used.
+
+% \begin{table}[b!]
+% \begin{center}
+%         \begin{tabular}{|p{3in}| p{3in}|}
+%     \hline
+%     \textbf{HsaSignalAction} & \textbf{Correponding HsaSignalSyncType that can be
+%     used with the action} \\
+%     \hline
+%     kHsaSignalSet & kHsaRelease, kHsaAcquireRelease \\ \hline
+%     kHsaSignalAtomic<And,Or,Xor,Exch, Add,Sub,Inc,Dec,Max,Min,Cas &
+%     kHsaRelease, kHsaNone, kHsaAcquire, kHsaAcquireRelease \\ \hline
+%   \end{tabular}
+% \end{center}
+% \caption{Action and Synchronization Combinations}
+% \label{actionandsync}
+% \end{table}
+
+% \begin{framed}
+%   \begin{lstlisting}
+%   typedef enum {
+%           kHsaSignalConditionEqual, 
+%           kHsaSignalConditionNotEqual,
+%           kHsaSignalConditionLessThan,
+%           kHsaSIgnalConditionGreaterThanOrEqual
+%   }HsaSignalWaitCondition;
+%   \end{lstlisting}
+% \diffblock{
+%   \begin{description}[font=\tt]
+%     \item[kHsaSignalConditionEqual] \hfill \\
+%             wait until timeout or value == signal.value
+%     \item[kHsaSignalConditionNotEqual] \hfill \\  
+%             wait until timeout or value $\ne$ signal.value
+%     \item[kHsaSignalConditionLessThan] \hfill \\
+%             wait until timeout or value \textless  signal.value
+%     \item[kHsaSignalConditionGreaterThanOrEqual] \hfill \\
+%             wait until timeout or value $\ge$ signal.value
+%   \end{description}
+% }
+% \end{framed}
+
+% In addition to this, the wait API must support \texttt{kHsaRelease}
+% and \texttt{kHsaAcquireRelease} synchronizations. 
+
+%\begin{framed}
+%\lstinputlisting{aql_dispatch.c}
+%\end{framed}
+

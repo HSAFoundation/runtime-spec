@@ -1,0 +1,92 @@
+\hypertarget{init}{}\section{Initialize and Finish
+API}\label{init}
+Since HSA core runtime is a user mode library, its state is a part
+of the application's process space. An application may initialize
+and finish the HSA runtime multiple times with-in the same process
+context and potentially with in multiple threads -- only a single
+instance of the runtime, per-process, will exist.  Initialization of
+the HSA core runtime is required for an application to use the
+runtime API calls. The application is also expected to finish the
+runtime once it no longer needs to use the runtime API. Calling any
+runtime API function without initializing it results in an undefined
+behavior.
+
+Invocation of \ttbf{hsa\_initialize} initializes the HSA runtime
+if it is already not initialized. It is allowed for applications to
+initialize core runtime multiple times and do a matching set of
+finishes. Any subsequent initialization of the HSA runtime library,
+while it is still initialized, is allowed. The runtime
+implementation relies on internal reference counting. Reference
+counting is a mechanism that allows the runtime to keep an internal
+count of the number of calls to \ttbf{hsa\_initialize}. This ensures
+that the runtime stays active until the last \ttbf{hsa\_finish}
+call. 
+
+An error message queue is an output of the \ttbf{hsa\_initialize}
+API. This error message queue serves as the \emph{default} error
+message queue for the runtime (this is discussed again in
+Section~\ref{architected_queue}). All invocations of the
+\ttbf{hsa\_initialize} return the same default error message queue
+handle, i.\ e.\ there is only one default error message queue per
+instance runtime.  This API does \emph{not} return a failure when no
+HSA components were discovered by the runtime. The definition of the
+API is as follows:
+
+\input{APIhsa_initialize}
+
+The initialize API returns \dbtt{HSA\_STATUS\_SUCCESS} if the
+initialization was successful. Otherwise it returns one of the
+following errors:
+
+\begin{easylist}
+& \dbtt{HSA\_STATUS\_INFO\_ALREADY\_INITIALIZED} when the core
+runtime library has already been initialized.
+
+& \dbtt{HSA\_STATUS\_ERROR\_OUT\_OF\_RESOURCES} if there is a
+failure in allocation of an internal structure required by the core
+runtime library. This error may also occur when the core runtime
+library needs to spawn threads or create internal OS-specific
+events. 
+
+& \dbtt{HSA\_STATUS\_ERROR\_COMPONENT\_INITIALIZATION} if there
+is a non-specific failure in initializing one of the components. 
+
+& \dbtt{status \textgreater \, HSA\_STATUS\_OTHER\_BEGIN} Any
+implementation specific error has a error value \textgreater
+\dbtt{HSA\_STATUS\_OTHER\_BEGIN} (see~\ref{error} for details).
+\end{easylist}
+
+The runtime defines \ttbf{hsa\_finish} as the corresponding API call
+to finalize the use of the runtime API. This API does not take in
+any input. This API merely updates the reference count until the
+reference count indicates that number of initializations has been
+matched with the number of finishes. Once this match is determined,
+the runtime proceeds to freeing resources allocated during
+initialization. It is possible in a multi-threaded scenario that one
+thread is doing a finish while the other is trying to initialize.
+The core runtime implementation handles such scenarios. The API is
+defined as follows:
+
+\input{APIhsa_finish}
+
+The finish API returns \dbtt{HSA\_STATUS\_SUCCESS} if the finish
+was successful. Otherwise, it returns one of the following errors:
+
+\begin{easylist}
+& \dbtt{HSA\_STATUS\_INFO\_REFCOUNT\_NONZERO} if the number of times
+initialize has been called is more than the number of time finish
+has been called.
+
+& \dbtt{HSA\_STATUS\_ERROR\_NOT\_INITIALIZED} if the finish was
+called (a) either before the runtime was every initialized, or (b)
+after it has already been finished. 
+
+& \dbtt{HSA\_STATUS\_ERROR\_RESOURCE\_FREE} if some of the
+resources consumed during initialization by the runtime could not be
+freed. 
+
+& \dbtt{status \textgreater \, HSA\_STATUS\_OTHER\_BEGIN} Any
+implementation specific error has a error value \textgreater
+\dbtt{HSA\_STATUS\_OTHER\_BEGIN} (see~\ref{error} for details).
+\end{easylist}
+

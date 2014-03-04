@@ -1,0 +1,193 @@
+\hypertarget{index_overview}{}\section{Overview}\label{index_overview}
+
+The runtime system contains the user mode management software
+required to execute a compiled HSA program. It ties in the
+information required in the compilation unit to execution 
+on queues, it abstracts HSA Component functionality, and also
+exposes HSA features to developers of applications, libraries and
+programming tools.
+
+The H\-S\-A core runtime A\-P\-I aims to be a thin layer
+that abstracts a common set of H\-S\-A features and allows for
+composition and support for different higher-\/level functionality
+that various programming models and languages can in turn be built
+on top of. The core base runtime aims to be a portable target to
+higher-\/level services and subsystems and programming
+model/language runtime systems.
+
+This document specifies and describes the HSA core base A\-P\-I. 
+
+\hypertarget{goals}{}\subsection{Goals}\label{goals}
+The HSA systems architecture requirements working group has
+specified a set of requirements that form the minimal feature-set of
+a HSA system. These features must be abstracted via API to enable
+users to program and utilize an HSA system. The goal of this
+document is to describe the API that abstracts these features and
+makes them available to a HSA user. This document specifies necessary
+and sufficient API to support and enable utilization of the following
+features that have been defined as requirements in the systems architecture requirements specification:
+
+\begin{itemize}
+\item Shared Virtual Memory
+\item Cache Coherency Domains 
+\item HSA Platform Topology Discovery
+\item Memory-Based Signalling and Synchronization 
+\item User Mode Queuing  
+\item Preemptive HSA Component Context Switching 
+\item Architected Queuing Language (AQL)
+\item HSA Component IEEE754-2008 Floating Point Exception Reporting
+\item HSA Component Hardware Debug Infrastructure 
+\item Efficient Syscall Infrastructure
+\end{itemize}
+
+The user mode queue and AQL feature definitions in the HSA Systems
+Architecture Requirements (SAR) Specification enable architected support
+for performing a user mode dispatch in an HSA component -- creating
+an AQL packet in a user mode queue and signalling the
+HW that such a packet is written and sufficient to initiate execution
+on an HSA component. The goal of this specification is to ensure
+that the API definition doesn't preclude architected dispatch. 
+
+\hypertarget{approach}{}\subsection{Approach}\label{approach}
+This document defines and groups API by functional area and
+describes how the features described in HSA Systems Architecture
+Requirement Specification document are abstracted. 
+
+The primary memory type, as defined in the systems architecture
+requirements document, requires no specific allocation or support
+from the runtime API. Hence no specific API are required to enable
+users to utilize Shared Virtual Memory or Cache Coherence Domains --
+these are realized in the HW implementation of an HSA system. The
+other features listed in \ref{goals} each form their on functional
+area in the HSA core base API specification.
+
+\hypertarget{glue}{}\section{ Infrastructure and Execution
+Flow}\label{glue}
+
+Core runtime exposes several details of the HSA hardware,
+including architected dispatches and support for execution control.
+The overall goal of the core runtime design is to provide a
+high-\/performance dispatch mechanism that is portable across
+multiple H\-S\-A vendor architectures. Two vendors with the same
+host I\-S\-A but different H\-S\-A-\/compliant G\-P\-Us will be able
+to run the same unmodified binary, because they support the
+H\-S\-A-\/architected A\-Q\-L interface and supply a library
+that implements the architected core runtime A\-P\-I. 
+
+In order for user-level applications to use the HSA system and HSA
+components, they need to write HSAIL programs and compile and
+execute these programs using user mode queues and AQL commands.
+The HSA Programmer’s Reference Manual (PRM) defines HSAIL Virtual ISA and Programming Model,
+serves as a Compiler Writer’s Guide, and defines Object Format
+(BRIG). The HSA runtime helps setup the execution via API calls and
+data structures to support architected features.
+
+The HSA core runtime realizes architected dispatch. Architected
+dispatch is the key feature in an HSA system that enables a
+user-\/level application to directly issue commands to the HSA
+Component hardware.  Architected dispatch differentiates it from
+other higher-\/level runtime systems and programming models\-: other
+runtime systems provide software A\-P\-Is for setting arguments and
+launching kernels, while H\-S\-A architects these at the hardware
+and specification level.  The critical path of the dispatch
+mechanism is architected at the H\-S\-A hardware level and can be
+done with regular memory operations and runtime provided wrapper
+API.  Fundamentally, the user creates user mode queues and an
+A\-Q\-L Packet in memory, and then signals the HSA component to
+begin executing the packet using light weight operations (which may
+be wrapped with A\-P\-I calls).
+
+This section describes various features core runtime provides to
+support architected dispatch as steps that a user needs to take to
+utilize runtime.
+
+\subsection{Initial Setup}
+One of the first steps in the setup is that of device discovery.
+Device discovery is performed at the initialization of the core
+runtime and information is made available to the user as data
+structures. Section~\ref{topology} describes these structures.
+The next step in the setup is creation of the
+component queues. Queues are an HSA architected mechanism to submit
+work to the HSA component HW. The interfaces for queue creation 
+are defined in Section~\ref{architected_queue}. Different
+components may provide
+implementation-\/specific code under the core A\-P\-I for these
+functions. H\-S\-A runtime also includes mechanisms to provide
+implementation-\/specific data as part of the dispatch, provided
+such data can be computed at compile time. 
+
+\subsection{Compilation Flow}
+Once an HSAIL program is written or generated by a higher-level
+compilation step, it needs to be \emph{assembled} to generate a
+BRIG. BRIG is the HSAIL object format and is specified in the PRM. 
+HSA runtime defines API call to compile the BRIG and generate a code
+object that has sufficient information to execute the user
+program. The details of this compilation process and symbol
+resolution are discussed in Section~\ref{finalizerchapter}.
+
+\subsection{Execution of Kernel}
+The Systems Architecture Requirements (SAR) document specifies the
+structure of the \emph{packets} (i.e. commands) that can be placed on
+the HSA user mode queues for the component HW to execute them. The
+format of the packets is architected and they are referred to as
+Architected Queuing Language (AQL) packets. One of the types of AQL
+packets is a dispatch AQL packet.
+The user can now create an AQL packet
+and initialize it with the code object obtained from the
+finalization step, including the
+allocation of memory to hold the kernel arguments and the
+spill/arg/private memory. 
+The interface for kernel arguments between the runtime and the
+kernel I\-S\-A (instruction set architecture) is also architected at
+the H\-S\-A level. This is covered in the H\-S\-A\-I\-L A\-B\-I
+(this is discussed in
+Section~\ref{coreapi_HSAIL_ABI}),
+which specifies the in-\/memory layout of the kernarg segment. Users
+can determine the layout of the kernarg memory segment at compile
+time merely by examining the signature of the H\-S\-A\-I\-L
+function. The finalizer is required to support this A\-B\-I and thus
+there is no need for runtime metadata to specify the position or
+format of arguments.
+This step can be done once for each A\-Q\-L packet creation.
+
+Optimized implementations can cache the
+result of this step and re-\/use the A\-Q\-L packet for subsequent
+launches. Care must be taken to ensure that the A\-Q\-L Dispatch
+packet (and the associated kernel and spill/arg/private memory) is
+not re-\/used before the launch completes. For simple cases, (that
+is, a single-\/thread, synchronous launch, the
+AQL dispatch packet(s) can be declared as a static variable
+and initialized at the same time the code is finalized. More
+advanced cases can create and track several
+AQL Dispatch packet(s) for a single kernel code object.
+
+HSA HW defines a packet process for processing these packets and a doorbell
+mechanism to inform the packet processing HW that packets have been
+written into the queue. The Core runtime defines a structure and update
+API to inform the HW that the dispatch packet has been written to the
+queue. Different packet formats and states of a packet are discussed
+in Section~\ref{AQL}. Section~\ref{architected_queue} discusses the
+queue creation and various states the queue can be in, once it is
+created.
+
+Once the packet is written and the HW is informed by way of the
+doorbell, the execution can start. The execution happens
+asynchronously. The user is free to write more packets for executing
+other kernels in the queue. This activity can overlap the actual
+execution of the kernel.
+
+\subsection{Determining Kernel Completion}
+HSA SAR defines signals as a mechanism for communication between
+different parts of a HSA system. Signals are defined as opaque
+objects in the HSA core runtime and APIs have been defined to send a
+value to the signal and wait for a value at the signal,
+Section~\ref{signals} discusses signals in detail. The AQL dispatch
+packet has a provision for the user to pass in an opaque signal.
+When the HSA Component HW observes a valid signal in the AQL packet,
+it sends a value to this signal when execution of the kernel is
+complete (success or error). The user can wait on this signal to
+determine kernel completion. Errors and their
+meaning are discussed in Section~\ref{error}.
+\begin{framed}
+\lstinputlisting{main.c}
+\end{framed}

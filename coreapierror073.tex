@@ -1,0 +1,200 @@
+\begin{DIFnomarkup}
+\hypertarget{error}{}\section{Synchronous and Asynchronous Errors and
+Asynchronous Notification}
+\label{error}
+\end{DIFnomarkup}
+
+Error handling in the core runtime can broadly be classified into
+two categories: synchronous error handling and asynchronous
+error/notification handling. 
+
+Synchronous errors are always reported when the call returns. They
+indicate if the API returned a success or an error.
+
+Asynchronous errors can occur due to various reasons:
+\begin{inparaenum}[(i)]
+
+\item Activity in packet processor, executing kernels, their actions
+and memory accesses. If an error is detected during execution of a
+kernel, the completion signal (if present) will be signaled with an
+error indication value.
+
+\item To provide \emphld{information/warning} (not as an exception
+in expected behavior but by definition). This information/warning
+may not necessarily indicate an error. For example, a timeout may be
+an acceptable response for a wait API but is not indicative of a
+failure. 
+
+\end{inparaenum}
+
+\begin{DIFnomarkup}
+\hypertarget{syncerror}{}\subsection{Synchronous Errors }\label{syncerror}
+\end{DIFnomarkup}
+
+When a core runtime API is called by the user and does not execute
+successfully, the core runtime returns a status that can help
+determine a cause of the unsuccessful execution. Each API call
+discussed in this chapter defines what constitutes a successful
+execution. While a few error conditions can be generalized to a
+certain degree (e.g. failure in allocating system memory) many
+errors can have system/implementation specific explanations.
+
+The HSA core runtime API defines an enumeration that captures the
+result of any API function that has been executed (the only
+exception to this behavior are setter/getter API that access core
+runtime structures). This enumeration is of the type
+\dbtt{hsa\_status\_t} and enumerates \emphld{success},
+\emphld{info}, and \emphld{error}. The \emphld{info} status definition
+is discussed in Section ~\ref{asyncerror}.
+
+\emphld{Success} status is a single value,
+\dbtt{HSA\_STATUS\_SUCCESS}. Description of every core runtime
+API call that returns \dbtt{hsa\_status\_t} explains the
+expected successful behavior for that API. The value of
+\dbtt{HSA\_STATUS\_SUCCESS} is always 0.
+
+\emphld{Error} status could be due to user input/actions that are not
+allowed (e.g. negative value in a size for allocation) or systemic
+errors (e.g. an asynchronous activity lead to a failure that
+cascaded into a failure in this API). The constants used for error
+status are restricted to the negative range of values within the
+\dbtt{hsa\_status\_t} enumeration. Errors must always have a
+negative value. The Name of any constant that indicates an error status is
+prefixed by \dbtt{HSA\_STATUS\_ERROR}. Errors could potentially be 
+implementation.
+
+While the name of the constant in itself is informative for success,
+info or error status, there may be scenarios where
+\begin{inparaenum}[(i)] \item the user may request more information
+about the meaning of a particular status, or, \item the return
+status was implementation specific and the user needs to decode it.
+\end{inparaenum} In the case of implementation specific status, the
+negative number returned for error may not correspond to a
+particular enumeration constant. To query additional
+information on synchronous errors, the core runtime defines the
+following API:
+
+\input{APIhsa_status_query}
+
+This API returns \dbtt{HSA\_STATUS\_SUCCESS} if one or both of the
+{\itshape status\_info} and {\itshape status\_info\_string} have been 
+successfully updated with information regarding the input
+{\itshape input\_status}. Otherwise it returns one of the following errors:
+
+\begin{easylist}
+& \dbtt{HSA\_STATUS\_NONE} when no additional information is
+available regarding the status user requested. 
+& \dbtt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} if a NULL value is
+passed for either of the arguments
+\end{easylist}
+
+\begin{DIFnomarkup}
+\hypertarget{asyncerror}{}\subsection{Asynchronous Errors and
+Notifications}\label{asyncerror}
+\end{DIFnomarkup}
+
+The HSA core runtime supports user-defined callbacks to handle
+asynchronous errors. There are two different categories of callbacks
+that can be registered by the user: \begin{inparaenum}[(i)] \item
+for asynchronous information or warnings generated when the runtime
+is executing, or, \item for asynchronous errors that get generated
+in packet processor, or while executing a kernel \end{inparaenum}.
+The core runtime supports a callback each for asynchronous errors
+and notifications.
+The user must use caution when using blocking functions within their
+callback implementation -- a callback that does not return can
+render the runtime state to be undefined. The user cannot depend on
+thread local storage within the callbacks implementation and may
+safely kill the thread that registers the callback. It is the user's
+responsibility to ensure that the callback function is thread-safe.
+The runtime does not implement any default callbacks.
+
+\subsubsection{Asynchronous Notification of Information or
+Warning}\label{asynnotif}
+
+The information/warning status is represented by a value greater
+than 0 within the \dbtt{hsa\_status\_t} enumeration. The status is
+up to user interpretation and the runtime allows the user to
+register a callback to take necessary action. Consider the example
+where a user calls the initialize API to initialize the core runtime
+and the return status is
+\dbtt{HSA\_STATUS\_INFO\_ALREADY\_INITIALIZED} (to indicate that
+the core runtime has already been initialized). This result may be
+interpreted differently in different usage scenarios. A callback for
+such notifications may be registered via \ttbf{hsa\_open} API
+discussed in Section~\ref{init} or via
+\ttbf{hsa\_notification\_callback\_register} API, which is defined
+as follows:
+
+\input{APIregister_notify}
+
+The {\itshape context} parameter is used to identify a particular
+runtime context that this callback is registered for. When a
+callback is registered for a particular context, it will only be
+invoked if the notification is for an action in that context.
+Section~\ref{init} discusses the context in detail. The
+\ttbf{hsa\_notification\_callback\_register} API can return one of
+the following errors:
+\begin{easylist}
+& \dbtt{HSA\_STATUS\_ERROR\_OUT\_OF\_RESOURCES} if there is a failure
+in allocation of an internal structure required by the core runtime
+library in the context of registering a callback. This error may
+also occur when the core runtime library needs to spawn threads or
+create internal OS-specific events. 
+& \dbtt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} 
+if {\itshape info} is NULL.
+@ \dbtt{HSA\_STATUS\_INVALID\_CONTEXT} if the context is invalid
+(e.g. referenced counted to 0). 
+\end{easylist}
+
+One of the arguments of the notification callback is a structure
+that contains notification information. The structure is defined as
+follows:
+
+\input{STRnotify_message}
+
+\subsubsection{Asynchronous Notification of Errors}\label{asynnotif}
+
+The HSA system can have several queues in operation and
+several kernels executing from these queues asynchronously.
+When any asynchronous activity generates an error, the action that
+initiated the activity may have concluded. To deal with
+asynchronous errors, the core runtime supports asynchronous error
+callbacks. The asynchronous error callback may be registered by means of the
+\ttbf{hsa\_open} API discussed in Section~\ref{init} or via
+\ttbf{hsa\_error\_callback\_register} API, which is defined as
+follows:
+
+\input{APIregister_error}
+
+Details on how association of the callback can be done with
+asynchronous activities are discussed in Sections~\ref{init} and
+\ref{architected_queue}. The {\itshape context} parameter is used
+to identify a particular runtime context that this callback is
+registered for. When a callback is registered for a particular
+context, it will only be invoked if the notification is for an
+action in that context. For example, if a queue was created for a
+runtime context {\itshape c1} and a callback registered for a
+context {\itshape c2} but not for {\itshape c1}, any error on the
+queue, such as a packet processing error, will not trigger the
+execution of asynchronous error callback registered for context
+{\itshape c1}. This API can return one of the following errors:
+
+\begin{easylist}
+& \dbtt{HSA\_STATUS\_ERROR\_OUT\_OF\_RESOURCES} if there is a failure
+in allocation of an internal structure required by the core runtime
+library in the context of registering a callback. This error may
+also occur when the core runtime library needs to spawn threads or
+create internal OS-specific events. 
+& \dbtt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} 
+if {\itshape info} is NULL.
+\end{easylist}
+
+One of the arguments of the notification callback is a structure
+that contains notification information. The structure is defined as
+follows:
+
+\input{STRerror_message}
+
+\subsection{Asynchronous Notification Example}
+This is {\color{red} work-in-progress} -- the chapter needs to be written.

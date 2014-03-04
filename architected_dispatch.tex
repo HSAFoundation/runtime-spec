@@ -1,0 +1,106 @@
+\hyperlink{coreapi}{Core A\-P\-I
+Documentation}\hypertarget{coreapi_dtde}{}\section{Component-\/\-Initiated
+Dispatch}\label{coreapi_dtde}
+
+Due to architected support for a queue and design of A\-Q\-L,
+H\-S\-A supports component-\/initiated dispatch, which is the ability
+for a kernel to dispatch a new kernel by writing an A\-Q\-L packet
+directly to a user queue. In simple use cases, the A\-Q\-L packet
+can be created on the host and passed as a parameter to the kernel.
+This eliminates the need to do dynamic memory allocation on the
+component, but has the limitation that the problem fanout must be known
+at the time the first kernel is launched (so that the A\-Q\-L
+packets can be preallocated). H\-S\-A also supports more advanced
+use cases where the A\-Q\-L packet is dynamically allocated
+(including the memory space for kernel arguments and
+spill/arg/private space) on the component. This usage model obviously
+requires dynamic component-\/side memory allocation, for both host and
+component memory.
+
+Some requirements to do component-\/initiated dispatch\-:
+
+\begin{itemize}
+
+\item Ability to dynamically choose a kernel to dispatch\-: Let us
+assume for example that there are three kernels (A, B and C). If the
+host launches A, then the user has the choice of launching B or C,
+or even A in case of recursion. So, the user should be able to get
+the I\-S\-A and segment size (Hsa\-Aql\-Kernel) from the
+corresponding B\-R\-I\-G dynamically. \mbox{[}caveat\-: The code
+sample here does not show how we can do this. It assumes that the
+Hsa\-Aql\-Kernel is being passed as an argument to the parent kernel
+(A in this case)\mbox{]}
+
+\item Ability to dynamically allocate memory from the shader\-: We
+need to allocate memory for A\-Q\-L\-Packet, different kernel
+segments in the A\-Q\-L\-Packet, kernel arguments, and so forth.
+
+\item Ability for a finalizer to identify a default H\-S\-A queue to
+write A\-Q\-L\-Packet\-: The H\-S\-A queue information resides in
+the runtime layer of the stack. This needs to be exchanged with the
+compiler so it can be stored in the global space. This way, when the
+compiler sees the queue, it knows where to pick the H\-S\-A queue
+information to write the A\-Q\-L\-Packet.
+
+\item Ability to notify the completion of all the
+component-\/initiated dispatches on the host\-:
+
+\begin{itemize}
+\item The beginning of execution of the child kernel may or may not
+wait for the parent kernel's completion. This is determined by the
+user and could be algorithm dependent.
+\item If the parent (initiated from host) kernel finishes
+successfully, it means all kernels it initiated also finished
+successfully.
+\item To implement this, we need to track the list of kernels
+launched from the parent. Change the status of parent to complete,
+only if parent and all its child kernels have completed
+successfully.
+\end{itemize}
+\end{itemize}
+
+Implementations that support component initiated dispatches will
+need to support these requirements. If the implementation supports
+the stated requirements, the following actions will allow a
+component to initiate a dispatch\-:
+\begin{itemize}
+\item The queue and \texttt{hsa\_code\_object\_t} (describing the
+kernel to launch) can be passed as arguments to the parent (the one
+launched from the host) kernel. If the dispatch is to the same
+queue, it is accessible via an HSAIL instruction.
+\item If not, get the Hsa\-Aql\-Kernel from the B\-R\-I\-G for the
+kernel that is chosen to be dynamically dispatchd.
+\item When new work is to be created, the H\-S\-A\-I\-L code would\-:
+\begin{itemize}
+\item Use the kernel dynamic memory allocator to allocate a new
+A\-Q\-L\-Packet.
+\item Use inline H\-S\-A\-I\-L to replicate the functionality of the
+Hsa\-Init\-A\-Q\-L\-Packet function. We could perhaps provide an
+H\-S\-A\-I\-L library to implement this functionality. Recall this
+function\-:
+\begin{itemize}
+\item Copies some fields from the Hsa\-Aql\-Kernel structure (for
+example, the kernel I\-S\-A) to the A\-Q\-L\-Packet
+\item Uses a host allocator to allocate memory for the kernel
+arguments
+\item Uses a component allocator to allocate memory for spill,
+private, and arg segments
+\end{itemize}
+\end{itemize}
+\item The H\-S\-A\-I\-L knows the signature of the called function
+and can fill in the A\-Q\-L packet with regular H\-S\-A\-I\-L global
+store instructions.
+\item The H\-S\-A queue is architected, so the H\-S\-A\-I\-L can use
+memory store instructions to dispatch the kernel for dispatch.
+Depending how the user queues are configured, atomic accesses might
+be necessary to handle contention with other writers. Note that, if
+the queue information is not passed in as an argument, the default
+queue can be chosen by the finalizer as it was exchanged earlier
+from the runtime layer.
+\item We also need to handle deallocation of the kernel arguments
+and spill/private/arg space after the kernel completes.
+\item On the host, check if the parent has finished. If the parent
+has finished successfully, then it means that all the child kernels
+have finished successfully too. If the parent or any of the child
+kernels failed, an error code will be returned. 
+\end{itemize}
