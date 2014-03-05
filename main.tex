@@ -59,7 +59,7 @@
 \usepackage{enumitem}
 \usepackage{framed}
 \usepackage[ampersand]{easylist}
-\ListProperties(Hide=100, Hang=true, Progressive=3ex, 
+\ListProperties(Hide=100, Hang=true, Progressive=3ex,
 Style2*=$\bullet$ ,Style1*=$\triangleright$ )
 
 
@@ -86,12 +86,12 @@ Style2*=$\bullet$ ,Style1*=$\triangleright$ )
 \RequirePackage[normalem]{ulem} %DIF PREAMBLE
 \RequirePackage{color}\definecolor{RED}{rgb}{1,0,0}\definecolor{BLUE}{rgb}{0,0,1}
 %DIF PREAMBLE
-\providecommand{\DIFadd}[1]{{\protect\color{blue}{#1}}} 
+\providecommand{\DIFadd}[1]{{\protect\color{blue}{#1}}}
 %DIF PREAMBLE
 
 \providecommand{\DIFdel}[1]{{\protect\color{red}{\sout{#1}}}}
 %\providecommand{\DIFdel}[1]{{\protect\color{red}{#1}}}
-%\providecommand{\DIFdel}[1]{{\protect\color{red}\protect\scriptsize{#1}}}  
+%\providecommand{\DIFdel}[1]{{\protect\color{red}\protect\scriptsize{#1}}}
 \newenvironment{DIFnomarkup}{}{}
 
 %DIF PREAMBLE
@@ -138,7 +138,7 @@ Style2*=$\bullet$ ,Style1*=$\triangleright$ )
 %\large
 \hypersetup{pageanchor=false,citecolor=blue}
 \begin{titlepage}
-\includegraphics[width=.5\textwidth]{foundation.png}
+\includegraphics[width=.5\textwidth]{fig/foundation.png}
 \vspace*{7cm}
 \begin{center}
 {\Large H\-S\-A Core API Programmers Reference Manual\\[1ex]\large
@@ -176,11 +176,38 @@ infringement of any intellectual property right.
 \setcounter{page}{1}
 
 %\chapter{changes} \label{changes} \hypertarget{changes}{}
-%\input{changes}
+%% \section{Changes}
+%% \subsection{Rev 0.17}
+%% \begin{itemize}
+%% \item finished adding direct API instead of doxygen-included API all
+%% the way into the document
+%% \item updated queue structure and example to reflect what is
+%% described in the systems architecture requirements
+%% \item
+%% \end{itemize}
+
+%% \subsection{Rev 0.16}
+%% \begin{itemize}
+%% \item remove doxygen output usage and adding API directly to individual sections -- made it up to section 3.3
+%% \item move architected dispatch and example to the end
+%% \item move device to device enqueue to the architected dispatch chapter
+%% \item remove images
+%% \item added section on topology discovery
+%% \item added section on AQL
+%% \end{itemize}
+
+%% \subsection{Rev 0.15}
+%% \begin{itemize}
+%% \item \add[AMD] {deleted section on core graphics}
+%% \item \add[AMD] {deleted vendor enumeration proposal}
+%% \item \add[AMD] {replaced the existing multi-threaded queue example
+%% with a simpler multi-threaded enqueue example on request}
+%% \end{itemize}
+
 
 \hypersetup{pageanchor=true,citecolor=blue}
 \chapter{Introduction} \label{index}\hypertarget{index}{}
-\input{index}
+\input{intro}
 
 \chapter{HSA Core A\-P\-I Specification and Description} \label{coreapi}
 \hypertarget{coreapi}{}
@@ -194,7 +221,7 @@ operate on structure elements.
 Several operating systems allow functions to be executed when a DLL
 or a shared library is loaded (e.g. DLL main in Windows and GCC
 \emph{constructor/destructor} attributes that allow functions to be
-executed prior to main in several operating systems). 
+executed prior to main in several operating systems).
 Whether or not the HSA runtime functions are allowed to be invoked
 in such fashion may be implementation specific and are outside the
 scope of this specification.
@@ -203,9 +230,16 @@ Similarly, any header files distributed by the HSA foundation for
 this spec may contain calling convention specific prefixes such as
 \_\_cdecl or \_\_stdcall. Such calling conventions are again invocation,
 usage and implementation specific. Hence, the calling convention
-specific prefix definition is outside the scope of API definition. 
+specific prefix definition is outside the scope of API definition.
 
-\input{coreapi}
+\input{api_error.tex}
+\input{api_open.tex}
+\input{api_topology.tex}
+\input{api_signal.tex}
+\input{api_queue.tex}
+\input{api_aql.tex}
+\input{api_memory.tex}
+\input{api_other}
 
 \begin{appendices}
 \chapter{Compilation Unit, Finalizer and ISA Linking}
@@ -218,7 +252,7 @@ specific prefix definition is outside the scope of API definition.
 
 \chapter{Component Initiated Dispatches} \label{architected}
 \hypertarget{architectedchptr}{}
-\input{architected_dispatch}
+\input{compdispatch}
 
 \chapter{Error Status Structure and Defined Values}
 \label{errstatus} \hypertarget{errstatus}{}
@@ -227,5 +261,5 @@ specific prefix definition is outside the scope of API definition.
 \end{appendices}
 
 \bibliographystyle{plain}
-\bibliography{corebase}
+\bibliography{bibliography}
 \end{document}

@@ -4,13 +4,6 @@
 %\input{coreapisignal070.tex}
 %\input{coreapiqueue070.tex}
 %\input{coreapiaql070.tex}
-\input{coreapierror.tex}
-\input{coreapiopen.tex}
-\input{coreapitopo.tex}
-\input{coreapisignal.tex}
-\input{coreapiqueue.tex}
-\input{coreapiaql.tex}
-\input{coreapimemory.tex}
 
 \hypertarget{coreapi_coredebug}{}\section{Execution Control At the Core Level}\label{coreapi_coredebug}
 
@@ -31,7 +24,7 @@ agent and can be used to identify the trap.
 
 To support this infrastructure in the runtime, the Core A\-P\-I
 defines a structure that can be used to exchange information between
-the kernel executing on the H\-S\-A component and the agent. 
+the kernel executing on the H\-S\-A component and the agent.
 
 The core runtime defines a structure, mailbox, whose purpose is to
 exchange information as a part of execution control. Mailbox is a
@@ -66,8 +59,8 @@ component sets the full flag, sends a signal to agent by accessing the
 {\itshape mailbox\_signal} inside the queue structure (see
 Section~\ref{architected_queue}), and waits for the full flag to be
 emptied. The mailbox structure is defined as follows.
-\input{ENUinterrupt_condition}
-\input{STRexecution_info}
+\input{example/ENUinterrupt_condition}
+\input{example/STRexecution_info}
 
 The Agent waits on the signal, processes the mailbox, and clears
 the full flag.
@@ -76,7 +69,7 @@ If this kernel had a debugtrap\-\_\-u32, a simple check for
 debugtrap can be written the following way\-:
 
 \begin{framed}
-\lstinputlisting{mailbox_simple.c}
+\lstinputlisting{example/mailbox_simple.c}
 \end{framed}
 
 \hypertarget{coreapi_agent}{}\section{Agent Dispatch Support at the
@@ -89,17 +82,17 @@ to the service queue or any user mode queue.  The service queue
 shares the same structure as the regular HSA queue.  The default
 service queues are monitored by the runtime.
 
-\input{APIagent_dispatch}
+\input{example/APIagent_dispatch}
 
 
-\hypertarget{extensions}{}\section{Extensions to the 
+\hypertarget{extensions}{}\section{Extensions to the
 Core Runtime API}\label{extensions}
 
 When an implementor of the core runtime specification is not
 supporting any of the extension API, they will return
 \texttt{HSA\_STATUS\_ERROR\_EXTENSION\_NOT\_SUPPORTED} as a return
-status for that API. 
- 
+status for that API.
+
 Individual vendors may define vendor extensions to HSA core runtime,
 or multiple vendors may collaborate to define an extension. The
 difference is in the naming scheme used for the symbols (defines,
@@ -113,7 +106,7 @@ global namespace must use the following naming convention:
     For example, a company ``ACME'' defining a single-vendor extension
     would use the prefix \emph{hsa\_ext\_acme\_}. Company names must
     be registered with the HSA Foundation, must be unique, and may be
-    abbreviated to improve the readability of the symbols. 
+    abbreviated to improve the readability of the symbols.
   \end{itemize}
 \item Symbols for multi-vendor extensions that are defined in the
 global namespace must use the following naming convention:
@@ -123,13 +116,13 @@ global namespace must use the following naming convention:
     resulting symbols would use the prefix \emph{hsa\_mvext\_}.
   \end{itemize}
 \end{itemize}
- 
+
 Any constant definitions in the extension (\#define/enumerations) use
 the same naming convention, except using all capital letters. So,
 using the single-vendor extension example from above, the associated
 defines and enumerations would have the prefix
 \texttt{HSA\_EXT\_ACME\_}.
- 
+
 The symbols for all vendor extensions (both single-vendor and
 multi-vendor) are captured in the file {\bf hsa/vendor\_extensions.h}.
 This file is maintained by the HSA Foundation.  This file includes
@@ -140,12 +133,12 @@ Foundation. Multi-vendor enumerations begin at the value of
 1000000. For example, using the examples above, the
 \texttt{hsa\_vendor\_extension\_t} enumeration might be:
 
-\input{ENUvendor_ext}
- 
+\input{example/ENUvendor_ext}
+
 HSA defines the following query function for vendor extensions:
 
-\input{APIquery_vendorextension} 
- 
+\input{example/APIquery_vendorextension}
+
 This API returns \texttt{HSA\_STATUS\_SUCCESS} if the extension is
 supported.  Additionally, {\itshape extension\_structure} is written
 with extension-specific information such as version information,
@@ -154,15 +147,15 @@ a unique structure for each extension.  If the vendor extension is
 not supported, \texttt{HSA\_STATUS\_ERROR\_EXTENSION\_UNSUPPORTED}
 is returned, and \texttt{extension\_structure} is not modified.
 
-\subsection{Example Definition And Usage of an Extension} 
+\subsection{Example Definition And Usage of an Extension}
 An example that shows a hypothetical single-vendor extension ``Foo''
 registered by company ``ACME''.  The example includes four defines
 and two API functions.  Note the use of the structure
 \texttt{hsa\_svext\_acme\_foo\_t} and how this interacts with the
 \ttbf{hsa\_query\_vendor\_extension} API call.
 
-\lstinputlisting{extension.c}
- 
+\lstinputlisting{example/extension.c}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %An enumeration, \texttt{HsaSignalSyncType} allows the user to specify the
@@ -219,7 +212,7 @@ and two API functions.  Note the use of the structure
 %\diffblock{
 %  \begin{description} [font=\tt]
 %    \item[kHsaSet] \hfill \\
-%            basic set signal with release, no atomics 
+%            basic set signal with release, no atomics
 %    \item[kHsaSignalAtomicAnd] \hfill \\
 %            atomic AND, signal.value \&= value
 %    \item[kHsaSignalAtomicOr] \hfill \\
@@ -237,9 +230,9 @@ and two API functions.  Note the use of the structure
 %    \item[kHsaSignalAtomicDec] \hfill \\
 %            atomic increment, signal.value--, value is ignored
 %    \item[kHsaSignalAtomicMax] \hfill \\
-%            atomic maximum, MAX(signal.value,value) 
+%            atomic maximum, MAX(signal.value,value)
 %    \item[kHsaSignalAtomicMin] \hfill \\
-%            atomic minimum, MIN(signal.value,value) 
+%            atomic minimum, MIN(signal.value,value)
 %    \item[kHsaSignalAtomicCas] \hfill \\
 %            atomic compare and swap, if(signal.value == value2)
 %            signal.value = value2
@@ -265,7 +258,7 @@ and two API functions.  Note the use of the structure
 %To just signal using a set (no atomics), action
 %\texttt{kHsaSignalSet} may be used. However, only
 %\texttt{kHsaRelease} and \texttt{kHsaAcquireRelease} synchronization
-%types apply to the \texttt{kHsaSignalSet} action. 
+%types apply to the \texttt{kHsaSignalSet} action.
 
 %The Table \ref{actionandsync} shows which synchronization operations
 %apply to which signal actions. The implementation of the
@@ -291,7 +284,7 @@ and two API functions.  Note the use of the structure
 % \begin{framed}
 %   \begin{lstlisting}
 %   typedef enum {
-%           kHsaSignalConditionEqual, 
+%           kHsaSignalConditionEqual,
 %           kHsaSignalConditionNotEqual,
 %           kHsaSignalConditionLessThan,
 %           kHsaSIgnalConditionGreaterThanOrEqual
@@ -301,7 +294,7 @@ and two API functions.  Note the use of the structure
 %   \begin{description}[font=\tt]
 %     \item[kHsaSignalConditionEqual] \hfill \\
 %             wait until timeout or value == signal.value
-%     \item[kHsaSignalConditionNotEqual] \hfill \\  
+%     \item[kHsaSignalConditionNotEqual] \hfill \\
 %             wait until timeout or value $\ne$ signal.value
 %     \item[kHsaSignalConditionLessThan] \hfill \\
 %             wait until timeout or value \textless  signal.value
@@ -312,9 +305,9 @@ and two API functions.  Note the use of the structure
 % \end{framed}
 
 % In addition to this, the wait API must support \texttt{kHsaRelease}
-% and \texttt{kHsaAcquireRelease} synchronizations. 
+% and \texttt{kHsaAcquireRelease} synchronizations.
 
 %\begin{framed}
-%\lstinputlisting{aql_dispatch.c}
+%\lstinputlisting{example/aql_dispatch.c}
 %\end{framed}
 

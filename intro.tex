@@ -10,7 +10,7 @@ accelerators that is already occurring in the marketplace, and takes
 the next step by defining standards for uniting the accelerators
 architecturally.  The HSA specifications includes requirements for
 virtual memory, memory coherency, architected dispatch mechanisms,
-and power-efficient signals.   
+and power-efficient signals.
 HSA refers to these accelerators as “components”.  The system
 architecture defines a consistent base for building portable
 applications that access the power and performance benefits of the
@@ -25,14 +25,14 @@ provided for accessing multi-core CPUs.
 
 In addition to the system architecture, HSA’s “Programmer’s
 Reference Guide” defines HSAIL - a portable, low-level, compiler
-intermediate language designed for parallel computing.  
+intermediate language designed for parallel computing.
 
 \begin{description}
 \item[Portable:] The HSAIL language is an open-standard, supported by
 multiple vendors in the HSA Foundation, and is portable across
 vendors and product generations, so that applications which use
 HSAIL are guaranteed to run on future hardware that supports the
-HSAIL standard.  
+HSAIL standard.
 \item[Low-level:] HSAIL’s representation is just above the machine
 instruction set.  Most optimizations including register allocation
 are intended to be performed by the compiler that generates HSAIL.
@@ -56,7 +56,7 @@ parallel computing devices.
 \end{description}
 
 For more information on HSAIL, refer to the HSA Programmer’s
-Reference Guide.  
+Reference Guide.
 
 The final piece of the puzzle is the HSA Core Runtime API.  The core
 runtime is a thin, user-mode API that provides the interfaces
@@ -87,11 +87,11 @@ API for controlling the launch of HSAIL kernels.
 
 The remainder of this document describes the HSA software
 architecture and execution model, and includes functional
-descriptions for all of the HSA APIs and associated data structures. 
+descriptions for all of the HSA APIs and associated data structures.
 
 \begin{figure}
   \centering
-  \includegraphics[width=0.5\textwidth]{swarch}
+  \includegraphics[width=0.5\textwidth]{fig/swarch}
   \centering
   \caption{HSA Software Architecture}
   \label{fig:swarch}
@@ -121,7 +121,7 @@ target machine.   Another option is that the HSAIL is finalized when
 the applications is built, or the machine cod  The HSA Finalizer is
 an optional component of the HSA Core Runtime, which may reduce the
 footprint of the HSA software on systems where the finalization is
-done before runtime. 
+done before runtime.
 
 Each language also includes a “language runtime” that connects the
 language implementation to the HSA Core Runtime.   When the language
@@ -129,7 +129,7 @@ compiler generates code for a parallel region, it will include calls
 to the HSA Runtime to set up and dispatch the work to the HSA
 Component.   The language runtime is also responsible for
 initializing HSA, and may utilize other HSA core runtime features as
-well.  
+well.
 
 The API for the HSA core runtime is standard across all HSA vendors,
 such that languages which use the HSA runtime can run on the
@@ -141,7 +141,7 @@ vendors must provide a single runtime which supports all the
 components in the platform.
 The implementation of the HSA Runtime may include kernel-level
 components (typical for hardware components) or may be entirely
-user-space (simulators or CPU implementations).     
+user-space (simulators or CPU implementations).
 
 \hypertarget{glue}{}\section{ Infrastructure and Execution
 Flow}\label{glue}
@@ -152,7 +152,7 @@ Model}\label{executionmodel}
 }
 \DIFdelbegin \DIFdel{Host/HSAIL – brief intro that describes host running host code
 include HSA runtime, components running HSAIL.
-}\DIFdelend 
+}\DIFdelend
 
 \diffblock{\hypertarget{archdispatch}{}\subsection{Architected Dispatch}
 \label{archdispatch}}
@@ -164,7 +164,7 @@ multiple H\-S\-A vendor architectures. Two vendors with the same
 host I\-S\-A but different H\-S\-A-\/compliant G\-P\-Us will be able
 to run the same unmodified binary, because they support the
 H\-S\-A-\/architected A\-Q\-L interface and supply a library
-that implements the architected core runtime A\-P\-I. 
+that implements the architected core runtime A\-P\-I.
 
 In order for user-level applications to use the HSA system and HSA
 components, they need to write HSAIL programs and compile and
@@ -201,18 +201,18 @@ runtime and information is made available to the user as data
 structures. Section~\ref{topology} describes these structures.
 The next step in the setup is creation of the
 component queues. Queues are an HSA architected mechanism to submit
-work to the HSA component HW. The interfaces for queue creation 
+work to the HSA component HW. The interfaces for queue creation
 are defined in Section~\ref{architected_queue}. Different
 components may provide
 implementation-\/specific code under the core A\-P\-I for these
 functions. H\-S\-A runtime also includes mechanisms to provide
 implementation-\/specific data as part of the dispatch, provided
-such data can be computed at compile time. 
+such data can be computed at compile time.
 
 \subsection{Compilation Flow}
 Once an HSAIL program is written or generated by a higher-level
 compilation step, it needs to be \emph{assembled} to generate a
-BRIG. BRIG is the HSAIL object format and is specified in the PRM. 
+BRIG. BRIG is the HSAIL object format and is specified in the PRM.
 HSA runtime defines API call to compile the BRIG and generate a code
 object that has sufficient information to execute the user
 program. The details of this compilation process and symbol
@@ -229,7 +229,7 @@ The user can now create an AQL packet
 and initialize it with the code object obtained from the
 finalization step, including the
 allocation of memory to hold the kernel arguments and the
-spill/arg/private memory. 
+spill/arg/private memory.
 The interface for kernel arguments between the runtime and the
 kernel I\-S\-A (instruction set architecture) is also architected at
 the H\-S\-A level. This is covered in the H\-S\-A\-I\-L A\-B\-I
@@ -282,5 +282,5 @@ complete (success or error). The user can wait on this signal to
 determine kernel completion. Errors and their
 meaning are discussed in Section~\ref{error}.
 \begin{framed}
-\lstinputlisting{main.c}
+\lstinputlisting{example/main.c}
 \end{framed}

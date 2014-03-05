@@ -22,7 +22,7 @@ using the appropriate H\-S\-A core A\-P\-I invocation.
 
 The API for registering and deregistering is defined as follows:
 
-\input{APIregister}.
+\input{example/APIregister}.
 
 This API returns \texttt{HSA\_STATUS\_SUCCESS} to indicate that
 registration/deregistration has been successfully performed.
@@ -41,7 +41,7 @@ a part of prior registered ranges.
 & \texttt{HSA\_STATUS\_INFO\_OUT\_OF\_RESOURCES} if there is a
 failure in allocating necessary resources to perform registration.
 Note that this is just info, since registration doesn't impact
-functionality, the user can still continue considering this an info. 
+functionality, the user can still continue considering this an info.
 
 \end{easylist}
 
@@ -55,12 +55,12 @@ allocation. For example\-:
 \begin{lstlisting}
 void* ptr = malloc(16);
 status = hsa_memory_register(ptr, 8);
-if(status == HSA_STATUS_ERROR_INVALID_ARGUMENT) 
+if(status == HSA_STATUS_ERROR_INVALID_ARGUMENT)
   handle_error(status);
 \end{lstlisting}
 \end{framed}
 
- is a valid program. On the other hand\-: 
+ is a valid program. On the other hand\-:
 
 \begin{framed}
 \begin{lstlisting}
@@ -137,7 +137,7 @@ Note that since registration is a performance hint, allocating
 memory through this API corresponds to the \emph{hint}. The API is
 defined as follows:
 
-\input{APImemory_allocate}
+\input{example/APImemory_allocate}
 
 If the memory is allocated successfully, the API returns
 \texttt{HSA\_STATUS\_SUCCESS}. Otherwise, it returns one of the
@@ -151,10 +151,10 @@ OS-specific events.
 
 & \texttt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} if {\itshape
 address} or {\itshape size} are not valid Allocation of size 0 is
-allowed and returns a NULL pointer. 
+allowed and returns a NULL pointer.
 \end{easylist}
 
-\hypertarget{coreapi_kernarg}{}\subsection{Allocation of Kernarg 
+\hypertarget{coreapi_kernarg}{}\subsection{Allocation of Kernarg
 Memory}\label{kernargmem}
 
 The kernarg memory that AQL packet points to (see Section~\ref{AQL})
@@ -166,7 +166,7 @@ allocating and copying to the allocated kernarg memory. To
 facilitate such optimizations, HSA core runtime defines the
 following API:
 
-\input{APIkernargmem}
+\input{example/APIkernargmem}
 
 If the memory is allocated/copied successfully, the API returns
 \texttt{HSA\_STATUS\_SUCCESS}. Otherwise, one of the
@@ -180,7 +180,7 @@ OS-specific events.
 
 & \texttt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} if {\itshape
 address} or {\itshape size} are not valid. Allocation of size 0 is
-allowed and returns a NULL pointer. 
+allowed and returns a NULL pointer.
 
 @ \texttt{HSA\_STATUS\_ERROR\_COPY\_SOURCE\_INVALID} if the source
 of the copy operation is invalid.
@@ -201,11 +201,11 @@ directly.
 H\-S\-A runtime provides host interface to allocate/deallocate and
 access component local memory. The result of the allocation is a
 pointer to an address in application processes address space, which
-can be accessed directly by the component during kernel execution. 
+can be accessed directly by the component during kernel execution.
 
 The API is defined as follows:
 
-\input{APImemory_local}
+\input{example/APImemory_local}
 
 All three API return \texttt{HSA\_STATUS\_SUCCESS} when the
 allocate/free/copy is successful. Otherwise, one of the following
@@ -219,13 +219,13 @@ runtime library. This error may also occur when the core runtime
 library needs to spawn threads or create internal OS-specific
 events. The \ttbf{hsa\_memory\_allocate\_component\_local} and
 \ttbf{hsa\_memory\_copy\_component\_local\_to\_system} API can
-return this error. 
+return this error.
 
 & \texttt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} if {\itshape
 component}, {\itshape address}, {\itshape src} or {\itshape dst} are
 not valid and if the {\itshape address} pointer in
 \ttbf{hsa\_memory\_allocate\_component\_local} is NULL. Allocation
-of size 0 is allowed. 
+of size 0 is allowed.
 
 \end{easylist}
 
@@ -259,5 +259,5 @@ perform component-\/to-\/host memory copy. For example\-:
 
 copies 1024 bytes from system to component local memory.
 
-The user should not register or deregister component local memory. 
+The user should not register or deregister component local memory.
 

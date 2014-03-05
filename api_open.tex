@@ -7,7 +7,7 @@
 \hypertarget{init}{}\section{Open and close
 }\label{init}
 \end{DIFnomarkup}
-\DIFaddend 
+\DIFaddend
 
 Since HSA core runtime is a user mode library, its state is a part
 of the application's process space. When the runtime is opened for
@@ -53,7 +53,7 @@ user when the reference count represented by that runtime context is
 
 The definition of the \ttbf{hsa\_open} API is as follows:
 
-\input{APIhsa_initialize}
+\input{example/APIhsa_initialize}
 
 The open API returns \dbtt{HSA\_STATUS\_SUCCESS} if the
 initialization was successful. Otherwise it returns one of the
@@ -64,10 +64,10 @@ following errors:
 failure in allocation of an internal structure required by the core
 runtime library. This error may also occur when the core runtime
 library needs to spawn threads or create internal OS-specific
-events. 
+events.
 
 & \dbtt{HSA\_STATUS\_ERROR\_COMPONENT\_INITIALIZATION} if there
-is a non-specific failure in initializing one of the components. 
+is a non-specific failure in initializing one of the components.
 
 & \dbtt{HSA\_STATUS\_ERROR\_CONTEXT\_NULL} if the context pointer
 passed by the user is NULL. User is required to pass in a memory
@@ -95,7 +95,7 @@ closed runtime instance will fail. However, \ttbf{hsa\_open} can be
 called to create a new instance of the runtime after it is closed.
 The API for \ttbf{hsa\_close} is defined as follows:
 
-\input{APIhsa_close}
+\input{example/APIhsa_close}
 
 The close API returns \dbtt{HSA\_STATUS\_SUCCESS} if the close
 was successful. Otherwise, it returns one of the following errors:
@@ -107,7 +107,7 @@ after it has already been successfully closed.
 
 & \dbtt{HSA\_STATUS\_ERROR\_RESOURCE\_FREE} if some of the
 resources consumed during initialization by the runtime could not be
-freed. 
+freed.
 \end{easylist}
 
 If the close is called when the reference count is not 1, it is
@@ -119,7 +119,7 @@ runtime on the context that is till active before the API returns.
 The HSA core runtime API for an acquire on a context,
 \ttbf{hsa\_context\_acquire}, is defined as follows:
 
-\input{APIacquire_context}
+\input{example/APIacquire_context}
 
 The open API returns \dbtt{HSA\_STATUS\_SUCCESS} if the acquire was
 successful and if {\itshape output\_context} holds the new context
@@ -129,7 +129,7 @@ generated. Otherwise it returns one of the following errors:
 & \dbtt{HSA\_STATUS\_ERROR\_NOT\_INITIALIZED} if the
 \ttbf{hsa\_acquire\_context} was called (a) either before the
 runtime was initialized, or (b) after it has already been
-closed. 
+closed.
 & \dbtt{HSA\_STATUS\_CONTEXT\_LIMIT\_REACHED} if the increment has
 taken the context to the UINT64\_MAX value defined in
 \texttt{stdint.h} C header file.
@@ -138,7 +138,7 @@ taken the context to the UINT64\_MAX value defined in
 The corresponding release API, \ttbf{hsa\_context\_release} is
 defined as follows:
 
-\input{APIrelease_context}
+\input{example/APIrelease_context}
 
 The \ttbf{hsa\_context\_release} API returns
 \dbtt{HSA\_STATUS\_SUCCESS} if the release was successful.
@@ -155,5 +155,5 @@ integer. The context does not wrap around.
 \end{easylist}
 \subsection{Open/Close Example}
 
-\lstinputlisting{openclose.c}
+\lstinputlisting{example/openclose.c}
 

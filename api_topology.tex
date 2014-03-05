@@ -16,11 +16,11 @@ representing the HSA system to gather details such as the number of
 different HSA Components on the system with local access to a
 particular set of memory resources. \DIFaddbegin \DIFadd{Topology table is designed to be
 allocated in a block of contiguous memory.
-}\DIFaddend 
+}\DIFaddend
 
 The \ttbf{hsa\_topology\_table\_create} API is defined as follows:
 
-\input{APItopology_create}
+\input{example/APItopology_create}
 
 The API returns \dbtt{HSA\_STATUS\_SUCCESS} if the table has been
 successfully created and returned by way of the {\itshape header}. Otherwise,
@@ -37,7 +37,7 @@ or in the creation of table header or the actual table.
 
 \begin{figure}
   \centering
-  \includegraphics[width=0.5\textwidth]{topologytable}
+  \includegraphics[width=0.5\textwidth]{fig/topologytable}
   \centering
   \caption{Structure of the Topology Table}
   \label{fig:topology_table}
@@ -47,13 +47,13 @@ The table structure is shown in Figure~\ref{fig:topology_table}.
 The first entity in the table is a table header. This is the output
 of the \ttbf{hsa\_topology\_table\_create} API.
 The table header is defined by the following structure:
-\input{STRtopology_header}
+\input{example/STRtopology_header}
 
 The table header structure includes the platform structure (
 \dbtt{hsa\_platform\_t}).  The platform information in the platform
 structure includes size/offset-array pairs for HSA agents
 (\dbtt{hsa\_agent\_t}), memory (\dbtt{hsa\_memory\_descriptor\_t}) and
-cache (\dbtt{hsa\_cache\_descriptor\_t}).  
+cache (\dbtt{hsa\_cache\_descriptor\_t}).
 HSA platform can have a hierarchical structure with multiple
 components/agents and physical memories.  The
 \dbtt{hsa\_platform\_t} structure also includes properties such as
@@ -63,17 +63,17 @@ links to various elements in the topology table (see Figure
 
 The platform structure is defined as follows:
 
-\input{STRhsa_platform}
+\input{example/STRhsa_platform}
 
 When no information is available for a particular element, the
 corresponding {\itshape number\_ \textless element \textgreater s}
 field is set to zero by the runtime in the platform structure.
 Platform structure maps to the agents, cache and physical memory,
 \DIFdelbegin \DIFdel{etc.}%DIFDELCMD < \, %%%
-\DIFdelend in the topology table for all nodes in the platform. 
+\DIFdelend in the topology table for all nodes in the platform.
 
 The core runtime defines the following structure to represent cache:
-\input{STRhsa_cache_descriptor}
+\input{example/STRhsa_cache_descriptor}
 The structure holds associativity, cache size, cache line size for
 all levels of cache and the inclusive property for all but the
 last level. Each cache in the HSA system has a unique cache ID
@@ -87,12 +87,12 @@ characteristics and latency for accessing memory. Implementations
 may choose not to provide memory bandwidth or latency information.
 The memory descriptor structure is defined as follows:
 
-\input{STRhsa_memory_descriptor} 
+\input{example/STRhsa_memory_descriptor}
 
-The structure: 
-\input{STRhsa_segment} 
+The structure:
+\input{example/STRhsa_segment}
 can represent any combination of the 7 HSA segments, a single
-bit for each segment. 
+bit for each segment.
 
 The HSA Agent data structure represents an HSA component when the
 {\itshape agent\_type} field in the agent structure is set to a 1
@@ -106,11 +106,11 @@ indicates that agent can participate in agent dispatches. All
 three bits or a combination of them can be set by the HSA runtime.
 
 The structure of the HSA agent/component is defined as follows:
-\input{STRhsa_component}
+\input{example/STRhsa_component}
 
 Within the agent, the agent type is an enumeration that is defined
 as follows:
-\input{ENUagent_type}
+\input{example/ENUagent_type}
 
 The user must destroy the topology table before closing the runtime.
 The \dbtt{hsa\_topology\_table\_destroy} API is defined by the
@@ -128,7 +128,7 @@ the asynchronous error is observed will return the latest version of
 the topology table at the time of the API invocation. However, if
 the same HW was hot-swapped out and in with the same interval, or if
 the error encountered in a component was recovered, the topology
-table may not look different from the users perception. 
+table may not look different from the users perception.
 
 \hypertarget{topology_example}{} \subsection{Topology Example}
 This is {\color{red} work-in-progress} -- the chapter needs to be written.

@@ -6,7 +6,7 @@ Asynchronous Notification}
 
 Error handling in the core runtime can broadly be classified into
 two categories: synchronous error handling and asynchronous
-error/notification handling. 
+error/notification handling.
 
 Synchronous errors are always reported when the call returns. They
 indicate if the API returned a success or an error.
@@ -23,7 +23,7 @@ error indication value.
 in expected behavior but by definition). This information/warning
 may not necessarily indicate an error. For example, a timeout may be
 an acceptable response for a wait API but is not indicative of a
-failure. 
+failure.
 
 \end{inparaenum}
 
@@ -60,7 +60,7 @@ cascaded into a failure in this API). The constants used for error
 status are restricted to the negative range of values within the
 \dbtt{hsa\_status\_t} enumeration. Errors must always have a
 negative value. The Name of any constant that indicates an error status is
-prefixed by \dbtt{HSA\_STATUS\_ERROR}. Errors could potentially be 
+prefixed by \dbtt{HSA\_STATUS\_ERROR}. Errors could potentially be
 implementation.
 
 While the name of the constant in itself is informative for success,
@@ -74,16 +74,16 @@ particular enumeration constant. To query additional
 information on synchronous errors, the core runtime defines the
 following API:
 
-\input{APIhsa_status_query}
+\input{example/APIhsa_status_query}
 
 This API returns \dbtt{HSA\_STATUS\_SUCCESS} if one or both of the
-{\itshape status\_info} and {\itshape status\_info\_string} have been 
+{\itshape status\_info} and {\itshape status\_info\_string} have been
 successfully updated with information regarding the input
 {\itshape input\_status}. Otherwise it returns one of the following errors:
 
 \begin{easylist}
 & \dbtt{HSA\_STATUS\_NONE} when no additional information is
-available regarding the status user requested. 
+available regarding the status user requested.
 & \dbtt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} if a NULL value is
 passed for either of the arguments
 \end{easylist}
@@ -126,7 +126,7 @@ discussed in Section~\ref{init} or via
 \ttbf{hsa\_notification\_callback\_register} API, which is defined
 as follows:
 
-\input{APIregister_notify}
+\input{example/APIregister_notify}
 
 The {\itshape context} parameter is used to identify a particular
 runtime context that this callback is registered for. When a
@@ -140,18 +140,18 @@ the following errors:
 in allocation of an internal structure required by the core runtime
 library in the context of registering a callback. This error may
 also occur when the core runtime library needs to spawn threads or
-create internal OS-specific events. 
-& \dbtt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} 
+create internal OS-specific events.
+& \dbtt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT}
 if {\itshape info} is NULL.
 @ \dbtt{HSA\_STATUS\_INVALID\_CONTEXT} if the context is invalid
-(e.g. referenced counted to 0). 
+(e.g. referenced counted to 0).
 \end{easylist}
 
 One of the arguments of the notification callback is a structure
 that contains notification information. The structure is defined as
 follows:
 
-\input{STRnotify_message}
+\input{example/STRnotify_message}
 
 \subsubsection{Asynchronous Notification of Errors}\label{asynnotif}
 
@@ -165,7 +165,7 @@ callbacks. The asynchronous error callback may be registered by means of the
 \ttbf{hsa\_error\_callback\_register} API, which is defined as
 follows:
 
-\input{APIregister_error}
+\input{example/APIregister_error}
 
 Details on how association of the callback can be done with
 asynchronous activities are discussed in Sections~\ref{init} and
@@ -185,8 +185,8 @@ execution of asynchronous error callback registered for context
 in allocation of an internal structure required by the core runtime
 library in the context of registering a callback. This error may
 also occur when the core runtime library needs to spawn threads or
-create internal OS-specific events. 
-& \dbtt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT} 
+create internal OS-specific events.
+& \dbtt{HSA\_STATUS\_ERROR\_INVALID\_ARGUMENT}
 if {\itshape info} is NULL.
 \end{easylist}
 
@@ -194,12 +194,8 @@ One of the arguments of the notification callback is a structure
 that contains notification information. The structure is defined as
 follows:
 
-\input{STRerror_message}
+\input{example/STRerror_message}
 
 \subsection{Asynchronous Notification Example}
-\DIFdelbegin \DIFdel{This is }%DIFDELCMD < {\color{red} %%%
-\DIFdel{work-in-progress}%DIFDELCMD < } %%%
-\DIFdel{-- the chapter needs to be written.
- }\DIFdelend \DIFaddbegin \lstinputlisting{asyncerror.c}
+\lstinputlisting{example/asyncerror.c}
 
- \DIFaddend
