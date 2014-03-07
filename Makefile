@@ -1,33 +1,20 @@
-all: main.pdf
+# TODO (mmario): this Makefile is broken, needs to be simplified / use latexmk
+DOC=main
 
-pdf: main.pdf
+all : $(DOC).pdf
 
-main.pdf:
+$(DOC).pdf:
 	# generate tex files from corebase.h
 	cd example && python generate.py
-	# generate the corebase pdf from current version
-	# cp coreapierror074.tex coreapierror.tex
-	# cp coreapiopen074.tex coreapiopen.tex
-	# cp coreapitopo074.tex coreapitopo.tex
-	# cp coreapisignal074.tex coreapisignal.tex
-	# cp coreapiqueue074.tex coreapiqueue.tex
-	# cp coreapiaql074.tex coreapiaql.tex
-	# cp coreapimemory074.tex coreapimemory.tex
-	# cp finalizer074.tex finalizer.tex
-	# cp index074.tex index.tex
-	arlatex --document=main.tex --outfile=mainblob.tex
-	pdflatex main
-	bibtex main
-	bibtex main
-	makeindex main.idx
-	pdflatex main
-	latex_count=5 ; \
-	while egrep -s 'Rerun (LaTeX|to get cross-references right)' main.log && [ $$latex_count -gt 0 ] ;\
-	    do \
-	      echo "Rerunning latex...." ;\
-	      pdflatex main ;\
-	      latex_count=`expr $$latex_count - 1` ;\
-	    done
+	pdflatex $(DOC)
+	bibtex $(DOC)
+	bibtex $(DOC)
+	makeindex $(DOC).idx
+	count=3 ; while egrep -s 'Rerun (LaTeX|to get cross-references right)' $(DOC).log && [ $$count -gt 0 ] ; do \
+		echo "Rerunning latex...." ;\
+		pdflatex $(DOC) ;\
+		count=`expr $$count - 1` ;\
+	done
 
 # diff:
 # 	cp main.pdf hsa_core_runtime_0_74_0.pdf
