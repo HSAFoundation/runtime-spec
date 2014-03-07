@@ -141,9 +141,8 @@ Style2*=$\bullet$ ,Style1*=$\triangleright$ )
 \includegraphics[width=.5\textwidth]{fig/foundation.png}
 \vspace*{7cm}
 \begin{center}
-%% CHANGE ME .173 => 174
 {\Large H\-S\-A Core API Programmers Reference Manual\\[1ex]\large
-0.\-173 }\\
+0.\-174 }\\
 \vspace*{1cm}
 \vspace*{0.5cm}
 {\small 17 February 2013}\\
@@ -361,10 +360,6 @@ Flow}\label{glue}
 \hypertarget{executionmodel}{}\section{Execution
 Model}\label{executionmodel}
 }
-%% CHANGE ME  - delete what follows
-Host/HSAIL – brief intro that describes host running host code
-include HSA runtime, components running HSAIL.
-
 \diffblock{\hypertarget{archdispatch}{}\subsection{Architected Dispatch}
 \label{archdispatch}}
 Core runtime exposes several details of the HSA hardware,
@@ -718,11 +713,7 @@ follows:
 
 \input{example/STRerror_message}
 \subsection{Asynchronous Notification Example}
-%% CHANGE ME
-%% BEFORE
-This is work in progress - the chapter needs to be written
-%% AFTER
-%%\lstinputlisting{example/asyncerror.c}
+\lstinputlisting{example/asyncerror.c}
 
 %%\input{api_open.tex}
 \hypertarget{init}{}\section{Open and close}\label{init}
@@ -877,32 +868,20 @@ integer. The context does not wrap around.
 
 %%\input{api_topology.tex}
 \hypertarget{component}{}\section{Topology and Component
-}\label{topology}
-HSA platform topology information is provided by the runtime by way of
-data structures so user can gather details about how a HSA
-system/platform exposed its architectural details such as
-%% CHANGE ME
-%% BEFORE
-components, memory, caches and connectivity (platform topology
-requirement is described in the SAR document)
-%% AFTER
-%% agents and memory
-. This information
-could be utilized by the user in different ways including decisions
-on where to execute a particular user task. Core runtime
-specification defines the topology table data structure and other
-data structures to represent topology hierarchy.  After the core
-runtime is initialized with \ttbf{hsa\_open}, the user may create a
-local copy of the topology information using the API
+}\label{topology} HSA platform topology information is provided by the
+runtime by way of data structures so user can gather details about how
+a HSA system/platform exposed its architectural details such as agents
+and memory. This information could be utilized by the user in
+different ways including decisions on where to execute a particular
+user task. Core runtime specification defines the topology table data
+structure and other data structures to represent topology hierarchy.
+After the core runtime is initialized with \ttbf{hsa\_open}, the user
+may create a local copy of the topology information using the API
 \ttbf{hsa\_topology\_table\_create}. The user can parse this table
 representing the HSA system to gather details such as the number of
 different HSA Components on the system with local access to a
-particular set of memory resources.
-%% CHANGE ME
-%% BEFORE
-
-%% AFTER
-%% Topology table is designed to be allocated in a block of contiguous memory.
+particular set of memory resources. Topology table is designed to be
+allocated in a block of contiguous memory.
 
 The \ttbf{hsa\_topology\_table\_create} API is defined as follows:
 
@@ -964,17 +943,13 @@ all levels of cache and the inclusive property for all but the
 last level. Each cache in the HSA system has a unique cache ID
 identifying it.
 
-The memory descriptor structure represents a physical memory block
-or region and includes elements to provide bandwidth
-%% CHANGE ME
-%% BEFORE
-%% AFTER
-%% (an implementation may chose to return 0 in the }{\itshape
-%% peak\_bandwidth\_mbps field if it cannot provide bandwidth)
-, interleave
-characteristics and latency for accessing memory. Implementations
-may choose not to provide memory bandwidth or latency information.
-The memory descriptor structure is defined as follows:
+The memory descriptor structure represents a physical memory block or
+region and includes elements to provide bandwidth (an implementation
+may chose to return 0 in the {\itshape peak\textunderscore bandwidth\textunderscore mbps} field if
+it cannot provide bandwidth) , interleave characteristics and latency
+for accessing memory. Implementations may choose not to provide memory
+bandwidth or latency information.  The memory descriptor structure is
+defined as follows:
 
 \input{example/STRhsa_memory_descriptor}
 
@@ -1020,7 +995,7 @@ the error encountered in a component was recovered, the topology
 table may not look different from the users perception.
 
 \hypertarget{topology_example}{} \subsection{Topology Example}
-This is {\color{red} work-in-progress} -- the chapter needs to be written.
+This is {\color{red} work-in-progress} - the chapter needs to be written.
 
 %%\input{api_signal.tex}
 \hypertarget{signals}{}\section{Memory based Signals and
@@ -1032,15 +1007,8 @@ between various elements.  A signal is an alternative, possibly more
 power-efficient, communication mechanism between two entities in a
 H\-S\-A system. A signal carries a value, which can be updated or
 conditionally waited upon via an API call or, optionally, an HSAIL
-instruction.
-%% CHANGE ME
-%% BEFORE
-A signal structure is opaque and is always typedef'ed to.
-%% AFTER
-%% EMPTY
-
-Implementations can use the most power-efficient send-propagation
-and wait techniques available to them on the HSA system.
+instruction. Implementations can use the most power-efficient send-propagation
+and wait techniques available to them on the  HSA system.
 %Implementations may choose to
 %make it a pointer to a private, internal, signal structure.
 
@@ -1051,13 +1019,7 @@ runtime API for allocation of signals that may be used for
 synchronization and states that the signal is opaque and may contain
 implementation specific information.
 
-The signal handle, which represents a signal, and
-%% CHANGE ME
-%% BEFORE
-%% EMPTY
-%% AFTER
-%% the structure for
-
+The signal handle, which represents a signal, and the structure for
 the value the signal carries, are defined as follows:
 
 \begin{lstlisting}
@@ -1843,19 +1805,17 @@ must rely on the \texttt{finalizer} to get the corresponding segment
 sizes. Further details about determining segment sizes are described in
 Section~\ref{finalizerchapter}.
 
-Of the other HSA segments, the kernarg segment is also a part of
-the AQL packet, but as a pointer. This is because the kernarg segment
-carries the arguments required to execute the kernel being
-dispatched and must be setup by the user (the layout of this
-segment is language/finalization specific and associated with the
-code object generated by finalization) prior to writing the AQL
-packet to the queue (unlike the group and private segments, whose
-lifespan spans only the active state of the AQL dispatch packet).
-%% CHANGE ME
-%% BEFORE
-%% EMPTY
-%% AFTER
-%%Please refer to the HSAIL service layer for an example on how to setup the kernarg segment for the HSAIL language, which is based on the 32/64 bit modes the kernel is compiled in.
+Of the other HSA segments, the kernarg segment is also a part of the
+AQL packet, but as a pointer. This is because the kernarg segment
+carries the arguments required to execute the kernel being dispatched
+and must be setup by the user (the layout of this segment is
+language/finalization specific and associated with the code object
+generated by finalization) prior to writing the AQL packet to the
+queue (unlike the group and private segments, whose lifespan spans
+only the active state of the AQL dispatch packet).  Please refer to
+the HSAIL service layer for an example on how to setup the kernarg
+segment for the HSAIL language, which is based on the 32/64 bit modes
+the kernel is compiled in.
 
 \hypertarget{agent_packet}{}\subsection{Agent Dispatch AQL
 Packet}\label{agent_packet}
