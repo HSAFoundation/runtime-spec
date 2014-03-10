@@ -10,7 +10,7 @@ extern "C" {
  */
 typedef enum hsa_status_t{
     /**
-     * indicates success. The API has been successfully executed per its definition. 
+     * indicates success. The API has been successfully executed per its definition.
      */
     HSA_STATUS_SUCCESS=0,
 
@@ -27,7 +27,7 @@ typedef enum hsa_status_t{
 
     /**
      * indicates that signal is timedout
-     */  
+     */
     HSA_STATUS_INFO_SIGNAL_TIMEOUT
 } hsa_status_t;
 /** @}**************************************************************/
@@ -38,7 +38,7 @@ typedef enum hsa_status_t{
  */
 /**
  * @brief
- * 
+ *
  * @param input_status
  *      is input argument. Any unsuccessful API return status that the user is seeking more
  *      information on.
@@ -51,8 +51,8 @@ typedef enum hsa_status_t{
  *      potentially describes the error status. The string terminates in a ISO
  *      646 defined NUL char.
  */
-hsa_status_t hsa_status_query_description(hsa_status_t input_status, 
-    uint64_t *status_info, 
+hsa_status_t hsa_status_query_description(hsa_status_t input_status,
+    uint64_t *status_info,
     char * const * status_info_string);
 /** @}**************************************************************/
 
@@ -140,7 +140,7 @@ typedef struct hsa_async_error_info_s{
      * additional info to be intepreted based on the error\_type
      */
     uint64_t     reserved3;
-    
+
 } hsa_async_error_info_t;
 /** @}**************************************************************/
 
@@ -196,7 +196,7 @@ hsa_status_t hsa_error_callback_register(void ( *error_callback)(const hsa_async
  * @brief
  *
  * @param context
- *      output, user allocated. A type for reference counting. 
+ *      output, user allocated. A type for reference counting.
  *
  *
  */
@@ -418,12 +418,12 @@ typedef enum hsa_property_t{
     HSA_MAX_FLOPS,
 
     /**
-     * Theoretical peak integer operations supported by the agent, if applicable. 
+     * Theoretical peak integer operations supported by the agent, if applicable.
      */
     HSA_MAX_IOPS,
 
     /**
-     * Theoretical peak integer operations supported by the agent, if applicable. 
+     * Theoretical peak integer operations supported by the agent, if applicable.
      */
     HSA_MAX_PROCESSING_ELEMENTS
 } hsa_property_t;
@@ -468,12 +468,12 @@ typedef struct hsa_agent_s{
     /**
      * Unique identifier for an HSA agent.
      */
-    uint32_t               agent_id;                      
+    uint32_t               agent_id;
 
     /**
      * an identifier for the type of this agent.
      */
-    hsa_agent_type_t       agent_type;               
+    hsa_agent_type_t       agent_type;
 
     /**
      * The vendor of the agent/component. ISO/IEC 646 character encoding must
@@ -493,28 +493,28 @@ typedef struct hsa_agent_s{
      * table of properties of the agent, any property that is not available has a value of 0
      */
     uint64_t               *property_table;
-    
-    /**
-     * number of the different types of memories available to this agent. 
-     */
-    uint32_t               number_memory_descriptors;      
 
-    /** 
+    /**
+     * number of the different types of memories available to this agent.
+     */
+    uint32_t               number_memory_descriptors;
+
+    /**
      * Array of memory descriptor offsets.  Number of elements in array equals
      * number\_memory\_descriptors.
     */
-    uint32_t               *memory_descriptors; 
+    uint32_t               *memory_descriptors;
 
     /**
      * Number of caches available to this agent/component
      */
-    uint32_t               number_cache_descriptors;      
+    uint32_t               number_cache_descriptors;
 
-    /** 
+    /**
      * Array of cache descriptor offsets.  Number of elements in array equals
      * number\_cache\_descriptors.
     */
-    uint32_t               *cache_descriptors; 
+    uint32_t               *cache_descriptors;
 
     /**
      * Number of subagents.
@@ -529,14 +529,14 @@ typedef struct hsa_agent_s{
     /**
      * Wave front size, i.e. number of work-items in a wavefront.
      */
-    uint32_t               wavefront_size;                
+    uint32_t               wavefront_size;
 
     /**
      * Maximum size of the user queue in bytes allocatable via the runtime.
-    */ 
-    uint32_t               queue_size;                     
-                                              
-    /** 
+    */
+    uint32_t               queue_size;
+
+    /**
      * Size (in bytes) of group memory available to a single work-group.
     */
     uint32_t               group_memory_size_bytes;
@@ -558,7 +558,7 @@ typedef struct hsa_platform_s{
      * 1-400MHz.
      */
     uint32_t                hsa_system_timestamp_frequency_mhz;
-    
+
     /**
      * number of different nodes in this platform configuration.
      */
@@ -580,27 +580,27 @@ typedef struct hsa_platform_s{
     uint32_t                *agent_offset_list_bytes;
 
     /**
-     * number of the different types of memories available to this agent. 
+     * number of the different types of memories available to this agent.
      */
-    uint32_t                number_memory_descriptors;      
+    uint32_t                number_memory_descriptors;
 
-    /** 
+    /**
      * each element in the array carries an offset into the topology table to
      * where memory descriptors are located.  Number of elements in array
      * equals number\_memory\_descriptors.
     */
-    uint32_t                *memory_descriptor_offset_list_bytes; 
+    uint32_t                *memory_descriptor_offset_list_bytes;
 
     /**
      * number of caches available to this agent/component
      */
-    uint32_t                number_cache_descriptors;      
+    uint32_t                number_cache_descriptors;
 
-    /** 
+    /**
      * array of offsets (into the topology table) to cache descriptors.  Number
      * of elements in array equals number\_cache\_descriptors.
     */
-    uint32_t                *cache_descriptors_offset_list_bytes; 
+    uint32_t                *cache_descriptors_offset_list_bytes;
 
 } hsa_platform_t;
 /** @}**************************************************************/
@@ -615,10 +615,10 @@ typedef struct hsa_topology_header_s{
      */
     uint32_t       header_size_bytes;
 
-    /** 
+    /**
      * the hierarchical platform structure that abstracts the table
      */
-    hsa_platform_t platform; 
+    hsa_platform_t platform;
 
     /**
      * size of the table
@@ -640,7 +640,7 @@ typedef struct hsa_topology_header_s{
  */
 /**
  * @brief
- * 
+ *
  * @param header
  *      output, runtime allocated. The topology header, this includes the base
  *      pointers to the rest of the topology table.
@@ -655,7 +655,7 @@ hsa_status_t hsa_topology_table_create(hsa_topology_header_t **header);
  */
 /**
  * @brief
- * 
+ *
  * @param header
  *      input, generated by \ttbf{hsa\_topology\_table\_create} API. The
  *      topology header, this includes the base pointers to the rest of the
@@ -672,21 +672,21 @@ hsa_status_t hsa_topology_table_destroy(hsa_topology_header_t *header);
 /**
  * @brief
  *
- * @param component_time 
+ * @param component_time
  *      input, the time in component clock frequence, this can be obtained by
  *      using clock\_u64 instruction in HSAIL
  * @param host_time
  *      output, time per host frequency (which is available via
- *      hsa_clock_query_host_frequency API) 
+ *      hsa_clock_query_host_frequency API)
  * @return TBD
  */
-hsa_status_t hsa_clock_convert_time_component_to_host(uint64_t component_time, 
+hsa_status_t hsa_clock_convert_time_component_to_host(uint64_t component_time,
     uint64_t *host_time);
 
 /**
  * @brief
  *
- * @param component_time 
+ * @param component_time
  *      input, the time in component clock frequence, this can be obtained by
  *      using clock\_u64 instruction in HSAIL
  * @param host_time
@@ -694,7 +694,7 @@ hsa_status_t hsa_clock_convert_time_component_to_host(uint64_t component_time,
  *      hsa_clock_query_host_frequency API)
  * @return TBD
  */
-hsa_status_t hsa_clock_convert_convert_time_host_to_component(uint64_t host_time, 
+hsa_status_t hsa_clock_convert_convert_time_host_to_component(uint64_t host_time,
     uint64_t *component_time);
 /** @}**************************************************************/
 
@@ -718,14 +718,14 @@ typedef union signal_value_s{
 typedef uint64_t hsa_signal_handle_t;
 
 /** \addtogroup APIsignal_create ---------------------------------------------
- * 
+ *
  *  @{
  */
 /**
  * @brief
- * @param initial_signal_value  
+ * @param initial_signal_value
  *      input. Initial value at the signal, the signal is initialized with this value.
- * @param signal_handle  
+ * @param signal_handle
  *      User allocated, output. The handle of the signal that this API creates.
  *      This handle is opaque.
  * @param context
@@ -744,12 +744,12 @@ hsa_status_t hsa_signal_create(hsa_signal_value_t intial_signal_value,
  */
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle that was obtained from \ttbf{hsa\_signal\_create} API.
  * @param context
- *      input. Additional context to which this signal should be bound to     
+ *      input. Additional context to which this signal should be bound to
  */
-hsa_status_t hsa_signal_bind(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_bind(hsa_signal_handle_t signal_handle,
     hsa_runtime_context_t *context);
 /** @}***********************************************************************/
 
@@ -758,12 +758,12 @@ hsa_status_t hsa_signal_bind(hsa_signal_handle_t signal_handle,
  */
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle that was obtained from \ttbf{hsa\_signal\_create} API.
  * @param context
  *      input. Unbind the signal from this context.
  */
-hsa_status_t hsa_signal_unbind(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_unbind(hsa_signal_handle_t signal_handle,
     hsa_runtime_context_t *context);
 /** @}***********************************************************************/
 
@@ -772,17 +772,17 @@ hsa_status_t hsa_signal_unbind(hsa_signal_handle_t signal_handle,
  */
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle that was obtained from \ttbf{hsa\_signal\_create} API.
  */
 hsa_status_t hsa_signal_destroy(hsa_signal_handle_t signal_handle);
 /** @}***********************************************************************/
 
 
-/** \addtogroup APIsignal_timeout -------------------------------------------- 
+/** \addtogroup APIsignal_timeout --------------------------------------------
  *  @{
  */
-/** 
+/**
  * @brief
  *
  */
@@ -795,164 +795,164 @@ uint64_t hsa_signal_get_timeout();
  */
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param signal_value  
+ * @param signal_value
  *      input. Value of the signal, with relaxed semantics,
  *      signal\_value is assigned to the value@signal\_handle.
  */
-hsa_status_t hsa_signal_send_relaxed(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_send_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t signal_value);
 
 
 /**
- * @brief 
- * @param signal_handle   
+ * @brief
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param add_value  
+ * @param add_value
  *      input. Value to add to the value@signal\_handle (the addition is atomic).
  */
-hsa_status_t hsa_signal_add_release(hsa_signal_handle_t signal_handle, 
-                hsa_signal_value_t add_value);
-
-/**
- * @brief 
- * @param signal_handle   
- *      input. Opaque handle of the signal object that is to be signaled.
- * @param add_value  
- *      input. Value to add to the value@signal\_handle (the addition is atomic).
- */
-hsa_status_t hsa_signal_add_relaxed(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_add_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t add_value);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param and_value  
+ * @param add_value
+ *      input. Value to add to the value@signal\_handle (the addition is atomic).
+ */
+hsa_status_t hsa_signal_add_relaxed(hsa_signal_handle_t signal_handle,
+                hsa_signal_value_t add_value);
+
+/**
+ * @brief
+ * @param signal_handle
+ *      input. Opaque handle of the signal object that is to be signaled.
+ * @param and_value
  *      input. Value to do an And with, value@signal\_handle \&= and\_value.
  */
-hsa_status_t hsa_signal_and_release(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_and_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t and_value);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param and_value  
+ * @param and_value
  *      input. Value to do an And with, value@signal\_handle \&= and\_value.
  */
-hsa_status_t hsa_signal_and_relaxed(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_and_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t and_value);
 
 /**
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param or_value  
+ * @param or_value
  *      input. value@signal\_handle OR= or\_value.
  */
-hsa_status_t hsa_signal_or_release(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_or_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t or_value);
 
 /**
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param or_value  
+ * @param or_value
  *      input. value@signal\_handle OR= or\_value.
  */
-hsa_status_t hsa_signal_or_relaxed(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_or_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t or_value);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal\ object that is to be signaled.
- * @param xor_value  
+ * @param xor_value
  *      input. Value to do an XOR with, value@signal\_handle XOR= xor\_value.
  */
-hsa_status_t hsa_signal_xor_release(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_xor_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t xor_value);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal\ object that is to be signaled.
- * @param xor_value  
+ * @param xor_value
  *      input. Value to do an XOR with, value@signal\_handle XOR= xor\_value.
  */
-hsa_status_t hsa_signal_xor_relaxed(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_xor_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t xor_value);
 
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param exchange_value  
+ * @param exchange_value
  *      user allocated, input/output. Exchange value, the value to be placed at
  *      signal, value@signal\_handle , after being stored in value\_at\_signal,
  *      is overwritten with exchange\_value.
- * @param value_at_signal  
+ * @param value_at_signal
  *      user allocated, output. value\_at\_signal = value@signal\_handle;
  *      value@signal\_handle = exchange\_value.
  */
-hsa_status_t hsa_signal_exchange_release(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_exchange_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t exchange_value,
                 hsa_signal_value_t *value_at_signal);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param exchange_value  
+ * @param exchange_value
  *      user allocated, input/output. Exchange value, the value to be placed at
  *      signal, value@signal\_handle , after being stored in value\_at\_signal,
  *      is overwritten with exchange\_value.
- * @param value_at_signal  
+ * @param value_at_signal
  *      user allocated, output. value\_at\_signal = value@signal\_handle;
  *      value@signal\_handle = exchange\_value.
  */
-hsa_status_t hsa_signal_exchange_relaxed(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_exchange_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t exchange_value,
                 hsa_signal_value_t *value_at_signal);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param decrement_value  
+ * @param decrement_value
  *      input. Value the signal is to be decremented with, value@signal\_handle -=
  *      decrement\_value.
  */
-hsa_status_t hsa_signal_decrement_release(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_decrement_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t decrement_value);
 
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param decrement_value  
+ * @param decrement_value
  *      input. Value the signal is to be decremented with, value@signal\_handle -=
  *      decrement\_value.
  */
-hsa_status_t hsa_signal_decrement_relaxed(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_decrement_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t decrement_value);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param value_compare  
+ * @param value_compare
  *      input. The value to compare value@signal\_handle against (operator is equal to).
- * @param value_replace  
+ * @param value_replace
  *      input. the value to replace the value@signal\_handle with if signal.value was
  *      equal to value\_compare.
- * @param value_at_signal  
+ * @param value_at_signal
  *      user allocated, output. The value at the signal, prior to the atomic replace, if the
  *      comparision was successful.
  */
-hsa_status_t hsa_signal_cas_release(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_cas_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t value_compare,
                 hsa_signal_value_t value_replace,
                 hsa_signal_value_t *value_at_signal);
@@ -960,84 +960,84 @@ hsa_status_t hsa_signal_cas_release(hsa_signal_handle_t signal_handle,
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param compare_value  
+ * @param compare_value
  *      input. Compared with value@signal\_handle to determine maximum.
- * @param max_value  
+ * @param max_value
  *      user allocated, output. MAX(compare\_value, value@signal\_handle). The
  *      signal value is updated with the max value.
  */
-hsa_status_t hsa_signal_max(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_max(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t compare_value,
                 hsa_signal_value_t *max_value);
 
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled.
- * @param compare_value  
+ * @param compare_value
  *      input. value@signal\_handle is compared with this and the minimum of the two
  *      returned.
- * @param min_value  
+ * @param min_value
  *      user allocated, output. min(compare\_value, value@signal\_handle). The
  *      signal value is updated with the min value.
 */
-hsa_status_t hsa_signal_min(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_min(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t compare_value,
                 hsa_signal_value_t *min_value);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled
- * @param signal_value  
+ * @param signal_value
  *      input. Value of the signal
  */
-hsa_status_t hsa_signal_send_release(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_send_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t signal_value);
 
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled
- * @param subtract_value  
+ * @param subtract_value
  *      input. Value to be subtracted from the value@signal\_handle.
  */
-hsa_status_t hsa_signal_subtract_release(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_subtract_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t subtract_value);
 
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled
- * @param subtract_value  
+ * @param subtract_value
  *      input. Value to be subtracted from the value@signal\_handle.
  */
-hsa_status_t hsa_signal_subtract_relaxed(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_subtract_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t subtract_value);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled
- * @param increment_value  
+ * @param increment_value
  *      input. Value to do the increment with
  */
-hsa_status_t hsa_signal_increment_release(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_increment_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t increment_value);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal object that is to be signaled
- * @param increment_value  
+ * @param increment_value
  *      input. Value to do the increment with
  */
-hsa_status_t hsa_signal_increment_relaxed(hsa_signal_handle_t signal_handle, 
+hsa_status_t hsa_signal_increment_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t increment_value);
 
 
@@ -1091,9 +1091,9 @@ typedef enum hsa_signal_condition_t{
  */
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal whose value is to be retrieved.
- * @param value  
+ * @param value
  *      user allocated, output. Pointer to where the current
  *      value@signal\_handle must be read into.
 */
@@ -1108,39 +1108,39 @@ hsa_status_t hsa_signal_query_acquire(hsa_signal_handle_t signal_handle,
  */
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal whose value is to be retrieved.
- * @param cond 
+ * @param cond
  *      input. apply this condition to compare the wait\_value with
  *      value@signal\_handle and return the value@signal\_handle only when the
  *      condition is met.
  * @param compare_value
  *      input. value to compare with.
- * @param return_value  
+ * @param return_value
  *      user allocated, output. Pointer to where the current
  *      value@signal\_handle must be read into.
 */
 hsa_status_t hsa_signal_wait_acquire(hsa_signal_handle_t signal_handle,
-                          hsa_signal_condition_t cond, 
+                          hsa_signal_condition_t cond,
                           hsa_signal_value_t compare_value,
                           hsa_signal_value_t *return_value);
 
 /**
  * @brief
- * @param signal_handle   
+ * @param signal_handle
  *      input. Opaque handle of the signal whose value is to be retrieved.
- * @param cond 
+ * @param cond
  *      input. apply this condition to compare the compare\_value with
  *      value@signal\_handle and return the value@signal\_handle only when the
  *      condition is met.
  * @param compare_value
  *      input. value to compare with.
- * @param return_value  
+ * @param return_value
  *      user allocated, output. Pointer to where the current
  *      value@signal\_handle must be read into.
  */
 hsa_status_t hsa_signal_wait_acquire_release(hsa_signal_handle_t signal_handle,
-                          hsa_signal_condition_t cond, 
+                          hsa_signal_condition_t cond,
                           hsa_signal_value_t compare_value,
                           hsa_signal_value_t *return_value);
 /** @}***********************************************************************/
@@ -1186,45 +1186,45 @@ typedef struct hsa_group_execution_info_s{
     /**
      * what caused this execution to stop.
      */
-    hsa_interrupt_condition_t *condition; 
-  
+    hsa_interrupt_condition_t *condition;
+
     /**
      * the flattend workitem IDs, array[workgroup\_size].
      */
     uint32_t *workitem_id;
-    
+
     /**
      * the ID of the compute unit, array[workgroup\_size].
      */
-    uint32_t *compute_unit_id;         
-    
+    uint32_t *compute_unit_id;
+
     /**
      * pointer to the AQL packet, array[workgroup\_size].
      */
-    uint64_t *aql_packet_ptr;          
-                                       
+    uint64_t *aql_packet_ptr;
+
     /**
      * any pertinent virtual address, array[workgroup\_size].
      */
-    uint64_t *virtual_address;         
-    
+    uint64_t *virtual_address;
+
     /**
      * the current program counter, array[workgroup\_size].
      */
-    uint64_t *current_program_counter; 
-                                       
+    uint64_t *current_program_counter;
+
     /**
      * location to where the arguments have been stored. The size and contents
      * are written by the component and need to be decoded by the agent when
      * reading this.
      */
-    uint64_t args;  
+    uint64_t args;
 
     /**
      * if the condition is syscall, location to where the outputs need to be
      * stored. This is array[workgroup\_size].
      */
-    uint64_t **syscall_output;         
+    uint64_t **syscall_output;
 
 } hsa_group_execution_info_t;
 /** @}***********************************************************************/
@@ -1235,7 +1235,7 @@ typedef struct hsa_group_execution_info_s{
  */
 typedef struct hsa_queue_mailbox_t {
   /**
-   * A pointer to the mailbox 
+   * A pointer to the mailbox
    */
   const hsa_group_execution_info_t *mailbox_ptr;
 
@@ -1252,14 +1252,14 @@ typedef struct hsa_queue_mailbox_t {
  *  @{
  */
 typedef struct hsa_queue_s{
-  /** 
+  /**
    * used for dynamic queue protocol determination. Currently, 0, the default
    * queue type, is the only type supported.
    */
   uint32_t queue_type;
 
 
-  /** 
+  /**
    * bitfield to indicate specific features supported by queue. On a queue
    * creation, if user observes that some unknown bits are set, then the user
    * should ignore them.
@@ -1267,7 +1267,7 @@ typedef struct hsa_queue_s{
   uint32_t queue_features;
 
 
-  /** 
+  /**
    * A 64-bit pointer to the base of the virtual memory which holds the AQL
    * packets for the queue. At the time of queue creation, the address passed
    * in by the user as queue memory is copied here. This address must be
@@ -1276,7 +1276,7 @@ typedef struct hsa_queue_s{
   uint64_t base_address;
 
 
-  /** 
+  /**
    * After writing a packet to the queue, user must signal this signal object
    * with the most recent write\_offset. The packet may already have been
    * processed by the packet processor by the time this doorbell is signaled,
@@ -1333,7 +1333,7 @@ typedef struct hsa_aql_packet_header_s {
   /**
    * 8 bits for describing the packet type, 0 for INVALID, 1 for COMPONENT
    * DISPATCH, 2 for BARRIER and 4 for AGENT DISPATCH. All other values are
-   * reserverd.  
+   * reserverd.
    */
   uint16_t format:8;
 
@@ -1351,8 +1351,8 @@ typedef struct hsa_aql_packet_header_s {
    * Table~\ref{acquirefencescope}.
    */
   uint16_t acquire_fence_scope:2;
-    
-    
+
+
   /**
    * Determines the scope and type of the memory fence operation applied after
    * kernel completion but before the packet is completed. The different values
@@ -1398,7 +1398,7 @@ typedef struct hsa_aql_dispatch_packet_s{
 
 
   /**
-     reserved 
+     reserved
   */
   uint16_t  reserved2;
 
@@ -1436,7 +1436,7 @@ typedef struct hsa_aql_dispatch_packet_s{
 
   /**
      Address of an object in memory that includes an
-     implementation-defined executable ISA image for the kernel. 
+     implementation-defined executable ISA image for the kernel.
   */
   uint64_t  kernel_object_address;
 
@@ -1473,7 +1473,7 @@ typedef struct hsa_aql_barrier_packet_s{
 
 
   /**
-     reserved 
+     reserved
    */
   uint32_t reserved2;
 
@@ -1514,7 +1514,7 @@ typedef struct hsa_aql_barrier_packet_s{
 
 
   /**
-     reserved 
+     reserved
   */
   uint64_t reserved3;
 
@@ -1523,7 +1523,7 @@ typedef struct hsa_aql_barrier_packet_s{
      HSA signaling object used to indicate completion of the dependency
      resolution, success of failure
    */
-  uint64_t completion_signal;                 
+  uint64_t completion_signal;
 
 
 } hsa_aql_barrier_packet_t;
@@ -1551,7 +1551,7 @@ typedef struct hsa_aql_agent_dispatch_packet_s{
   /**
    * Must be 0.
    */
-  uint32_t  reserved2; 
+  uint32_t  reserved2;
 
   /**
    * Pointer to location to store the function return value(s) in.
@@ -1566,7 +1566,7 @@ typedef struct hsa_aql_agent_dispatch_packet_s{
   /**
    * 64-bit direct or indirect arguments.
    */
-  uint64_t  arg1;  
+  uint64_t  arg1;
 
   /**
    * 64-bit direct or indirect arguments.
@@ -1581,12 +1581,12 @@ typedef struct hsa_aql_agent_dispatch_packet_s{
   /**
    * Must be 0.
    */
-  uint64_t  reserved3; 
+  uint64_t  reserved3;
 
   /**
    * Address of HSA signaling object used to indicate completion of the job.
    */
-  uint64_t  completionSignal;  
+  uint64_t  completionSignal;
 
 } hsa_aql_agent_dispatch_packet_t;
 /** @}***********************************************************************/
@@ -1625,29 +1625,29 @@ typedef enum hsa_service_queue_type_s {
  *  @{
  */
 /**
- * @brief 
+ * @brief
  *
- * @param component  
+ * @param component
  *      input. The component on which this queue is to be created.
- * @param size  
+ * @param size
  *      input. Size of the queue memory in number of packets in is expected to hold.
- * @param queue_type  
+ * @param queue_type
  *      input. type of the queue (only type 0, which is default in-order issue
  *      queue, is supported at this time).
  * @param service_queue_type
  *      input. The user can choose between NONE (no service queue), COMMON
  *      (runtime provided service queue that is shared), NEW (require the
- *      runtime to create a new queue). 
+ *      runtime to create a new queue).
  * @param context
  *      input. The context in which this queue is being created. Any
  *      errors/notifications will be reported via callbacks registered in the
  *      same context.
- * @param queue  
+ * @param queue
  *      runtime allocated, output. The queue structure, filled up and returned
  *      by the runtime.
  * @param mailbox
  *      mailbox to gather execution information to be used for debug trap. User
- *      may pass NULL here if the user doesn't want the mailbox created.     
+ *      may pass NULL here if the user doesn't want the mailbox created.
  */
 hsa_status_t hsa_queue_create(const hsa_agent_t *component,
                                          size_t size,
@@ -1664,7 +1664,7 @@ hsa_status_t hsa_queue_create(const hsa_agent_t *component,
  */
 /**
  * @brief
- * @param queue  
+ * @param queue
  *      input. The queue that needs to be inactivated.
  */
 hsa_status_t hsa_queue_inactivate(hsa_queue_t *queue);
@@ -1676,11 +1676,11 @@ hsa_status_t hsa_queue_inactivate(hsa_queue_t *queue);
  */
 /**
  * @brief
- * @param queue  
+ * @param queue
  *      input. The queue structure that points to the queue that needs to be
  *      destroyed, after destruction base\_address or the rest of the queue
- *      structure, even if cached by the user, are no longer valid. 
- *      
+ *      structure, even if cached by the user, are no longer valid.
+ *
  */
 hsa_status_t hsa_queue_destroy(hsa_queue_t *queue);
 /** @}***********************************************************************/
@@ -1730,8 +1730,8 @@ uint64_t hsa_queue_get_write_index_acquire(hsa_queue_t *queue);
  * @param val
  *      input. The new value of the write index.
  */
-uint64_t hsa_queue_set_write_index_relaxed(hsa_queue_t *q, 
-    uint64_t val); 
+uint64_t hsa_queue_set_write_index_relaxed(hsa_queue_t *q,
+    uint64_t val);
 
 /**
  * @brief
@@ -1741,8 +1741,8 @@ uint64_t hsa_queue_set_write_index_relaxed(hsa_queue_t *q,
  * @param val
  *      input. The new value of the write index.
  */
-uint64_t hsa_queue_set_write_index_release(hsa_queue_t *q, 
-    uint64_t val); 
+uint64_t hsa_queue_set_write_index_release(hsa_queue_t *q,
+    uint64_t val);
 
 /**
  * @brief
@@ -1750,12 +1750,12 @@ uint64_t hsa_queue_set_write_index_release(hsa_queue_t *q,
  * @param queue
  *      input. The HSA queue structure.
  * @param old_val
- *      input. The value to compare with 
- * @param new_val 
+ *      input. The value to compare with
+ * @param new_val
  *      input. If a match is determined, the write index is updated with new\_val
  */
-uint64_t hsa_queue_cas_write_index(hsa_queue_t *q, 
-    uint64_t old_val, 
+uint64_t hsa_queue_cas_write_index(hsa_queue_t *q,
+    uint64_t old_val,
     uint64_t new_val);
 
 
@@ -1765,12 +1765,12 @@ uint64_t hsa_queue_cas_write_index(hsa_queue_t *q,
  * @param queue
  *      input. The HSA queue structure.
  * @param old_val
- *      input. The value to compare with 
- * @param new_val 
+ *      input. The value to compare with
+ * @param new_val
  *      input. If a match is determined, the write index is updated with new\_val
  */
-uint64_t hsa_queue_cas_write_index_release(hsa_queue_t *q, 
-    uint64_t old_val, 
+uint64_t hsa_queue_cas_write_index_release(hsa_queue_t *q,
+    uint64_t old_val,
     uint64_t new_val);
 
 
@@ -1780,12 +1780,12 @@ uint64_t hsa_queue_cas_write_index_release(hsa_queue_t *q,
  * @param queue
  *      input. The HSA queue structure.
  * @param old_val
- *      input. The value to compare with 
- * @param new_val 
+ *      input. The value to compare with
+ * @param new_val
  *      input. If a match is determined, the write index is updated with new\_val
  */
-uint64_t hsa_queue_cas_write_index_acquire(hsa_queue_t *q, 
-    uint64_t old_val, 
+uint64_t hsa_queue_cas_write_index_acquire(hsa_queue_t *q,
+    uint64_t old_val,
     uint64_t new_val);
 
 
@@ -1795,12 +1795,12 @@ uint64_t hsa_queue_cas_write_index_acquire(hsa_queue_t *q,
  * @param queue
  *      input. The HSA queue structure.
  * @param old_val
- *      input. The value to compare with 
- * @param new_val 
+ *      input. The value to compare with
+ * @param new_val
  *      input. If a match is determined, the write index is updated with new\_val
  */
-uint64_t hsa_queue_cas_write_index_relaxed(hsa_queue_t *q, 
-    uint64_t old_val, 
+uint64_t hsa_queue_cas_write_index_relaxed(hsa_queue_t *q,
+    uint64_t old_val,
     uint64_t new_val);
 
 /**
@@ -1809,12 +1809,12 @@ uint64_t hsa_queue_cas_write_index_relaxed(hsa_queue_t *q,
  * @param queue
  *      input. The HSA queue structure.
  * @param old_val
- *      input. The value to compare with 
- * @param new_val 
+ *      input. The value to compare with
+ * @param new_val
  *      input. If a match is determined, the write index is updated with new\_val
  */
-uint64_t hsa_queue_cas_write_index_acquire_release(hsa_queue_t *q, 
-    uint64_t old_val, 
+uint64_t hsa_queue_cas_write_index_acquire_release(hsa_queue_t *q,
+    uint64_t old_val,
     uint64_t new_val);
 
 /**
@@ -1825,7 +1825,7 @@ uint64_t hsa_queue_cas_write_index_acquire_release(hsa_queue_t *q,
  * @param val
  *      input. The value to add to the write index
  */
-uint64_t hsa_queue_add_write_index_relaxed(hsa_queue_t *q, 
+uint64_t hsa_queue_add_write_index_relaxed(hsa_queue_t *q,
     uint64_t val);
 
 /**
@@ -1836,7 +1836,7 @@ uint64_t hsa_queue_add_write_index_relaxed(hsa_queue_t *q,
  * @param val
  *      input. The value to add to the write index
  */
-uint64_t hsa_queue_add_write_index_acquire(hsa_queue_t *q, 
+uint64_t hsa_queue_add_write_index_acquire(hsa_queue_t *q,
     uint64_t val);
 
 /**
@@ -1847,7 +1847,7 @@ uint64_t hsa_queue_add_write_index_acquire(hsa_queue_t *q,
  * @param val
  *      input. The value to add to the write index
  */
-uint64_t hsa_queue_add_write_index_release(hsa_queue_t *q, 
+uint64_t hsa_queue_add_write_index_release(hsa_queue_t *q,
     uint64_t val);
 
 /**
@@ -1858,7 +1858,7 @@ uint64_t hsa_queue_add_write_index_release(hsa_queue_t *q,
  * @param val
  *      input. The value to add to the write index
  */
-uint64_t hsa_queue_add_write_index_acquire_release(hsa_queue_t *q, 
+uint64_t hsa_queue_add_write_index_acquire_release(hsa_queue_t *q,
     uint64_t val);
 
 /** @}***********************************************************************/
@@ -1870,9 +1870,9 @@ uint64_t hsa_queue_add_write_index_acquire_release(hsa_queue_t *q,
 /**
  * @brief
  *
- * @param error_code  
+ * @param error_code
  *      input. the error code to convert to string
- * @param error_string  
+ * @param error_string
  *      output. the string description of the error code
  */
 hsa_status_t hsa_queue_error_string_from_code(
@@ -2015,7 +2015,7 @@ typedef enum hsa_control_directive_present_mask_t {
    * says that max for dynamic group size is specified
    */
   HSA_CONTROL_DIRECTIVE_MAX_DYNAMIC_GROUP_SIZE = 2,
-  
+
   /**
    * if enabled
    */
@@ -2049,7 +2049,7 @@ typedef enum hsa_control_directive_present_mask_t {
   /**
    * if enabled
    */
-  HSA_CONTROL_DIRECTIVE_REQUIRE_NO_PARTIAL_WORKGROUPS = 256 
+  HSA_CONTROL_DIRECTIVE_REQUIRE_NO_PARTIAL_WORKGROUPS = 256
 
 } hsa_control_directive_present_mask_t;
 
@@ -2125,7 +2125,7 @@ typedef struct hsa_control_directives_s {
 
   /**
    If this is is not enabled in {\itshape enabled\_control\_directives} then
-   must be 0, otherwise must be greater than 0. 
+   must be 0, otherwise must be greater than 0.
    See HSA Programmer's Reference Manual description of maxflatgridsize control
    directive.
    */
@@ -2133,7 +2133,7 @@ typedef struct hsa_control_directives_s {
 
   /**
    If this is is not enabled in {\itshape enabled\_control\_directives} then
-   must be 0, otherwise must be greater than 0. 
+   must be 0, otherwise must be greater than 0.
    See HSA Programmer's Reference Manual description of maxflatgridsize control
    directive.
    */
@@ -2142,7 +2142,7 @@ typedef struct hsa_control_directives_s {
   /**
    If this is is not enabled in {\itshape enabled\_control\_directives} then
    must be 0 and the finalizer may generate ISA that could result in any number
-   of work-groups executing on a single compute unit. 
+   of work-groups executing on a single compute unit.
    Otherwise, the finalizer will \emph{attempt} to generate ISA
    that will allow the specified number of work-groups to execute
    on a single compute unit. This is only a hint and can be ignored
@@ -2150,10 +2150,10 @@ typedef struct hsa_control_directives_s {
    functions it calls, has the same control directive, then the
    values must be the same or the finalization can fail. This can be used to
    determine the number of resources that should be allocated to a single
-   work-group and work-item. 
+   work-group and work-item.
    */
   uint32_t requested_workgroups_per_cu;
- 
+
   /**
    If not enabled then all elements for Dim3 must be 0, otherwise
    every element must be greater than 0. See HSA Programmer's
@@ -2161,7 +2161,7 @@ typedef struct hsa_control_directives_s {
    directive.
    */
   hsa_dim3_t required_grid_size;
-  
+
   /**
    If not enabled then all elements for Dim3 must be 0, and the produced code
    can be dispatched with any legal work-group range consistent with the
@@ -2232,7 +2232,7 @@ typedef struct hsa_code_s {
    be set to sizeof(hsa\_*\_code\_t). Used for backward compatibility.
    */
   uint32_t struct_byte_size;
-  
+
   /**
    Offset from base of hsa\_code\_t to compilationunit\_code\_t that
    contains this hsa\_code\_t to the base of this hsa\_code\_t. Can be
@@ -2411,17 +2411,17 @@ typedef struct hsa_code_entry_s {
  *  @{
  */
 typedef enum hsa_code_kind_t {
-  /** 
+  /**
    * Not a code object
    */
   HSA_CODE_NONE = 0,
 
-  /** 
+  /**
    * HSAIL kernel that can be used with an AQL dispatch packet.
    */
   HSA_CODE_KERNEL = 1,
 
-  /** 
+  /**
    * HSAIL function.
    */
   HSA_CODE_FUNCTION = 2,
@@ -2606,7 +2606,7 @@ typedef struct hsa_compilationunit_debug_s {
 } hsa_compilationunit_debug_t;
 /** @}***********************************************************************/
 
-typedef void* hsa_finalize_brig_caller_t; 
+typedef void* hsa_finalize_brig_caller_t;
 
 typedef hsa_status_t (*hsa_alloc_t)(
       hsa_finalize_brig_caller_t caller,
@@ -2633,9 +2633,9 @@ typedef hsa_status_t (*hsa_alloc_t)(
  * @param caller
  *      Opaque pointer and will be passed to all call back functions made by
  *      this call of the finalizer.
- * @param component 
+ * @param component
  *      input. A valid pointer to the hsa\_agent\_t.
- * @param brig 
+ * @param brig
  *      input. A pointer to the in memory BRIG structure.
  * @param code_count
  *      The number of kernels plus functions to produce hsa\_kernel\_code\_t and
@@ -2647,10 +2647,10 @@ typedef hsa_status_t (*hsa_alloc_t)(
  *      section of the passed brig of a kernel or function definition. These
  *      will be the kernels and functions that will have code objects generated
  *      in the produced hsa\_compilationunit\_code\_t
- * @param control_directives 
+ * @param control_directives
  *      The control directives that can be specified to influence how the
  *      finalizer generates code. If NULL then no control directives are used.
- * @param map_symbol_address 
+ * @param map_symbol_address
  *      Used by the finalizer to obtain the segment address for global
  *      segment symbols. The value of caller will be passed to every call.
  * @param allocate_compilationunit_code
@@ -2659,20 +2659,20 @@ typedef hsa_status_t (*hsa_alloc_t)(
  *      hsa\_compilationunit\_code\_t that is returned. It is the
  *      responsibility of the call of the finalizer to deallocate this memory,
  *      even if the finalizer does not report success.
- * @param allocate_compilationunit_debug 
+ * @param allocate_compilationunit_debug
  *      The callback function that the finalizer will use to allocate the
  *      memory that will be used for the hsa\_compilationunit\_debug\_t that is
  *      returned. It is the responsibility of the call of the finalizer to
  *      destroy this memory, even if the finalizer does not report success.
- * @param optimization_level 
+ * @param optimization_level
  *      an implementation defined value that control the level of optimization
  *      performed by the finalizer.
- * @param options 
+ * @param options
  *      implementation defined options that can be specified to the finalizer.
  *      compilationunit\_code: if the return status is success then a pointer to
  *      the generated hsa\_compilationunit\_code\_t for the HSA component must
- *      be written. 
- *      
+ *      be written.
+ *
 */
 hsa_status_t hsa_finalize_brig( hsa_finalize_compilationunit_caller_t caller,
   hsa_agent_t* component,
@@ -2697,7 +2697,7 @@ hsa_status_t hsa_finalize_brig( hsa_finalize_compilationunit_caller_t caller,
 /**
  * @brief
  *
- * @param code_object 
+ * @param code_object
  *        input. a pointer to the compilation unit object that needs to be destroyed.
 */
 hsa_status_t hsa_compilationunit_code_destroy(hsa_compilationunit_code_t *code_object);
@@ -2706,7 +2706,7 @@ hsa_status_t hsa_compilationunit_code_destroy(hsa_compilationunit_code_t *code_o
 /**
  * @brief
  *
- * @param debug_object 
+ * @param debug_object
  *        input. a pointer to the compilation unit debug object that needs to
  *        be destroyed.
 */
@@ -2719,8 +2719,8 @@ hsa_status_t hsa_compilationunit_debug_destroy(hsa_compilationunit_debug_t *debu
  */
 /**
  * @brief
- * 
- * @param code_object 
+ *
+ * @param code_object
  *      input. The code object to serialize.
  * @param size
  *      output. Size of the serialized object that is generated.
@@ -2733,12 +2733,12 @@ hsa_status_t hsa_compilationunit_serialize(hsa_compilationunit_code_t *code_obje
 
 /**
  * @brief
- * 
+ *
  * @param serialized_object
  *      input. Pointer to the serialized object.
  * @param size
  *      input. Size of the serialized object that is generated.
- * @param code_object 
+ * @param code_object
  *      runtime allocated, output. The code object generated as a part of serialization.
 */
 hsa_status_t hsa_compilationunit_deserialize( void *serialized_object,
@@ -2759,8 +2759,8 @@ hsa_status_t hsa_compilationunit_deserialize( void *serialized_object,
  * @param code_object
  *      runtime allocated, output. A pointer to the kernel code object.
 */
-hsa_status_t hsa_symbol_bind_code_object( hsa_code_t *kernel, 
-    hsa_symbol_map_t *input_symbol_map, 
+hsa_status_t hsa_symbol_bind_code_object( hsa_code_t *kernel,
+    hsa_symbol_map_t *input_symbol_map,
     hsa_code_t *output_kernel);
 /** @}***********************************************************************/
 
@@ -2782,7 +2782,7 @@ hsa_status_t hsa_symbol_bind_code_object( hsa_code_t *kernel,
  *      runtime allocated, output. Structure with symbol details.
  * @return -- tbd
 */
-hsa_status_t hsa_symbol_map_query_by_name(hsa_symbol_map_t *symbol_map, 
+hsa_status_t hsa_symbol_map_query_by_name(hsa_symbol_map_t *symbol_map,
     hsa_brig_t brig,
     char *symbol_name,
     hsa_symbol_t *symbol_details);
@@ -2794,12 +2794,12 @@ hsa_status_t hsa_symbol_map_query_by_name(hsa_symbol_map_t *symbol_map,
  * @param symbol_map
  *      a pointer to the symbol map structure
  * @param brig
- *      the the brig this symbol table came from 
+ *      the the brig this symbol table came from
  * @param symbol_details
  *      structure with symbol details
  * @return -- tbd
 */
-hsa_status_t hsa_symbol_map_query_by_offset(hsa_symbol_map_t *symbol_map, 
+hsa_status_t hsa_symbol_map_query_by_offset(hsa_symbol_map_t *symbol_map,
     hsa_brig_t *brig,
     uint32_t directive_section_offset,
     hsa_symbol_t *symbol_details);
@@ -2831,16 +2831,16 @@ hsa_status_t hsa_symbol_destroy(hsa_symbol_map_t *symbol_map);
  * Overlapping registrations are allowed. This is neither detrimental nor
  * beneficial.
  *
- * @param address 
+ * @param address
  *      input. A pointer to the base of the memory region to be registered. If a null
  *      pointer is passed, no operation is performed.
- * @param size 
+ * @param size
  *      input. Requested registration size in bytes. If a size of zero is passed, no
  *      operation is performed.
  *
  *******************************************************************************
  */
-hsa_status_t hsa_memory_register(void *address, 
+hsa_status_t hsa_memory_register(void *address,
     size_t size);
 
 /**
@@ -2859,7 +2859,7 @@ hsa_status_t hsa_memory_register(void *address,
  * Other than the potential performance impact there should be no user
  * noticeable side-effects from deregistering a memory region.
  *
- * @param 
+ * @param address
  *      input. address A pointer to the base of the memory region to be deregistered.
  *      If a NULL pointer is passed, no operation is performed.
  *
@@ -2882,7 +2882,7 @@ hsa_status_t hsa_memory_deregister(void *address);
  *      input, address pointer allocated by the user. Dereferenced
  *      and assigned to the pointer to the memory allocated for this
  *      request.
- */     
+ */
 hsa_status_t hsa_memory_allocate(size_t size_bytes, void **address);
 
 /** @}***********************************************************************/
@@ -2896,19 +2896,19 @@ hsa_status_t hsa_memory_allocate(size_t size_bytes, void **address);
  * @details The hsa_memory_allocate_component_local HSA core interface is used for
  * allocating global device memory associated with specified device.
  *
- * @param component 
+ * @param component
  *      input. A valid pointer to the HSA device for which the specified amount of
  *      global memory is to be allocated.
- * @param size 
+ * @param size
  *      input. Requested allocation size in bytes. If size is 0, NULL is returned.
- * @param address 
+ * @param address
  *      output. A valid pointer to the location of where to return the pointer to the
  *      base of the allocated region of memory.
  *
  *******************************************************************************
  */
 hsa_status_t hsa_memory_allocate_component_local( const hsa_agent_t *component,
-    size_t size, 
+    size_t size,
     void **address);
 
 /**
@@ -2918,7 +2918,7 @@ hsa_status_t hsa_memory_allocate_component_local( const hsa_agent_t *component,
  * deallocating global device memory that was previously allocated with
  * ::HsaAllocateDeviceMemory.
  *
- * @param address 
+ * @param address
  *      input. A pointer to the address to be deallocated. If the pointer is NULL, no
  *      operation is performed.
  *
@@ -2935,43 +2935,627 @@ hsa_status_t hsa_memory_free_component_local(void *address);
  * space, an error is returned. If the size of the destination or source arrays
  * is smaller than the indicated size, the behavior is undefined.
  *
- * @param dst 
+ * @param dst
  *      user allocated, output. A valid pointer to the destination array where the content is to be
  *      copied.
- * @param src 
+ * @param src
  *      input. A valid pointer to the source of data to be copied.
- * @param size 
+ * @param size
  *      input. Number of bytes to copy.
  * @param signal
  *      input. The signal that will be incremented by the runtime
- *      when the copy is complete.     
+ *      when the copy is complete.
  */
-hsa_status_t hsa_memory_copy_component_local_to_system(void *dst, 
-    const void *src, 
-    size_t size, 
+hsa_status_t hsa_memory_copy_component_local_to_system(void *dst,
+    const void *src,
+    size_t size,
     hsa_signal_handle_t signal);
+/** @}***********************************************************************/
+
+/** \addtogroup APIhsa_get_image_format_capability -------------------------------------------
+ *  @{
+ */
+/**
+ * @brief todo
+ *
+ * @param component
+ *       (in) HSA device to be associated with the image.
+ * @param image_format
+ *       (in) Image format.
+ * @param image_geometry
+ *       (in) Geometry of the image.
+ * @param capability_mask
+ *       (out) Image format capability bit-mask.
+ */
+hsa_status_t hsa_get_image_format_capability(
+                         const hsa_agent_t *component,
+                         const hsa_image_format_t *image_format,
+                         hsa_image_geometry_t image_geometry,
+                         uint32_t *capability_mask);
+/** @}**************************************************************/
+
+/** \addtogroup APIhsa_get_image_info -------------------------------------------
+ *  @{
+ */
+/**
+ * @param component
+ *        (in) HSA device to be associated with the image
+ * @param image_descriptor
+ *        (in) Implementation-independent image descriptor describing the image.
+ * @param image_info
+ *        (out) Image info size and alignment requirements that the HSA agent requires.
+ */
+hsa_status_t hsa_get_image_info(
+                         const hsa_agent_t *component,
+                         const hsa_image_descriptor_t *image_descriptor,
+                         hsa_image_info_t *image_info);
+/** @}**************************************************************/
+
+/** \addtogroup APIhsa_create_image_handle -------------------------------------------
+ *  @{
+ */
+/**
+ * @param component
+ *        (in) HSA device to be associated with the image
+ * @param image_descriptor
+ *        (in) implementation-independent image descriptor describing the image
+ * @param image_data
+ *        (in) address of the component-specific image data
+ * @param image_handle
+ *        (out) HSA component-specific image handle
+ */
+hsa_status_t hsa_create_image_handle (
+                         const hsa_agent_t *component,
+                         const hsa_image_descriptor_t *image_descriptor,
+                         const void *image_data,
+                         hsa_image_handle_t *image_handle);
+
+/** @}**************************************************************/
+
+/** \addtogroup APIhsa_import_image -------------------------------------------
+ *  @{
+ */
+/**
+ * @param component
+ *        (in) HSA device to be associated with the image
+ * @param src_memory
+ *        (in) source memory
+ * @param src_row_pitch
+ *        (in) number of bytes in one row of the source memory
+ * @param src_slice_pitch
+ *        (in) number of bytes in one slice of the source memory
+ * @param dest_image_handle
+ *        (in) destination HSA image handle
+ * @param image_region
+ *        (in) image region to be updated
+ * @param completion_signal
+ *        (in) signal to set when the operation is completed
+ */
+hsa_status_t hsa_import_image (
+                         const hsa_agent_t *component,
+                         const void *src_memory,
+                         size_t src_row_pitch,
+                         size_t src_slice_pitch,
+                         hsa_image_handle_t dest_image_handle,
+                         const hsa_image_region_t *image_region,
+                         const hsa_signal_handle_t *completion_signal);
+/** @}**************************************************************/
+
+/** \addtogroup APIhsa_export_image -------------------------------------------
+ *  @{
+ */
+/**
+ * @param component
+ *        (in) HSA device to be associated with the image
+ * @param src_image_handle
+ *        (in) source HSA image handle
+ * @param dst_memory
+ *        (in) destination memory
+ * @param dst_row_pitch
+ *        (in) number of bytes in one row of the destination memory
+ * @param dst_slice_pitch
+ *        (in) number of bytes in one slice of the destination  memory
+ * @param image_region
+ *        (in) image region to be exported
+ * @param completion_signal
+ *        (in) signal to set when the operation is completed
+ */
+hsa_status_t hsa_export_image(
+                          const hsa_agent_t *component,
+                          hsa_image_handle_t src_image_handle,
+                          void *dst_memory,
+                          size_t dst_row_pitch,
+                          size_t dst_slice_pitch,
+                          const hsa_image_region_t *image_region,
+                          const hsa_signal_handle_t *completion_signal);
+/** @}**************************************************************/
+
+/** \addtogroup APIhsa_copy_image -------------------------------------------
+ *  @{
+ */
+/**
+ * @param component
+ *        (in) HSA device to be associated with the image
+ * @param src_image_handle
+ *        (in) Source image handle
+ * @param dst_image_handle
+ *        (in) Destination image handle
+ * @param image_region
+ *        (in) Image region to be copied
+ * @param completion_signal
+ *        (in) Signal to set when the operation is completed.
+ */
+hsa_status_t hsa_copy_image(
+                       const hsa_agent_t *component,
+                       hsa_image_handle_t src_image_handle,
+                       hsa_image_handle_t dst_image_handle,
+                       const hsa_image_region_t *image_region,
+                       const hsa_signal_handle_t *completion_signal);
+/** @}**************************************************************/
+
+/** \addtogroup APIhsa_clear_image -------------------------------------------
+ *  @{
+ */
+/**
+ * @param component
+ *        (in) HSA device to be associated with the image
+ * @param image_handle
+ *        (in) HSA image to be cleared
+ * @param  data
+ *        (in) 4-component clear value in floating point format
+ * @param image_region
+ *        (in) image region to clear
+ * @param completion_signal
+ *        (in) signal to set when the operation is completed
+ */
+hsa_status_t hsa_clear_image(
+                        const hsa_agent_t *component,
+                        hsa_image_handle_t image_handle,
+                        const float data[4],
+                        const hsa_image_region_t *image_region,
+                        const hsa_signal_handle_t *completion_signal);
+
+/** @}**************************************************************/
+
+/** \addtogroup APIhsa_destroy_image_handle -------------------------------------------
+ *  @{
+ */
+/**
+ * @param image_handle
+ *        (in) HSA image handle
+ */
+hsa_status_t hsa_destroy_image_handle (
+                                    hsa_image_handle_t *image_handle);
+/** @}**************************************************************/
+
+/** \addtogroup APIhsa_create_sampler_handle -------------------------------------------
+ *  @{
+ */
+/**
+ * @param component
+ *        (in) HSA device to be associated with the image
+ * @param sampler_descriptor
+ *        (in) implementation-independent sampler descriptor
+ * @param sampler_handle
+ *        (out) HSA component-specific sampler handle
+ */
+hsa_status_t hsa_create_sampler_handle (
+                     const hsa_agent_t *component,
+                     const hsa_sampler_descriptor_t *sampler_descriptor,
+                     hsa_sampler_handle_t *sampler_handle);
+/** @}**************************************************************/
+
+/** \addtogroup APIhsa_destroy_sampler_handle -------------------------------------------
+ *  @{
+ */
+/**
+ * @param sampler_handle
+ *        (out) HSA component-specific sampler handle
+ */
+hsa_status_t hsa_destroy_sampler_handle (
+                                   hsa_sampler_handle_t *sampler_handle);
+
+/** @}**************************************************************/
+
+/** \addtogroup STRhsa_image_handle ---------------------------
+ *  @{
+ */
+typedef struct hsa_image_handle_s {
+   /**
+    * HSA component specific handle to the image
+    */
+    uint64_t handle;
+
+} hsa_image_handle_t;
+/** @}***********************************************************************/
+
+/** \addtogroup ENUhsa_image_format_capability ---------------------------
+ *  @{
+ */
+typedef enum  {
+
+   /**
+    * Images of this format are not supported
+    */
+    HSA_IMAGE_FORMAT_NOT_SUPPORTED = 0x0,
+
+   /**
+    * Images of this format can be accessed for read operations
+    */
+    HSA_IMAGE_FORMAT_READ_ONLY = 0x1,
+
+   /**
+    * Images of this format can be accessed for write operations
+    */
+    HSA_IMAGE_FORMAT_WRITE_ONLY = 0x2,
+
+    /**
+    * Images of this format can be accessed for read and write operations
+    */
+    HSA_IMAGE_FORMAT_READ_WRITE = 0x4,
+
+    /**
+    * Images of this format can be accessed for read-modify-write operations
+    */
+    HSA_IMAGE_FORMAT_READ_MODIFY_WRITE = 0x8
+
+} hsa_image_format_capability_t;
+/** @}***********************************************************************/
+
+/** \addtogroup STRhsa_image_info ---------------------------
+ *  @{
+ */
+typedef struct hsa_image_info_s {
+  /**
+   * HSA component specific image data size in bytes
+   */
+  size_t image_size;
+
+  /**
+   * HSA component specific image data alignment in bytes
+   */
+  size_t image_alignment;
+
+} hsa_image_info_t;
+/** @}***********************************************************************/
+
+/** \addtogroup ENUhsa_image_geometry ---------------------------
+ *  @{
+ */
+typedef enum {
+  /**
+   * One-dimensional image addressed by width coordinate
+   */
+  HSA_IMAGE_GEOMETRY_1D,
+
+  /**
+   * Two-dimensional image addressed by width and height coordinates
+   */
+  HSA_IMAGE_GEOMETRY_2D,
+
+  /**
+   * Three-dimensional image addressed by width, height, and depth
+   * coordinates.
+   */
+  HSA_IMAGE_GEOMETRY_3D,
+
+  /**
+   * Array of one-dimensional images with the same size and format.
+   * 1D arrays are addressed by index and width coordinate
+   */
+  HSA_IMAGE_GEOMETRY_1DArray,
+
+  /**
+   * Array of two-dimensional images with the same size and format.
+   * 2D arrays are addressed by index and width and height coordinates.
+   */
+  HSA_IMAGE_GEOMETRY_2DArray,
+
+  /**
+   * One-dimensional image interpreted as a buffer with specific restrictions.
+   */
+  HSA_IMAGE_GEOMETRY_1DBuffer
+} hsa_image_geometry_t;
+/** @}***********************************************************************/
+
+/** \addtogroup ENUhsa_image_component_type ---------------------------
+ *  @{
+ */
+typedef enum {
+    HSA_IMAGE_COMPONENT_TYPE_SNORM_INT8,
+    HSA_IMAGE_COMPONENT_TYPE_SNORM_INT16,
+    HSA_IMAGE_COMPONENT_TYPE_UNORM_INT8,
+    HSA_IMAGE_COMPONENT_TYPE_UNORM_INT16,
+    HSA_IMAGE_COMPONENT_TYPE_UNORM_INT24,
+    HSA_IMAGE_COMPONENT_TYPE_UNORM_SHORT_555,
+    HSA_IMAGE_COMPONENT_TYPE_UNORM_SHORT_565,
+    HSA_IMAGE_COMPONENT_TYPE_UNORM_SHORT_101010,
+    HSA_IMAGE_COMPONENT_TYPE_SIGNED_INT8,
+    HSA_IMAGE_COMPONENT_TYPE_SIGNED_INT16,
+    HSA_IMAGE_COMPONENT_TYPE_SIGNED_INT32,
+    HSA_IMAGE_COMPONENT_TYPE_UNSIGNED_INT8,
+    HSA_IMAGE_COMPONENT_TYPE_UNSIGNED_INT16,
+    HSA_IMAGE_COMPONENT_TYPE_UNSIGNED_INT32,
+    HSA_IMAGE_COMPONENT_TYPE_HALF_FLOAT,
+    HSA_IMAGE_COMPONENT_TYPE_FLOAT
+} hsa_image_component_type_t;
+/** @}***********************************************************************/
+
+/** \addtogroup ENUhsa_image_component_order ---------------------------
+ *  @{
+ */
+typedef enum {
+
+    HSA_IMAGE_COMPONENT_ORDER_A,
+    HSA_IMAGE_COMPONENT_ORDER_R,
+    HSA_IMAGE_COMPONENT_ORDER_RX,
+    HSA_IMAGE_COMPONENT_ORDER_RG,
+    HSA_IMAGE_COMPONENT_ORDER_RGX,
+    HSA_IMAGE_COMPONENT_ORDER_RA,
+    HSA_IMAGE_COMPONENT_ORDER_RGB,
+    HSA_IMAGE_COMPONENT_ORDER_RGBX,
+    HSA_IMAGE_COMPONENT_ORDER_RGBA,
+    HSA_IMAGE_COMPONENT_ORDER_BGRA,
+    HSA_IMAGE_COMPONENT_ORDER_ARGB,
+    HSA_IMAGE_COMPONENT_ORDER_ABGR,
+    HSA_IMAGE_COMPONENT_ORDER_SRGB,
+    HSA_IMAGE_COMPONENT_ORDER_SRGBX,
+    HSA_IMAGE_COMPONENT_ORDER_SRGBA,
+    HSA_IMAGE_COMPONENT_ORDER_SBGRA,
+    HSA_IMAGE_COMPONENT_ORDER_INTENSITY,
+    HSA_IMAGE_COMPONENT_ORDER_LUMINANCE,
+    HSA_IMAGE_COMPONENT_ORDER_DEPTH,
+    HSA_IMAGE_COMPONENT_ORDER_DEPTH_STENCIL
+
+} hsa_image_component_order_t;
+/** @}***********************************************************************/
+
+/** \addtogroup STRhsa_image_format ---------------------------
+ *  @{
+ */
+typedef struct hsa_image_format_s
+{
+   /**
+    * Component type of the image
+    */
+    hsa_image_component_type_t component_type;
+
+   /**
+    * Component order of the image
+    */
+    hsa_image_component_order_t component_order;
+
+} hsa_image_format_t;
+/** @}***********************************************************************/
+
+/** \addtogroup STRhsa_image_descriptor ---------------------------
+ *  @{
+ */
+typedef struct hsa_image_descriptor_s {
+  /**
+   * Geometry of the image
+   */
+  hsa_image_geometry_t geometry;
+
+  /**
+   * Width of the image in components
+   */
+  size_t width;
+
+  /**
+   * Height of the image in components, only used if geometry is 2D or higher
+   */
+  size_t height;
+
+  /**
+   * Depth of the image in slices, only used if geometry is 3D
+   * depth = 0 is same as depth = 1.
+   */
+  size_t depth;
+
+  /**
+   * Number of images in the image array, only used if geometry is 1DArray and
+   * 2DArray.
+   */
+  size_t array_size;
+
+  /**
+   * Format of the image
+   */
+  hsa_image_format_t format;
+
+
+} hsa_image_descriptor_t;
+/** @}***********************************************************************/
+
+/** \addtogroup STRhsa_image_offset ---------------------------
+ *  @{
+ */
+typedef struct hsa_image_offset_s {
+   /**
+    * x coordinate for the offset
+    */
+    uint32_t x;
+
+   /**
+    * y coordinate for the offset
+    */
+    uint32_t y;
+
+   /**
+    * z coordinate for the offset
+    */
+    uint32_t z;
+
+} hsa_image_offset_t;
+/** @}***********************************************************************/
+
+/** \addtogroup STRhsa_image_range ---------------------------
+ *  @{
+ */
+typedef struct hsa_image_range_s {
+   /**
+    * The width for an image range (in coordinates)
+    */
+    uint32_t width;
+
+   /**
+    * The height for an image range (in coordinates)
+    */
+    uint32_t height;
+
+   /**
+    * The depth for an image range (in coordinates)
+    */
+    uint32_t depth;
+
+} hsa_image_range_t;
+/** @}***********************************************************************/
+
+/** \addtogroup STRhsa_image_region ---------------------------
+ *  @{
+ */
+typedef struct hsa_image_region_s {
+   /**
+    * offset in the image (in coordinates)
+    */
+    hsa_image_offset_t image_offset;
+
+   /**
+    * dimensions of the image range (in coordinates)
+    */
+    hsa_image_range_t image_range;
+
+} hsa_image_region_t;
+/** @}***********************************************************************/
+
+/** \addtogroup STRhsa_sampler_handle ---------------------------
+ *  @{
+ */
+typedef struct hsa_sampler_handle_s {
+   /**
+    * HSA component-specific HSA sampler
+    */
+    uint64_t handle;
+
+} hsa_sampler_handle_t;
+/** @}***********************************************************************/
+
+/** \addtogroup ENUhsa_sampler_address_mode ---------------------------
+ *  @{
+ */
+typedef enum {
+
+  /**
+   * Out-of-range coordinates are not handled
+   */
+  HSA_SAMPLER_ADDRESS_UNDEFINED,
+
+  /**
+   * Clamp out-of-range coordinates to the image edge
+   */
+  HSA_SAMPLER_ADDRESS_CLAMP_TO_EDGE,
+
+  /**
+   * Clamp out-of-range coordinates to the image border
+   */
+  HSA_SAMPLER_ADDRESS_CLAMP_TO_BORDER,
+
+  /**
+   * Wrap out-of-range coordinates back into the valid coordinate range
+   */
+  HSA_SAMPLER_ADDRESS_WRAP,
+
+  /**
+   * Mirror out-of-range coordinates back into the valid coordinate range
+   */
+  HSA_SAMPLER_ADDRESS_MIRROR
+
+} hsa_sampler_address_mode_t;
+/** @}***********************************************************************/
+
+/** \addtogroup ENUhsa_sampler_coordinate_mode ---------------------------
+ *  @{
+ */
+typedef enum {
+  /**
+   * Coordinates are all in the range of 0.0 to 1.0
+   */
+  HSA_SAMPLER_COORD_NORMALIZED,
+
+  /**
+   * Coordinates are all in the range of 0 to (dimension-1)
+   */
+  HSA_SAMPLER_COORD_UNNORMALIZED
+
+} hsa_sampler_coordinate_mode_t;
+/** @}***********************************************************************/
+
+/** \addtogroup ENUhsa_sampler_filter_mode ---------------------------
+ *  @{
+ */
+typedef enum {
+  /**
+   * Filter to the image element nearest (in Manhattan distance) to the
+   * specified coordinate.
+   */
+  HSA_SAMPLER_FILTER_NEAREST,
+
+  /**
+   * Filter to the image element calculated by combining the elements in
+   * a 2x2 square block or 2x2x2 cube block around the specified
+   * coordinate. The elements are combined using linear interpolation.
+   */
+  HSA_SAMPLER_FILTER_LINEAR
+
+} hsa_sampler_filter_mode_t;
+/** @}***********************************************************************/
+
+/** \addtogroup STRhsa_sampler_descriptor ---------------------------
+ *  @{
+ */
+typedef struct hsa_sampler_descriptor_s {
+  /**
+   * Sampler coordinate mode describes the normalization of image coordinates
+   */
+  hsa_sampler_coordinate_mode_t coordinate_mode;
+
+  /**
+   * Sampler filter type describes the type of sampling performed
+   */
+  hsa_sampler_filter_type_t filter_mode;
+
+  /**
+   * Sampler address mode describes the processing of out-of-range image
+   * coordinates
+   */
+  hsa_sampler_address_mode_t address_mode;
+
+} hsa_sampler_descriptor_t;
 /** @}***********************************************************************/
 
 /** \addtogroup APIkernargmem -------------------------------------------
  *  @{
  */
+  /**
  *******************************************************************************
  * @brief Allocate memory on HSA Device
  * @details The hsa_memory_allocate_component_local HSA core interface is used for
  * allocating global device memory associated with specified device.
  *
- * @param component 
+ * @param component
  *      input. A valid pointer to the HSA component for which the specified amount of
  *      kernarg memory is to be allocated.
- * @param size 
+ * @param size
  *      input. Requested allocation size in bytes. If size is 0, NULL is returned.
- * @param address 
+ * @param address
  *      output. A valid pointer to the location of where to return the pointer to the
  *      base of the allocated region of memory.
  *
  *******************************************************************************
+ */
 hsa_status_t hsa_memory_allocate_kernarg( const hsa_agent_t *component,
-    size_t size, 
+    size_t size,
     void **address);
 
 
@@ -2984,16 +3568,16 @@ hsa_status_t hsa_memory_allocate_kernarg( const hsa_agent_t *component,
  * space, an error is returned. If the size of the destination or source arrays
  * is smaller than the indicated size, the behavior is undefined.
  *
- * @param dst 
+ * @param dst
  *      user allocated, output. A valid pointer to the destination array where the content is to be
  *      copied.
- * @param src 
+ * @param src
  *      input. A valid pointer to the source of data to be copied.
- * @param size 
+ * @param size
  *      input. Number of bytes to copy.
  */
-hsa_status_t hsa_memory_copy_kernarg_to_system(void *dst, 
-    const void *src, 
+hsa_status_t hsa_memory_copy_kernarg_to_system(void *dst,
+    const void *src,
     size_t size);
 
 /**
@@ -3005,19 +3589,19 @@ hsa_status_t hsa_memory_copy_kernarg_to_system(void *dst,
  * space, an error is returned. If the size of the destination or source arrays
  * is smaller than the indicated size, the behavior is undefined.
  *
- * @param dst 
+ * @param dst
  *      user allocated, output. A valid pointer to the destination array where the content is to be
  *      copied.
- * @param src 
+ * @param src
  *      input. A valid pointer to the source of data to be copied.
- * @param size 
+ * @param size
  *      input. Number of bytes to copy.
  * @param signal
  *      input. The signal that will be incremented by the runtime
- *      when the copy is complete.     
+ *      when the copy is complete.
  */
-hsa_status_t hsa_memory_copy_system_to_kernarg(void *dst, 
-    const void *src, 
+hsa_status_t hsa_memory_copy_system_to_kernarg(void *dst,
+    const void *src,
     size_t size);
 /** @}***********************************************************************/
 
@@ -3032,7 +3616,7 @@ hsa_status_t hsa_memory_copy_system_to_kernarg(void *dst,
  *      called with 5 64 bit args (see Section \ref{agent_dispatch}) as a
  *      parameter.
  */
-hsa_status_t hsa_register_agent_dispatch_callback(hsa_queue_t *agent_dispatch_queue, 
+hsa_status_t hsa_register_agent_dispatch_callback(hsa_queue_t *agent_dispatch_queue,
     void (*agent_dispatch_callback)(uint64_t arg0, uint64_t arg1, uint64_t
       arg2, uint64_t arg3, uint64_t returnaddr),
     hsa_runtime_context_t *context);
@@ -3045,8 +3629,8 @@ hsa_status_t hsa_register_agent_dispatch_callback(hsa_queue_t *agent_dispatch_qu
 typedef enum hsa_extension_t {
     /**
      * HSA extension to support images.
-     */    
-    HSA_EXTENSION_IMAGES, 
+     */
+    HSA_EXTENSION_IMAGES,
 
     /**
      * HSA extensions providing information necessary to debug
@@ -3055,11 +3639,11 @@ typedef enum hsa_extension_t {
     HSA_EXTENSION_DEBUG,
 
     /**
-     * HSA extension for Finalizer that finalizes the brig to 
+     * HSA extension for Finalizer that finalizes the brig to
      * compilation units that represent kernel and function code objects
      */
     HSA_EXTENSION_FINALIZER
-}hsa_extension_t;       
+}hsa_extension_t;
 /** @}***********************************************************************/
 
 
@@ -3071,16 +3655,16 @@ typedef enum hsa_vendor_extension_s {
    * start of the single vendor extension range
    */
   HSA_SVEXT_START= 0,
-  /** 
+  /**
    * Company ACME, starts with FOO symbol
    */
   HSA_SVEXT_ACME_FOO = 1,
 
-  /** 
+  /**
    * Company ACME has another\_ext symbol
    */
   HSA_SVEXT_ACME_ANOTHER_EXT = 2,
-  /** 
+  /**
    * multi vendor extension starts at 1000000
    */
   HSA_MVEXT_START = 1000000,
@@ -3090,7 +3674,7 @@ typedef enum hsa_vendor_extension_s {
    */
   HSA_MVEXT_FOO   = 1000001
 
-}hsa_vendor_extension_t;       
+}hsa_vendor_extension_t;
 /** @}***********************************************************************/
 
 
