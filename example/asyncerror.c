@@ -27,11 +27,7 @@ void error_callabck(hsa_async_error_info_t *error)
     exit(1);
   }
 
-  /*
-   * ....
-   * .... 
-   * ....
-   */
+  // rest of program 
 }
 
 
