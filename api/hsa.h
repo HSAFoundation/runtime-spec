@@ -95,6 +95,18 @@ typedef enum {
      * TODO
      */
     HSA_STATUS_ERROR_EXTENSION_UNSUPPORTED,
+    /**
+     * TODO
+     */
+    HSA_STATUS_UNSUPPORTED_IMAGE_FORMAT,
+    /**
+     * TODO
+     */
+    HSA_STATUS_UNSUPPORTED_IMAGE_SIZE_NOT_SUPPORTED,
+    /**
+     * TODO
+     */
+    HSA_STATUS_IMAGE_SIZE_NOT_SUPPORTED
 } hsa_status_t;
 /** @} */
 
@@ -3335,126 +3347,8 @@ hsa_status_t hsa_memory_copy_component_local_to_system(void *dst,
  */
 
 /**
- * @brief Image format capability returned by ::hsa_get_image_format_capability
- */
-typedef enum  {
-   /**
-    * Images of this format are not supported
-    */
-    HSA_IMAGE_FORMAT_NOT_SUPPORTED = 0x0,
-
-   /**
-    * Images of this format can be accessed for read operations
-    */
-    HSA_IMAGE_FORMAT_READ_ONLY = 0x1,
-
-   /**
-    * Images of this format can be accessed for write operations
-    */
-    HSA_IMAGE_FORMAT_WRITE_ONLY = 0x2,
-
-    /**
-    * Images of this format can be accessed for read and write operations
-    */
-    HSA_IMAGE_FORMAT_READ_WRITE = 0x4,
-
-    /**
-    * Images of this format can be accessed for read-modify-write operations
-    */
-    HSA_IMAGE_FORMAT_READ_MODIFY_WRITE = 0x8
-
-} hsa_image_format_capability_t;
-
-/**
- * @brief Geometry associated with the HSA image (image dimensions allowed in HSA)
- */
-typedef enum {
-  /**
-   * One-dimensional image addressed by width coordinate
-   */
-  HSA_IMAGE_GEOMETRY_1D,
-
-  /**
-   * Two-dimensional image addressed by width and height coordinates
-   */
-  HSA_IMAGE_GEOMETRY_2D,
-
-  /**
-   * Three-dimensional image addressed by width, height, and depth
-   * coordinates.
-   */
-  HSA_IMAGE_GEOMETRY_3D,
-
-  /**
-   * Array of one-dimensional images with the same size and format.
-   * 1D arrays are addressed by index and width coordinate
-   */
-  HSA_IMAGE_GEOMETRY_1DArray,
-
-  /**
-   * Array of two-dimensional images with the same size and format.
-   * 2D arrays are addressed by index and width and height coordinates.
-   */
-  HSA_IMAGE_GEOMETRY_2DArray,
-
-  /**
-   * One-dimensional image interpreted as a buffer with specific restrictions.
-   */
-  HSA_IMAGE_GEOMETRY_1DBuffer
-} hsa_image_geometry_t;
-
-/**
- * @brief Component type associated with the image. See Image section in HSA Programming Reference Manual for definitions on each component type.
- */
-typedef enum {
-    HSA_IMAGE_COMPONENT_TYPE_SNORM_INT8,
-    HSA_IMAGE_COMPONENT_TYPE_SNORM_INT16,
-    HSA_IMAGE_COMPONENT_TYPE_UNORM_INT8,
-    HSA_IMAGE_COMPONENT_TYPE_UNORM_INT16,
-    HSA_IMAGE_COMPONENT_TYPE_UNORM_INT24,
-    HSA_IMAGE_COMPONENT_TYPE_UNORM_SHORT_555,
-    HSA_IMAGE_COMPONENT_TYPE_UNORM_SHORT_565,
-    HSA_IMAGE_COMPONENT_TYPE_UNORM_SHORT_101010,
-    HSA_IMAGE_COMPONENT_TYPE_SIGNED_INT8,
-    HSA_IMAGE_COMPONENT_TYPE_SIGNED_INT16,
-    HSA_IMAGE_COMPONENT_TYPE_SIGNED_INT32,
-    HSA_IMAGE_COMPONENT_TYPE_UNSIGNED_INT8,
-    HSA_IMAGE_COMPONENT_TYPE_UNSIGNED_INT16,
-    HSA_IMAGE_COMPONENT_TYPE_UNSIGNED_INT32,
-    HSA_IMAGE_COMPONENT_TYPE_HALF_FLOAT,
-    HSA_IMAGE_COMPONENT_TYPE_FLOAT
-} hsa_image_component_type_t;
-
-/**
- * @brief Image component order associated with the image. See Image section in HSA Programming Reference Manual for definitions on each component
-order.
- */
-typedef enum {
-    HSA_IMAGE_COMPONENT_ORDER_A,
-    HSA_IMAGE_COMPONENT_ORDER_R,
-    HSA_IMAGE_COMPONENT_ORDER_RX,
-    HSA_IMAGE_COMPONENT_ORDER_RG,
-    HSA_IMAGE_COMPONENT_ORDER_RGX,
-    HSA_IMAGE_COMPONENT_ORDER_RA,
-    HSA_IMAGE_COMPONENT_ORDER_RGB,
-    HSA_IMAGE_COMPONENT_ORDER_RGBX,
-    HSA_IMAGE_COMPONENT_ORDER_RGBA,
-    HSA_IMAGE_COMPONENT_ORDER_BGRA,
-    HSA_IMAGE_COMPONENT_ORDER_ARGB,
-    HSA_IMAGE_COMPONENT_ORDER_ABGR,
-    HSA_IMAGE_COMPONENT_ORDER_SRGB,
-    HSA_IMAGE_COMPONENT_ORDER_SRGBX,
-    HSA_IMAGE_COMPONENT_ORDER_SRGBA,
-    HSA_IMAGE_COMPONENT_ORDER_SBGRA,
-    HSA_IMAGE_COMPONENT_ORDER_INTENSITY,
-    HSA_IMAGE_COMPONENT_ORDER_LUMINANCE,
-    HSA_IMAGE_COMPONENT_ORDER_DEPTH,
-    HSA_IMAGE_COMPONENT_ORDER_DEPTH_STENCIL
-
-} hsa_image_component_order_t;
-
-/**
- * @brief Image handle,  populated by ::hsa_create_image_handle
+ * @brief Image handle, populated by ::hsa_create_image_handle. Images
+ * handles are only unique within an agent, not across agents.
  *
  */
 typedef struct hsa_image_handle_s {
@@ -3466,8 +3360,44 @@ typedef struct hsa_image_handle_s {
 } hsa_image_handle_t;
 
 /**
- * @brief Component-specific image size and alignment
- * requirements. This structure stores the component-dependent image
+ * @brief Image format capability returned by ::hsa_get_image_format_capability
+ */
+typedef enum  {
+   /**
+    * Images of this format are not supported.
+    */
+    HSA_IMAGE_FORMAT_NOT_SUPPORTED = 0x0,
+
+   /**
+    * Images of this format can be accessed for read operations.
+    */
+    HSA_IMAGE_FORMAT_READ_ONLY = 0x1,
+
+   /**
+    * Images of this format can be accessed for write operations.
+    */
+    HSA_IMAGE_FORMAT_WRITE_ONLY = 0x2,
+
+    /**
+    * Images of this format can be accessed for read and write operations.
+    */
+    HSA_IMAGE_FORMAT_READ_WRITE = 0x4,
+
+    /**
+    * Images of this format can be accessed for read-modify-write operations.
+    */
+    HSA_IMAGE_FORMAT_READ_MODIFY_WRITE = 0x8,
+    /**
+    * Images of this format are guaranteed to have consistent data
+    * layout regardless of the how it is accessed by the HSA agent.
+    */  
+    HSA_IMAGE_FORMAT_ACCESS_INVARIANT_IMAGE_DATA = 0x10
+
+} hsa_image_format_capability_t;
+
+/**
+ * @brief Agent-specific image size and alignment
+ * requirements. This structure stores the agent-dependent image
  * data sizes and alignment, and populated by ::hsa_get_image_info
  */
 typedef struct hsa_image_info_s {
@@ -3484,19 +3414,156 @@ typedef struct hsa_image_info_s {
 } hsa_image_info_t;
 
 /**
+ * @brief Defines how the HSA device expects to access the image. The
+ * access pattern used by the HSA agent specified in
+ * ::hsa_create_image_handle
+ *
+ */
+typedef enum {
+  /**
+   * Image handle is to be used by the HSA agent as read-only using an
+   * HSAIL roimg type.
+   */
+  HSA_AGENT_IMAGE_ACCESS_READ_ONLY,
+
+  /**
+   * Image handle is to be used by the HSA agent as write-only using
+   * an HSAIL woimg type.
+   */
+  HSA_AGENT_IMAGE_ACCESS_WRITE_ONLY,
+
+  /**
+   * Image handle is to be used by the HSA agent as read and/or write
+   * using an HSAIL rwimg type.
+   */
+  HSA_AGENT_IMAGE_ACCESS_READ_WRITE
+
+} hsa_agent_image_access_t;
+
+/**
+ * @brief Geometry associated with the HSA image (image dimensions
+ * allowed in HSA). The enumeration values match the HSAIL BRIG type
+ * BrigImageGeometry.
+ */
+typedef enum {
+/**
+   * One-dimensional image addressed by width coordinate
+   */
+  HSA_IMAGE_GEOMETRY_1D = 0,
+
+  /**
+   * Two-dimensional image addressed by width and height coordinates
+   */
+  HSA_IMAGE_GEOMETRY_2D = 1,
+
+  /**
+   * Three-dimensional image addressed by width, height, and depth
+   * coordinates.
+   */
+  HSA_IMAGE_GEOMETRY_3D = 2,
+
+  /**
+   * Array of one-dimensional images with the same size and format.
+   * 1D arrays are addressed by index and width coordinate
+   */
+  HSA_IMAGE_GEOMETRY_1DA = 3,
+
+  /**
+   * Array of two-dimensional images with the same size and format.
+   * 2D arrays are addressed by index and width and height coordinates.
+   */
+  HSA_IMAGE_GEOMETRY_2DA = 4,
+
+  /**
+   * One-dimensional image interpreted as a buffer with specific restrictions.
+   */
+  HSA_IMAGE_GEOMETRY_1DB = 5,
+  
+  /**
+   * Two-dimensional depth image addressed by width and height coordinates
+   */
+  HSA_IMAGE_GEOMETRY_2DDEPTH = 6,
+
+  /**
+   * Array of two-dimensional depth images with the same size and format.
+   * 2D arrays are addressed by index and width and height coordinates.
+   */
+  HSA_IMAGE_GEOMETRY_2DADEPTH = 7
+} hsa_image_geometry_t;
+
+/**
+* @brief Component type associated with the image. See Image section
+* in HSA Programming Reference Manual for definitions on each
+* component type. The enumeration values match the HSAIL BRIG type
+* BrigImageChannelType.
+*/
+typedef enum
+{
+    HSA_IMAGE_CHANNEL_TYPE_SNORM_INT8 = 0,
+    HSA_IMAGE_CHANNEL_TYPE_SNORM_INT16 = 1,
+    HSA_IMAGE_CHANNEL_TYPE_UNORM_INT8 = 2,
+    HSA_IMAGE_CHANNEL_TYPE_UNORM_INT16 = 3,
+    HSA_IMAGE_CHANNEL_TYPE_UNORM_INT24 = 4,
+    HSA_IMAGE_CHANNEL_TYPE_UNORM_SHORT_555 = 5,
+    HSA_IMAGE_CHANNEL_TYPE_UNORM_SHORT_565 = 6,
+    HSA_IMAGE_CHANNEL_TYPE_UNORM_SHORT_101010 = 7,
+    HSA_IMAGE_CHANNEL_TYPE_SIGNED_INT8 = 8,
+    HSA_IMAGE_CHANNEL_TYPE_SIGNED_INT16 = 9,
+    HSA_IMAGE_CHANNEL_TYPE_SIGNED_INT32 = 10,
+    HSA_IMAGE_CHANNEL_TYPE_UNSIGNED_INT8 = 11,
+    HSA_IMAGE_CHANNEL_TYPE_UNSIGNED_INT16 = 12,
+    HSA_IMAGE_CHANNEL_TYPE_UNSIGNED_INT32 = 13,
+    HSA_IMAGE_CHANNEL_TYPE_HALF_FLOAT = 14,
+    HSA_IMAGE_CHANNEL_TYPE_FLOAT = 15
+
+} hsa_image_channel_type_t;
+
+/**
+ *
+* @brief Image component order associated with the image. See Image
+* section in HSA Programming Reference Manual for definitions on each
+* component order. The enumeration values match the HSAIL BRIG type
+* BrigImageChannelOrder.
+*
+*/
+typedef enum {
+
+    HSA_IMAGE_CHANNEL_ORDER_A = 0,
+    HSA_IMAGE_CHANNEL_ORDER_R = 1,
+    HSA_IMAGE_CHANNEL_ORDER_RX = 2,
+    HSA_IMAGE_CHANNEL_ORDER_RG = 3,
+    HSA_IMAGE_CHANNEL_ORDER_RGX = 4,
+    HSA_IMAGE_CHANNEL_ORDER_RA = 5,
+    HSA_IMAGE_CHANNEL_ORDER_RGB = 6,
+    HSA_IMAGE_CHANNEL_ORDER_RGBX = 7,
+    HSA_IMAGE_CHANNEL_ORDER_RGBA = 8,
+    HSA_IMAGE_CHANNEL_ORDER_BGRA = 9,
+    HSA_IMAGE_CHANNEL_ORDER_ARGB = 10,
+    HSA_IMAGE_CHANNEL_ORDER_ABGR = 11,
+    HSA_IMAGE_CHANNEL_ORDER_SRGB = 12,
+    HSA_IMAGE_CHANNEL_ORDER_SRGBX = 13,
+    HSA_IMAGE_CHANNEL_ORDER_SRGBA = 14,
+    HSA_IMAGE_CHANNEL_ORDER_SBGRA = 15,
+    HSA_IMAGE_CHANNEL_ORDER_INTENSITY = 16,
+    HSA_IMAGE_CHANNEL_ORDER_LUMINANCE = 17,
+    HSA_IMAGE_CHANNEL_ORDER_DEPTH = 18,
+    HSA_IMAGE_CHANNEL_ORDER_DEPTH_STENCIL = 19
+
+} hsa_image_channel_order_t;
+
+/**
  * @brief Image format descriptor (attributes of the image format).
  */
 typedef struct hsa_image_format_s {
-   /**
-    * Component type of the image
+/**
+    * Channel type of the image
     */
-    hsa_image_component_type_t component_type;
+    hsa_image_channel_type_t channel_type;
 
    /**
-    * Component order of the image
-    */
-    hsa_image_component_order_t component_order;
-
+    * Channel order of the image
+    */  
+    hsa_image_channel_order_t channel_order;
 } hsa_image_format_t;
 
 /**
@@ -3597,7 +3664,9 @@ typedef struct hsa_image_region_s {
 } hsa_image_region_t;
 
 /**
- * @brief Sampler handle. Samplers are populated by ::hsa_create_sampler_handle
+ * @brief Sampler handle. Samplers are populated by
+ * ::hsa_create_sampler_handle. Sampler handles are only unique within
+ * an agent, not across agents.
  */
 typedef struct hsa_sampler_handle_s {
    /**
@@ -3608,70 +3677,75 @@ typedef struct hsa_sampler_handle_s {
 } hsa_sampler_handle_t;
 
 /**
- * @brief Sampler address modes. The sampler address mode describes the
-processing of out-of-range image coordinates.
+ * @brief Sampler address modes. The sampler address mode describes
+ * the processing of out-of-range image coordinates. . The following
+ * modes are supported. The enumeration values match the HSAIL BRIG
+ * type BrigSamplerAddressing.
  */
 typedef enum {
 
   /**
    * Out-of-range coordinates are not handled
    */
-  HSA_SAMPLER_ADDRESS_UNDEFINED,
+  HSA_SAMPLER_ADDRESSING_UNDEFINED = 0,
 
   /**
    * Clamp out-of-range coordinates to the image edge
    */
-  HSA_SAMPLER_ADDRESS_CLAMP_TO_EDGE,
+  HSA_SAMPLER_ADDRESSING_CLAMP_TO_EDGE = 1,
 
   /**
    * Clamp out-of-range coordinates to the image border
    */
-  HSA_SAMPLER_ADDRESS_CLAMP_TO_BORDER,
+  HSA_SAMPLER_ADDRESSING_CLAMP_TO_BORDER = 2,
 
   /**
    * Wrap out-of-range coordinates back into the valid coordinate range
    */
-  HSA_SAMPLER_ADDRESS_WRAP,
+  HSA_SAMPLER_ADDRESSING_REPEAT = 3,
 
   /**
    * Mirror out-of-range coordinates back into the valid coordinate range
    */
-  HSA_SAMPLER_ADDRESS_MIRROR
+  HSA_SAMPLER_ADDRESSING_MIRRORED_REPEAT = 4
 
-} hsa_sampler_address_mode_t;
+} hsa_sampler_addressing_mode_t;
+
 
 /**
- * @brief Sampler coordinate modes.
+ * @brief Sampler coordinate modes. The enumeration values match the
+ * HSAIL BRIG BRIG_SAMPLER_COORD bit in the type BrigSamplerModifier
  */
 typedef enum {
   /**
    * Coordinates are all in the range of 0.0 to 1.0
    */
-  HSA_SAMPLER_COORD_NORMALIZED,
+  HSA_SAMPLER_COORD_NORMALIZED = 0,
 
   /**
    * Coordinates are all in the range of 0 to (dimension-1)
    */
-  HSA_SAMPLER_COORD_UNNORMALIZED
+  HSA_SAMPLER_COORD_UNNORMALIZED = 1
 
 } hsa_sampler_coordinate_mode_t;
 
 /**
- * @brief Sampler filter modes.
+ * @brief Sampler filter modes. The enumeration values match the HSAIL
+ * BRIG type BrigSamplerFilter.
  */
 typedef enum {
   /**
    * Filter to the image element nearest (in Manhattan distance) to the
    * specified coordinate.
    */
-  HSA_SAMPLER_FILTER_NEAREST,
+  HSA_SAMPLER_FILTER_NEAREST = 0,
 
   /**
    * Filter to the image element calculated by combining the elements in
    * a 2x2 square block or 2x2x2 cube block around the specified
    * coordinate. The elements are combined using linear interpolation.
    */
-  HSA_SAMPLER_FILTER_LINEAR
+  HSA_SAMPLER_FILTER_LINEAR = 1
 
 } hsa_sampler_filter_mode_t;
 
@@ -3680,7 +3754,8 @@ typedef enum {
  */
 typedef struct hsa_sampler_descriptor_s {
   /**
-   * Sampler coordinate mode describes the normalization of image coordinates
+   * Sampler coordinate mode describes the normalization of image
+   * coordinates
    */
   hsa_sampler_coordinate_mode_t coordinate_mode;
 
@@ -3690,107 +3765,192 @@ typedef struct hsa_sampler_descriptor_s {
   hsa_sampler_filter_mode_t filter_mode;
 
   /**
-   * Sampler address mode describes the processing of out-of-range image
-   * coordinates
+   * Sampler address mode describes the processing of out-of-range
+   * image coordinates
    */
   hsa_sampler_address_mode_t address_mode;
 
 } hsa_sampler_descriptor_t;
 
 /**
- * @brief Retrieves image format capabilities for the specified image format on the specified HSA component.
+ * @brief Retrieve image format capabilities for the specified image format on the specified HSA component.
  *
- * @details If successful, returns success and the queried image format’s capabilities bit-mask is written to the location specified by the @a capability_mask. See ::hsa_image_format_capability_t to determine all possible capabilities that can be reported in the bit mask.
+ * @details If successful, the queried image format’s capabilities
+ * bit-mask is written to the location specified by @a
+ * capability_mask. See ::hsa_image_format_capability_t to determine
+ * all possible capabilities that can be reported in the bit mask.
  *
- * @param[in] component
- *        HSA device to be associated with the image.
- * @param[in] image_format
- *        Image format.
- * @param[in] image_geometry
- *        Geometry of the image.
- * @param[out] capability_mask
- *        Image format capability bit-mask.
+ * @param[in] agent HSA agent to be associated with the image.
  *
- * @retval ::HSA_STATUS_SUCCESS
- *       If successful.
+ * @param[in] image_format Image format.
+ *
+ * @param[in] image_geometry Geometry of the image.
+ *
+ * @param[out] capability_mask Image format capability bit-mask.
+ *
+ * @retval ::HSA_STATUS_SUCCESS If successful.
+ *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT
- *       If @a component, @a image_format, or @a capability_mask are NULL.
+ *       If @a agent, @a image_format, or @a capability_mask are NULL.
  */
-hsa_status_t hsa_get_image_format_capability(const hsa_agent_t *component,
+hsa_status_t hsa_get_image_format_capability(const hsa_agent_t *agent,
                          const hsa_image_format_t *image_format,
                          hsa_image_geometry_t image_geometry,
                          uint32_t *capability_mask);
 /**
  *
- * @brief Inquires the required HSA component-specific image data details from a implementation independent image descriptor.
+ * @brief Inquires the required HSA component-specific image data
+ * details from a implementation independent image descriptor.
  *
- * @details The function inquires the required HSA component-specific image data details from a implementation-independent image descriptor. If successful, the function returns the queried HSA component-specific image data info is written to the location specified by @a image_info. Based on the implementation the optimal image data size and alignment requirements could vary depending on the image attributes specified in @a image_descriptor.
+ * @details If successful, the function the queried HSA agent-specific
+ * image data info is written to the location specified by @a
+ * image_info. Based on the implementation the optimal image data size
+ * and alignment requirements could vary depending on the image
+ * attributes specified in @a image_descriptor.
  *
- * @param[in] component
- *       HSA device to be associated with the image
- * @param[in] image_descriptor
- *       Implementation-independent image descriptor describing the image.
- * @param[out] image_info
- *       Image info size and alignment requirements that the HSA agent requires.
+ * @param[in] agent HSA agent to be associated with the image.
  *
- * @retval ::HSA_STATUS_SUCCESS If successful
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments is NULL.
+ * @param[in] image_descriptor Implementation-independent image
+ * descriptor describing the image.
+ *
+ * @param[out] image_info Image info size and alignment requirements
+ * that the HSA agent requires.
+ *
+ * @retval ::HSA_STATUS_SUCCESS If successful.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments
+ * is NULL.
+ *
+ * @retval ::HSA_STATUS_UNSUPPORTED_IMAGE_FORMAT If the HSA agent does
+ * not support the image format specified by the descriptor.
+ *
+ * @retval ::HSA_STATUS_IMAGE_SIZE_NOT_SUPPORTED If the HSA agent does
+ * not support the image dimensions specified by the format
+ * descriptor.
  */
 hsa_status_t hsa_get_image_info(
-                         const hsa_agent_t *component,
+                         const hsa_agent_t *agent,
                          const hsa_image_descriptor_t *image_descriptor,
                          hsa_image_info_t *image_info);
 
 /**
- * @brief Creates a component-defined image handle from an implementation-independent image descriptor and a component-specific image data.
+ * @brief Creates a agent-defined image handle from an
+ * implementation-independent image descriptor and a
+ * component-specific image data.
  *
- * @details If successful, the image handle is written to the location specified by @a image_handle. The image data memory must be allocated using the previously queried ::hsa_get_image_info memory requirements with the same HSA component and implementation-independent image descriptor.
+ * @details If successful, the image handle is written to the location
+ * specified by @a image_handle. The image data memory must be
+ * allocated using the previously queried ::hsa_get_image_info memory
+ * requirements with the same HSA agent and implementation-independent
+ * image descriptor.
  *
- * The memory management of image data is the application’s responsibility and can only be freed until the memory is no longer needed and any image handles using it are destroyed.
+ * The image data is not initialized and any previous memory contents
+ * is preserved. The memory management of image data is the
+ * application’s responsibility and can only be freed until the memory
+ * is no longer needed and any image handles using it are destroyed.
  *
- * @param[in] component Device to be associated with the image
- * @param[in] image_descriptor Implementation-independent image descriptor describing the image
- * @param[in] image_data Address of the component-specific image data
- * @param[out] image_handle Component-specific image handle
+ * @a agent_access defines how the HSA agent expects to use the image
+ * handle. The image format specified in @a image_descriptor must be
+ * capable by the HSA agent for the intended access pattern.
  *
- * @retval ::HSA_STATUS_SUCCESS If successful
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments is NULL.
+ * Image handles with different agent_access can be created using the
+ * same image data with exactly the same image descriptor as long as
+ * ::hsa_get_image_format_capability reports
+ * ::HSA_IMAGE_FORMAT_ACCESS_INVARIANT_IMAGE_DATA for the image format
+ * specified in the image_descriptor. Images of non-linear SRGB
+ * channel order types can share the same image data with its
+ * equivalent linear RGB channel order types, provided the rest of
+ * image descriptor parameters are identical.
+ *
+ * If necessary, an application can use HSA runtime image operations
+ * (::hsa_import_image, ::hsa_export_image, ::hsa_copy_image, and
+ * ::hsa_clear_image) to prepare the image for the intended use
+ * regardless of the access pattern.
+ *
+ * @param[in] agent HSA agent to be associated with the image.
+ *
+ * @param[in] image_descriptor Implementation-independent image
+ * descriptor describing the image.
+ *
+ * @param[in] image_data Address of the component-specific image data.
+ *
+ * @param[in] agent_access Access pattern of the image by the HSA
+ * agent.
+ *
+ * @param[out] image_handle Agent-specific image handle.
+ *
+ * @retval ::HSA_STATUS_SUCCESS If successful.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments
+ * is NULL.
+ *
+ * @retval ::HSA_STATUS_UNSUPPORTED_IMAGE_FORMAT if the HSA agent does
+ * not have the capability to support the image format using the
+ * specified @a agent_access.
+ *
+ * @retval HSA_STATUS_OUT_OF_RESOURCES if the HSA agent cannot create
+ * the specified handle because it is out of resources.
+ *
  */
 hsa_status_t hsa_create_image_handle(
-                         const hsa_agent_t *component,
+                         const hsa_agent_t *agent,
                          const hsa_image_descriptor_t *image_descriptor,
                          const void *image_data,
+                         hsa_agent_image_access_t agent_access,
                          hsa_image_handle_t *image_handle);
 
 /**
- * @brief Imports a linearly organized image data from memory directly to an image handle.
+ * @brief Imports a linearly organized image data from memory directly
+ * to an image handle.
  *
- * @details This operation updates the image data in the image handle from the source memory. The size of the data imported from memory is implicitly derived from the image region.
- * If  @a completion_signal is NULL, the operation occurs synchronously. Otherwise the function returns immediately and the  @a completion_signal is signaled when the operation completes.
- * If  @a src_row_pitch is smaller than the destination region width (in bytes), then @a src_row_pitch = region width.
- * If  @a src_slice_pitch is smaller than the destination region width * region height (in bytes), then  @a src_slice_pitch = region width * region height.
- * It is the application’s responsibility to avoid out of bounds memory access.
- * None of the source memory or image data memory in the previously created ::hsa_create_image_handle image handle can overlap – overlapping of any of the source and destination memory within the import operation produces undefined results.
+ * @details This operation updates the image data referenced by the
+ * image handle from the source memory. The size of the data imported
+ * from memory is implicitly derived from the image region.
  *
- * @param[in] component
- *        Device to be associated with the image
- * @param[in] src_memory
- *        Source memory
- * @param[in] src_row_pitch
- *        Number of bytes in one row of the source memory
- * @param[in] src_slice_pitch
- *        Number of bytes in one slice of the source memory
- * @param[in] dest_image_handle
- *        Destination Image handle
- * @param[in] image_region
- *        Image region to be updated
- * @param[in] completion_signal
- *        Signal to set when the operation is completed
+ * If @a completion_signal is NULL, the operation occurs
+ * synchronously. Otherwise the function returns immediately and the
+ * @a completion_signal is signaled when the operation completes.
+ *
+ * If @a src_row_pitch is smaller than the destination region width
+ * (in bytes), then @a src_row_pitch = region width.
+ *
+ * If @a src_slice_pitch is smaller than the destination region width
+ * * region height (in bytes), then @a src_slice_pitch = region width
+ * * region height.
+ * 
+ * It is the application’s responsibility to avoid out of bounds
+ * memory access.
+ *
+ * None of the source memory or image data memory in the previously
+ * created ::hsa_create_image_handle image handle can overlap –
+ * overlapping of any of the source and destination memory within the
+ * import operation produces undefined results.
+ *
+ * @param[in] agent HSA agent to be associated with the image.
+ *
+ * @param[in] src_memory Source memory.
+ *
+ * @param[in] src_row_pitch Number of bytes in one row of the source
+ * memory.
+ *
+ * @param[in] src_slice_pitch Number of bytes in one slice of the
+ * source memory.
+ *
+ * @param[in] dest_image_handle Destination Image handle.
+ *
+ * @param[in] image_region Image region to be updated.
+ *
+ * @param[in] completion_signal Signal to set when the operation is
+ * completed.
+ *
  * @retval ::HSA_STATUS_SUCCESS If successful.
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a component, @a src_memory or @a image_region are NULL.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a agent, @a
+ * src_memory or @a image_region are NULL.
+ *
  */
 hsa_status_t hsa_import_image (
-                         const hsa_agent_t *component,
+                         const hsa_agent_t *agent,
                          const void *src_memory,
                          size_t src_row_pitch,
                          size_t src_slice_pitch,
@@ -3799,7 +3959,8 @@ hsa_status_t hsa_import_image (
                          const hsa_signal_handle_t *completion_signal);
 
 /**
- * @brief Exports image data from the image handle directly to memory organized linearly.
+ * @brief Export image data from the image handle directly to memory
+ * organized linearly.
  *
  * @details The operation updates the destination memory with the image data in the image handle. The size of the data exported to memory is implicitly derived from the image region.
  * If @a completion_signal is NULL, the operation occurs synchronously. Otherwise the function returns immediately and the @a completion_signal is signaled when the operation completes.
@@ -3808,26 +3969,30 @@ hsa_status_t hsa_import_image (
  * It is the application’s responsibility to avoid out of bounds memory access.
  * None of the destination memory or image data memory in the previously created ::hsa_create_image_handle image handle can overlap – overlapping of any of the  source and destination memory within the export operation produces undefined results.
  *
- * @param[in] component
- *        Device to be associated with the image
- * @param[in] src_image_handle
- *        Source image handle
- * @param[in] dst_memory
- *        Destination memory
- * @param[in] dst_row_pitch
- *        Number of bytes in one row of the destination memory
- * @param[in] dst_slice_pitch
- *        Number of bytes in one slice of the destination  memory
- * @param[in] image_region
- *        Image region to be exported
- * @param[in] completion_signal
- *        Signal to set when the operation is completed
+ * @param[in] agent HSA agent to be associated with the image.
+ *
+ * @param[in] src_image_handle Source image handle.
+ *
+ * @param[in] dst_memory Destination memory.
+ *
+ * @param[in] dst_row_pitch Number of bytes in one row of the
+ * destination memory.
+ *
+ * @param[in] dst_slice_pitch Number of bytes in one slice of the
+ * destination memory.
+ *
+ * @param[in] image_region Image region to be exported.
+ *
+ * @param[in] completion_signal Signal to set when the operation is
+ * completed.
  *
  * @retval ::HSA_STATUS_SUCCESS If successful.
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a component, @a dst_memory or @a image_region are NULL.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a agent, @a
+ * dst_memory or @a image_region are NULL.
  */
 hsa_status_t hsa_export_image(
-                          const hsa_agent_t *component,
+                          const hsa_agent_t *agent,
                           hsa_image_handle_t src_image_handle,
                           void *dst_memory,
                           size_t dst_row_pitch,
@@ -3844,22 +4009,24 @@ hsa_status_t hsa_export_image(
  * The source and destination image handles must have been previously created using ::hsa_create_image_handle. The source and destination image data memory are not allowed to be the same. Overlapping any of the source and destination memory produces undefined results.
  * The source and destination image formats don’t have to match; appropriate format conversion is performed automatically. The source and destination images must be of the same geometry.
  *
- * @param[in] component
- *        HSA device to be associated with the image
- * @param[in] src_image_handle
- *        Source image handle
- * @param[in] dst_image_handle
- *        Destination image handle
- * @param[in] image_region
- *        Image region to be copied
- * @param[in] completion_signal
- *        Signal to set when the operation is completed.
+ * @param[in] agent HSA agent to be associated with the image.
+ *
+ * @param[in] src_image_handle Source image handle.
+ *
+ * @param[in] dst_image_handle Destination image handle.
+ *
+ * @param[in] image_region Image region to be copied.
+ *
+ * @param[in] completion_signal Signal to set when the operation is
+ * completed.
  *
  * @retval ::HSA_STATUS_SUCCESS If successful.
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a component or @a image_region are NULL.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a agent or @a
+ * image_region are NULL.
  */
 hsa_status_t hsa_copy_image(
-                       const hsa_agent_t *component,
+                       const hsa_agent_t *agent,
                        hsa_image_handle_t src_image_handle,
                        hsa_image_handle_t dst_image_handle,
                        const hsa_image_region_t *image_region,
@@ -3875,22 +4042,22 @@ hsa_status_t hsa_copy_image(
  * For images of  UNORM types, the floating point values must be in the [0..1] range. For images of SNORM types, the floating point values must be in the [-1..1] range. For images of UINT types, the floating point values are rounded down to an integer value. For images of SRGB types, the clear data is specified in a linear space, which is appropriately converted by the Runtime to sRGB color space.
  * Specifying clear value outside of the range representable by an image format produces undefined results.
  *
- * @param[in] component
- *        HSA device to be associated with the image
- * @param[in] image_handle
- *        Image to be cleared
- * @param[in]  data
- *        4-component clear value in floating point format
- * @param[in] image_region
- *        Image region to clear
- * @param[in] completion_signal
- *        Signal to set when the operation is completed
+ * @param[in] agent HSA agent to be associated with the image.
+ *
+ * @param[in] image_handle Image to be cleared.
+ *
+ * @param[in] data 4-component clear value in floating point format.
+ *
+ * @param[in] image_region Image region to clear.
+ *
+ * @param[in] completion_signal Signal to set when the operation is completed.
  *
  * @retval ::HSA_STATUS_SUCCESS If successful.
+ *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a component or @a image_region are NULL.
  */
 hsa_status_t hsa_clear_image(
-                        const hsa_agent_t *component,
+                        const hsa_agent_t *agent,
                         hsa_image_handle_t image_handle,
                         const float data[4],
                         const hsa_image_region_t *image_region,
@@ -3905,48 +4072,65 @@ hsa_status_t hsa_clear_image(
  *
  *  The image handle should not be destroyed while there are
  *  references to it queued for execution or currently being used in a
- *  dispatch.
+ *  dispatch. Failure to properly track image data lifetime causes
+ *  undefined results due to premature image handle deletion.
+ *
+ * @param[in] agent HSA agent to be associated with the image.
  *
  * @param[in] image_handle Image handle
  *
- * @retval ::HSA_STATUS_SUCCESS If successful.
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a image_handle is NULL.
+ * @retval ::HSA_STATUS_SUCCESS If successful.  
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a agent or @a
+ * image_handle is NULL.
  */
 hsa_status_t hsa_destroy_image_handle (
-                                    hsa_image_handle_t *image_handle);
+                        const hsa_agent_t *agent,
+                        hsa_image_handle_t *image_handle);
 
 /**
- * @brief Create an HSA component-defined sampler handle from a component-independent sampler descriptor.
+ * @brief Create an HSA component-defined sampler handle from a
+ * component-independent sampler descriptor.
  *
- * @details If successful, the sampler handle is written to the location specified by the sampler handle.
+ * @details If successful, the sampler handle is written to the
+ * location specified by the sampler handle.
  *
- * @param[in]  component
- *        HSA device to be associated with the image
- * @param[in]  sampler_descriptor
- *        Implementation-independent sampler descriptor
- * @param[out] sampler_handle
- *         Component-specific sampler handle
+ * @param[in] agent HSA agent to be associated with the image.
+ *
+ * @param[in]  sampler_descriptor Implementation-independent sampler descriptor
+ *
+ * @param[out] sampler_handle Component-specific sampler handle
  *
  * @retval ::HSA_STATUS_SUCCESS If successful.
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a component, @a sampler_descriptor, or @a sampler_handle are NULL.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments
+ * is NULL.
  */
 hsa_status_t hsa_create_sampler_handle(
-                     const hsa_agent_t *component,
+                     const hsa_agent_t *agent,
                      const hsa_sampler_descriptor_t *sampler_descriptor,
                      hsa_sampler_handle_t *sampler_handle);
 
 /**
  * @brief Destroys the specified sampler handle.
  *
- * @details If successful, the sampler handle previously created using ::hsa_create_sampler_handle is destroyed. The sampler handle should not be destroyed while there are references to it queued for execution or currently being used in a dispatch.
+ * @details If successful, the sampler handle previously created using
+ * ::hsa_create_sampler_handle is destroyed. The sampler handle should
+ * not be destroyed while there are references to it queued for
+ * execution or currently being used in a dispatch.
  *
- * @param[in] sampler_handle component-specific sampler handle
+ * @param[in] agent HSA agent to be associated with the image.
+ *
+ * @param[in] sampler_handle Sampler handle.
  *
  * @retval ::HSA_STATUS_SUCCESS If successful.
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a sampler_handle is NULL.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments
+ * is NULL.
  */
 hsa_status_t hsa_destroy_sampler_handle(
-                                   hsa_sampler_handle_t *sampler_handle);
+                     const hsa_agent_t *agent,
+                     hsa_sampler_handle_t *sampler_handle);
 /** @} */
 
 /** \defgroup API_kernargmem TODO
@@ -3958,7 +4142,8 @@ hsa_status_t hsa_destroy_sampler_handle(
  * @param[in] component A valid pointer to the component for which
  * the specified amount of kernarg memory is to be allocated.
  *
- * @param[in] size Requested allocation size in bytes. If size is 0, NULL is returned.
+ * @param[in] size Requested allocation size in bytes. If size is 0,
+ * NULL is returned.
  *
  * @param[out] address A valid pointer to the location of where to
  * return the pointer to the base of the allocated region of memory.

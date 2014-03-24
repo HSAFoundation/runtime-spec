@@ -61,14 +61,19 @@
 \usepackage{trackchanges}
 \usepackage{enumitem}
 
+% TODO(mmario): remove, should not be here
 \setlength{\parskip}{4mm plus2mm minus2mm}
+
 % no indentation
 \setlength{\parindent}{0cm}
 
 \newcommand{\diffblock}[1]{#1}
+
+% TODO(mmario): remove
 \newcommand{\ttbf}[1]{\diffblock{\texttt{\textbf{#1}}}}
-\newcommand{\emphld}[1]{\begin{DIFnomarkup} \emph{#1}
-\end{DIFnomarkup}}
+
+% TODO(mmario): remove
+\newcommand{\emphld}[1]{\begin{DIFnomarkup} \emph{#1} \end{DIFnomarkup}}
 
 \newcommand{\hsaarg}[1]{\textit{#1}}
 \newcommand{\hsadef}[2]{\hypertarget{#1}{\textbf{#2}}}
@@ -87,13 +92,12 @@
 \renewcommand{\familydefault}{\sfdefault}
 
 \RequirePackage[normalem]{ulem} %DIF PREAMBLE
-\RequirePackage{color}\definecolor{RED}{rgb}{1,0,0}\definecolor{BLUE}{rgb}{0,0,1}
+
 \newenvironment{DIFnomarkup}{}{}
 
 \pagestyle{fancy}
 \renewcommand{\chaptermark}[1]{ \markboth{#1}{} }
 \renewcommand{\sectionmark}[1]{ \markright{#1}{} }
-%\renewcommand{\headrulewidth}{0.5pt}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 
@@ -113,7 +117,7 @@
 \vspace*{7cm}
 \begin{center}
 {\Large HSA Core API Programmers Reference Manual\\[1ex]\large
-0.\-174 }\\
+0.177 }\\
 \vspace*{1cm}
 \vspace*{0.5cm}
 {\small \today}\\
@@ -2161,73 +2165,73 @@ Here is the corresponding kernel and usage model:
 
 \chapter{Images and Samplers}
 \label{images} \hypertarget{images}{}
-\hypertarget{Images}{\section{Introduction} \label{images}}
-
-Images in HSA are represented by \reftyp{hsa\_image\_handle\_t}, reference the
-image data in memory and store information about resource layout and
-their other properties. HSA decouples the storage of the image data
-and the description of how the device is supposed to interpret that
-data. This allows the developer to control the location of the image
-data storage and manage memory more efficiently.
+\hypertarget{Images}{\section{Introduction} \label{images}} Images in
+HSA are accessed by an image handle \reftyp{hsa\_image\_handle\_t}. The
+image handle references the image data in memory and records
+information about resource layout and other properties. HSA decouples
+the storage of the image data and the description of how the device
+interprets that data. This allows the developer to control the
+location of the image data storage and manage memory more efficiently.
 
 The HSA image format is specified using a format descriptor
-(\reftyp{hsa\_image\_format\_t}) that contains information about the image
-component type and the component order. The image component type
+(\reftyp{hsa\_image\_format\_t}) that contains information about the
+image channel type and the channel order. The image channel type
 describes how the data is to be interpreted along with the bit size,
-and image component order describes the number and the order. Not all
-image component types and order combinations are valid on a HSA
+and image channel order describes the number and the order. Not all
+image channel types and channel order combinations are valid on a HSA
 gent. All HSA agents have to support a required minimum set of image
 formats (see HSA Programmer’s Reference Manual). An application can
 query image format capabilities using
 \reffun{hsa\_get\_image\_format\_capability}.
 
 An implementation-independent image format descriptor
-(\reftyp{hsa\_image\_descriptor\_t}) is composed of geometry along with the image
-format. The image descriptor is used to inquire the runtime for the
-HSA component-specific image data size and alignment details by
-calling \reffun{hsa\_get\_image\_info} for the purpose of determining the
-implementation’s storage requirements.
+(\reftyp{hsa\_image\_descriptor\_t}) is composed of geometry along with
+the image format. The image descriptor is used to inquire the runtime
+for the HSA component-specific image data size and alignment details
+by calling \reffun{hsa\_get\_image\_info} for the purpose of determining
+the implementation’s storage requirements.
 
-The memory requirements (\reftyp{hsa\_image\_info\_t}) include the size of the
-memory needed as well as any alignment constraints. An application can
-either allocate new memory for the image data, or sub-allocate a
-memory block from an existing memory if the memory size allows. Before
-the image data is used, a HSA component -specific image handle must be
-created using it and if necessary, cleared and prepared according to
-the intended use.
+The memory requirements (\reftyp{hsa\_image\_info\_t}) include the size
+of the memory needed as well as any alignment constraints. An
+application can either allocate new memory for the image data, or
+sub-allocate a memory block from an existing memory if the memory size
+allows. Before the image data is used, a HSA agent -specific image
+handle must be created using it and if necessary, cleared and prepared
+according to the intended use.
 
-A HSA component-specific image handle is used by the HSAIL language
-for reading or writing using image read, store and atomic built-in
-operations. \reffun{hsa\_create\_image\_handle} creates an image handle from a
-implementation-independent image format descriptor and a HSA
-component-specific image data.
+A HSA agent-specific image handle (\reftyp{hsa\_image\_handle\_t}) is
+used by the HSAIL language for reading or writing using HSAIL rdimage,
+ldimage and stimage operations. \reffun{hsa\_create\_image\_handle}
+creates an image handle from a implementation-independent image format
+descriptor and independently allocated image data that conforms to the
+requirements provided by \reffun{hsa\_get\_image\_info}.
 
 It must be noted that while the image data technically accessible from
 its pointer in the raw form, the data layout and organization is
-device-specific and should be treated as opaque. The internal
+agent-specific and should be treated as opaque. The internal
 implementation of an optimal image data organization could vary
 depending on the attributes of the image format descriptor. As a
 result, there are no guarantees on the data layout when accessed from
-another HSA component. The only reliable way to import or export image
+another HSA agent. The only reliable way to import or export image
 data from optimally organized images is to copy their data to and from
 a linearly organized data layout in memory, as specified by the
 image’s format attributes.
 
 The HSA Runtime provides interfaces to allow operations on
 images. Image data transfer to and from memory with a linear layout
-can be performed using \reffun{hsa\_export\_image} and \reffun{hsa\_import\_image}
-respectively. A portion of an image could be copied to another image
-using \reffun{hsa\_copy\_image}. An image can be cleared using
-\reffun{hsa\_clear\_image}. It is the application’s responsibility to ensure
-proper synchronization and preparation of images on accesses from
-other image operations. See HSA System Architecture spec 2.13 for the
-HSA Image memory model.
+can be performed using \reffun{hsa\_export\_image} and
+\reffun{hsa\_import\_image} respectively. A portion of an image could be
+copied to another image using \reffun{hsa\_copy\_image}. An image can be
+cleared using \reffun{hsa\_clear\_image}. It is the application’s
+responsibility to ensure proper synchronization and preparation of
+images on accesses from other image operations. See HSA System
+Architecture spec 2.13 for the HSA Image memory model.
 
-Sampler objects, represented in HSA by \reftyp{hsa\_sampler\_handle\_t}, describe
-how images are processed on an rdimage HSAIL
-operation. \reffun{hsa\_create\_sampler\_handle} creates a HSA
-component-specific sampler handle from a device independent sampler
-descriptor (\reftyp{hsa\_sampler\_descriptor\_t}).
+A HSA agent-specific sampler handle (\reftyp{hsa\_sampler\_handle\_t})
+is used by the HSAIL language to describe how images are processed by
+the rdimage HSAIL operation. \reffun{hsa\_create\_sampler\_handle}
+creates a sampler handle from an agent independent sampler descriptor
+(\reftyp{hsa\_sampler\_descriptor\_t}).
 
 \newpage
 \hypertarget{Images API}{\section{API} \label{images_api}}

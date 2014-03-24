@@ -43,15 +43,15 @@ def process_file(file):
   typedefs = root.findall(".//memberdef[@kind='typedef']")
   for typedef in typedefs:
     typ = typedef.find('type').text;
-    if typ is not None: 
+    if typ is not None:
       continue
     tex.write("\n\n")
     # begin box
     tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
     # typedef definition. We use the 'definition' string because in the presence
     # of pointers to functions using the type itself is tricky.
-    definition = node2tex(typedef.find('definition')) 
-    name = node2tex(typedef.find('name')) 
+    definition = node2tex(typedef.find('definition'))
+    name = node2tex(typedef.find('name'))
     newname = " \\hsadef{" + typedef.get('id') + "}{" + name + "}"
     definition = definition.replace(name, newname, 1)
     tex.write(definition + "\n")
@@ -203,7 +203,7 @@ def process_file(file):
     if ret is not None:
       tex.write('\\vspace{-5mm}')
       tex.write("\\noindent\\textbf{Returns}\\\\[1mm]"+ "\n")
-      tex.write(node2tex(ret) + "\n\n")      
+      tex.write(node2tex(ret) + "\n\n")
       # add the tabular anyway so margin are kept constant
       tex.write('\\noindent\\begin{longtable}{@{}>{\\hangindent=2em}p{\\linewidth}}' + "\n")
       tex.write("\n\\end{longtable}" + "\n")
@@ -217,6 +217,9 @@ def process_file(file):
   tex.close()
 
 def main():
+  outdir = 'altlatex'
+  if not os.path.exists(outdir):
+    os.makedirs(outdir)
   for file in os.listdir('xml'):
     if file.find("group__API__") == 0 or file.find("group__ENU__") == 0 or file.find("group__STR__") == 0 or file.find("group__TDF__") == 0:
       sys.stdout.write('Processing ' + file + "...")
