@@ -12,12 +12,13 @@
 \usepackage{longtable}
 \usepackage{ifthen}
 \usepackage{textcomp}
-\usepackage{tabularx}
 \usepackage{paralist}
 \usepackage{framed}
 \usepackage[style=1]{mdframed}
 
 \usepackage{tcolorbox}
+  % allow page breaks within boxes
+  \tcbuselibrary{breakable}
 
 \usepackage{ifpdf}
 \ifpdf
@@ -61,8 +62,18 @@
 \usepackage{trackchanges}
 \usepackage{enumitem}
 
-% TODO(mmario): remove, should not be here
-\setlength{\parskip}{4mm plus2mm minus2mm}
+
+
+
+
+
+
+
+
+
+
+% Increase paragraph vspace
+\setlength{\parskip}{2mm}
 
 % no indentation
 \setlength{\parindent}{0cm}
@@ -85,6 +96,7 @@
 \newcommand{\reftyp}[1]{#1}
 \newcommand{\refenu}[1]{\reftyp{#1}}
 
+
 \addeditor{AMD}
 \makeindex
 \setcounter{tocdepth}{3}
@@ -101,13 +113,13 @@
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 
-
 \fancyhead{} % clear all header fields
 \fancyfoot{} % clear all footer fields
 \fancyfoot[LE,RO]{\scriptsize{\thepage}}
 \fancyfoot[LO,RE]{\scriptsize{HSA Core API Programmers Reference Manual}}
 \fancyhead[RE]{\scriptsize{\leftmark}}
 \fancyhead[LO]{\scriptsize{\rightmark}}
+
 
 \begin{document}
 %\large
@@ -117,7 +129,7 @@
 \vspace*{7cm}
 \begin{center}
 {\Large HSA Core API Programmers Reference Manual\\[1ex]\large
-0.177 }\\
+0.178}\\
 \vspace*{1cm}
 \vspace*{0.5cm}
 {\small \today}\\
@@ -556,7 +568,7 @@ particular enumeration constant. To query additional
 information on synchronous errors, the core runtime defines the
 following API:
 
-\input{api/altlatex/group__API__status__query}
+\input{api/altlatex/group__status__query}
 
 \begin{DIFnomarkup}
 \hypertarget{asyncerror}{}\subsection{Asynchronous Errors and
@@ -581,7 +593,6 @@ The runtime does not implement any default callbacks.
 
 \subsubsection{Asynchronous Notification of Information or
 Warning}\label{asynnotif}
-
 The information/warning status is represented by a value greater
 than 0 within the \reftyp{hsa\_status\_t} enumeration. The status is
 up to user interpretation and the runtime allows the user to
@@ -596,13 +607,13 @@ discussed in Section~\ref{init} or via
 \reffun{hsa\_notification\_callback\_register} API, which is defined
 as follows:
 
-\input{api/altlatex/group__API__register__notify}
+\input{api/altlatex/group__register__notify}
 
 One of the arguments of the notification callback is a structure
 that contains notification information. The structure is defined as
 follows:
 
-\input{api/altlatex/group__STR__notify__message}
+\input{api/altlatex/group__notify__message}
 
 \subsubsection{Asynchronous Notification of Errors}\label{asynnotif}
 
@@ -616,7 +627,7 @@ callbacks. The asynchronous error callback may be registered by means of the
 \reffun{hsa\_error\_callback\_register} API, which is defined as
 follows:
 
-\input{api/altlatex/group__API__register__error}
+\input{api/altlatex/group__register__error}
 
 Details on how association of the callback can be done with
 asynchronous activities are discussed in Sections~\ref{init} and
@@ -626,7 +637,7 @@ One of the arguments of the notification callback is a structure
 that contains notification information. The structure is defined as
 follows:
 
-\input{api/altlatex/group__STR__error__message}
+\input{api/altlatex/group__error__message}
 
 \subsection{Asynchronous Notification Example}
 \lstinputlisting{example/asyncerror.c}
@@ -664,7 +675,7 @@ runtime instance, close it (\reffun{hsa\_close}), create a new context
 (\reffun{hsa\_context\_acquire}) and release the acquired
 context(\reffun{hsa\_context\_release}.
 
-\input{api/altlatex/group__API__openclose}
+\input{api/altlatex/group__openclose}
 
 \subsection{Example}
 \lstinputlisting{example/openclose.c}
@@ -685,7 +696,7 @@ different HSA Components on the system with local access to a
 particular set of memory resources. The topology table is designed to
 be allocated in a block of contiguous memory.
 
-\input{api/altlatex/group__API__topology__create}
+\input{api/altlatex/group__topology__create}
 
 \begin{figure}[b]
   \centering
@@ -698,7 +709,7 @@ be allocated in a block of contiguous memory.
 The table structure is shown in Figure~\ref{fig:topology_table}.
 The first entity in the table is a table header. This is the output
 of the \reffun{hsa\_topology\_table\_create} API, and is defined as:
-\input{api/altlatex/group__STR__topology__header}
+\input{api/altlatex/group__topology__header}
 
 The table header structure includes the platform structure (
 \reftyp{hsa\_platform\_t}), defined below.  The platform information in
@@ -711,7 +722,7 @@ properties such as the clock frequency that are common across the
 platform and also links to various elements in the topology table (see
 Figure \ref{fig:topology_table}).
 
-\input{api/altlatex/group__STR__platform}
+\input{api/altlatex/group__platform}
 
 When no information is available for a particular element, the
 corresponding {\itshape number\_ \textless element \textgreater s}
@@ -720,7 +731,7 @@ Platform structure maps to the agents, cache and physical memory
 in the topology table for all nodes in the platform.
 
 The core runtime defines the following structure to represent cache:
-\input{api/altlatex/group__STR__cache__descriptor}
+\input{api/altlatex/group__cache__descriptor}
 
 The memory descriptor structure represents a physical memory block or
 region and includes elements to provide bandwidth (an implementation
@@ -730,12 +741,12 @@ may chose to return 0 in the {\itshape peak\textunderscore
 memory. Implementations may choose not to provide memory bandwidth or
 latency information.  The memory descriptor structure is defined as
 follows:
-\input{api/altlatex/group__STR__memory__descriptor}
+\input{api/altlatex/group__memory__descriptor}
 
 The following structure can represent any combination of the HSA
 segments, dedicating a single bit for each segment.
 
-\input{api/altlatex/group__STR__segment}
+\input{api/altlatex/group__segment}
 
 The HSA Agent data structure represents an HSA component when the
 \reffld{agent\_type} field in the agent structure is set to a 1
@@ -749,11 +760,11 @@ indicates that agent can participate in agent dispatches. All
 three bits or a combination of them can be set by the HSA runtime.
 
 The structure of the HSA agent/component is defined as follows:
-\input{api/altlatex/group__STR__component}
+\input{api/altlatex/group__component}
 
 Within the agent, the agent type is an enumeration that is defined
 as follows:
-\input{api/altlatex/group__ENU__agent__type}
+\input{api/altlatex/group__agent__type}
 
 The user must destroy the topology table before closing the runtime.
 The \reffun{hsa\_topology\_table\_destroy} API is defined by the
@@ -774,8 +785,7 @@ the error encountered in a component was recovered, the topology
 table may not look different from the users perception.
 
 \hypertarget{topology_example}{} \subsection{Topology Example}
-This is {\color{red} work-in-progress} - the chapter needs to be written.
-
+TODO
 
 \hypertarget{signals}{}\section{Memory based Signals and
 Synchronization}\label{signals}
@@ -797,23 +807,23 @@ signal is opaque and may contain implementation specific information.
 The signal handle, which represents a signal, and the structure for
 the value the signal carries, are defined as follows:
 
-\input{api/altlatex/group__STR__signal__value}
+\input{api/altlatex/group__signal__value}
 
 Signals are created and destroyed using the following API:
 
-\input{api/altlatex/group__API__signal__create}
-\input{api/altlatex/group__API__signal__destroy}
+\input{api/altlatex/group__signal__create}
+\input{api/altlatex/group__signal__destroy}
 
 Once a signal is created for a particular context, it may be bound
 to other contexts. This is useful when signal is used across
 different components of a users application. An API to bind the
 signal to a particular runtime context is defined as follows:
 
-\input{api/altlatex/group__API__signal__bind}
+\input{api/altlatex/group__signal__bind}
 
 A signal can also be unbound from a particular context:
 
-\input{api/altlatex/group__API__signal__unbind}
+\input{api/altlatex/group__signal__unbind}
 
 \vspace{3mm}As per the HSA SAR specification the signals may only be
 created and operated on by either instructions in HSAIL or the HSA
@@ -824,7 +834,7 @@ indicates the maximum amount of time that an implementation can spend
 waiting for a particular value before returning. The API to query the
 timeout is defined as:
 
-\input{api/altlatex/group__API__signal__timeout}
+\input{api/altlatex/group__signal__timeout}
 
 The send signal API sets the signal handle with caller specified
 value. Any subsequent wait on the signal handle would be given
@@ -877,7 +887,7 @@ signal value are:
 For efficiency, a unique signal API has been created for each of
 these actions.
 
-\input{api/altlatex/group__API__signal__all}
+\input{api/altlatex/group__signal__all}
 
 The user may wait on a signal, with a condition specifying the terms
 of wait. The wait can be done either in the HSA Component via an HSAIL
@@ -888,15 +898,15 @@ if the status returned by the wait API indicates a success
 (i.e. return value is \refenu{HSA\_STATUS\_SUCCESS}). The two wait APIs
 to support both synchronizations are defined as follows:
 
-\input{api/altlatex/group__API__signal__wait}
+\input{api/altlatex/group__signal__wait}
 
 The wait condition is defined as follows:
 
-\input{api/altlatex/group__ENU__wait__condition}
+\input{api/altlatex/group__wait__condition}
 
 The runtime also defines an API to query the current signal value:
 
-\input{api/altlatex/group__API__signal__query}
+\input{api/altlatex/group__signal__query}
 
 Signals may be utilized in many ways. For example, a running kernel,
 after it finishes producing a part of its computation, may set the
@@ -915,9 +925,7 @@ that is already in error may further be decremented to a larger
 negative value.
 
 \hypertarget{signal_example}{} \subsection{Usage Example}
-This is {\color{red} work-in-progress} -- the chapter needs to be written.
-\label{signal_example}
-
+TODO
 
 \hypertarget{architected\_queue}{} \section{Architected Queue in
 HSA} \label{architected_queue}
@@ -947,7 +955,7 @@ packets and the structure of the AQL packet are discussed in
 Section~\ref{AQL}. A queue in HSA is defined with the following
 structure:
 
-\input{api/altlatex/group__STR__queue}
+\input{api/altlatex/group__queue}
 
 \vspace{-3mm}Internally, the queue structure contains read index and
 write index.  These are not exposed to the user directly.  The write
@@ -995,7 +1003,7 @@ must ring the doorbell for every batch of AQL packets written.
 
 Queues are created using the following function:
 
-\input{api/altlatex/group__API__queue__create}
+\input{api/altlatex/group__queue__create}
 
 The \reffun{hsa\_queue\_create} API allocates the memory for the
 queue. Space for \texttt{size} number of packets is allocated by the
@@ -1035,7 +1043,7 @@ The first ratified version of the SAR specification does not define the
 marked as fields for future expansion.
 
 Queues are destroyed using
-\input{api/altlatex/group__API__queue__destroy}
+\input{api/altlatex/group__queue__destroy}
 
 \vspace{5mm}The user can access the read and write indexes by using
 the \reffun{hsa\_queue\_get/cas/add\_write\_index} and
@@ -1047,10 +1055,10 @@ API is undefined. All the API return the value of the corresponding
 index. The CAS, ADD and WRITE API on the write index return the value
 of the write index prior to the update.
 
-\input{api/altlatex/group__API__queue__update}
+\input{api/altlatex/group__queue__update}
 
 \vspace{5mm}The queue can forcefully be inactivated by the user:
-\input{api/altlatex/group__API__queue__inactivate}
+\input{api/altlatex/group__queue__inactivate}
 
 \hypertarget{queue_errors}{}\subsection{Queue Error Reporting,
 Inactivation and Queue State} \label{queueerrors}
@@ -1175,7 +1183,7 @@ component dispatch, agent dispatch and barrier.  There is a common
 packet header across these three packet types and is defined by the
 following structure:
 
-\input{api/altlatex/group__STR__aql__header}
+\input{api/altlatex/group__aql__header}
 
 The \texttt{format} field in the header is used to specify
 the packet type. Beyond the four packet types defined, all the
@@ -1255,7 +1263,7 @@ where it is awaiting its dispatch on to the HSA component. Even such
 packets awaiting execution are still considered as processed.
 
 The structure for the dispatch AQL packet is shown below:
-\input{api/altlatex/group__STR__dispatch__packet}
+\input{api/altlatex/group__dispatch__packet}
 
 \hypertarget{segment_sizes}{}\subsubsection{Segment
 Sizes}\label{segment_sizes}
@@ -1289,7 +1297,7 @@ support queues that allow both agent and component dispatches, but
 it is not a core feature). The HSA core runtime structure for agent
 dispatches is defined as follows:
 
-\input{api/altlatex/group__STR__agent__packet}
+\input{api/altlatex/group__agent__packet}
 
 \hypertarget{barrier_packet}{}\subsection{Barrier AQL
 packet}\label{barrier_packet}
@@ -1302,7 +1310,7 @@ This is unlike a dispatch packet whose completion may occur at some
 future time after the packet has finished processing. The HSA core
 runtime structure for the AQL barrier packet is shown below:
 
-\input{api/altlatex/group__STR__barrier__packet}
+\input{api/altlatex/group__barrier__packet}
 
 If any of the dependent signals have been signalled with a negative
 value, the barrier packet is complete, and will indicate failure in
@@ -1358,13 +1366,11 @@ signalled with an error).
 \item[completed-success] The barrier packet had all its dependencies
 met, its completion object has been signalled with a value of 0.
 \end{description}
-
 \hypertarget{aql_example}{}\subsection{Packet Setup
 Example}\label{aql_example}
-{\color{red} Work-in-progress}
-
-
+TODO
 \hypertarget{coreapi_memory_registration}{}\section{Memory Registration and Deregistration}\label{coreapi_memory_registration}
+
 \hypertarget{coreapi_registration_overview}{}\subsection{Overview}\label{coreapi_registration_overview}
 One of the key features of HSA is its ability to share global
 pointers between the host application and code executing on the
@@ -1386,7 +1392,7 @@ HSA program no longer needs to access a registered buffer in a
 device, the user should deregister that virtual address range by
 using the appropriate HSA core API invocation.
 
-\input{api/altlatex/group__API__register}
+\input{api/altlatex/group__register}
 
 \hypertarget{coreapi_registration_usage}{}\subsection{Usage}\label{coreapi_registration_usage}
 
@@ -1468,7 +1474,7 @@ Section~\ref{coreapi_registration_overview}), the HSA runtime
 provides an interface, \reffun{hsa\_memory\_allocate} to allocate
 memory that is internally registered by the runtime:
 
-\input{api/altlatex/group__API__memory__allocate}
+\input{api/altlatex/group__memory__allocate}
 
 \hypertarget{coreapi_kernarg}{}\subsection{Kernarg
 Memory}\label{kernargmem}
@@ -1481,7 +1487,7 @@ HSA core runtime provided API are utilized for allocating and copying
 to the allocated kernarg memory. To facilitate such optimizations, HSA
 core runtime defines the following API:
 
-\input{api/altlatex/group__API__kernargmem}
+\input{api/altlatex/group__kernargmem}
 
 \hypertarget{coreapi_device_memory}{}\subsection{Component Local
   Memory}\label{coreapi_device_memory}
@@ -1493,7 +1499,7 @@ limitation that the host might not be able to access it directly. HSA
 runtime provides a host interface to allocate/deallocate and access
 component local memory.
 
-\input{api/altlatex/group__API__memory__local}
+\input{api/altlatex/group__memory__local}
 
 \hypertarget{coreapi_device_memory_usage}{}\subsection{Usage}\label{coreapi_device_memory_usage}
 
@@ -1579,8 +1585,8 @@ component sets the full flag, sends a signal to agent by accessing the
 \reffld{mailbox\_signal} inside the queue structure (see
 Section~\ref{architected_queue}), and waits for the full flag to be
 emptied. The mailbox structure is defined as follows.
-\input{api/altlatex/group__ENU__interrupt__condition}
-\input{api/altlatex/group__STR__execution__info}
+\input{api/altlatex/group__interrupt__condition}
+\input{api/altlatex/group__execution__info}
 
 The Agent waits on the signal, processes the mailbox, and clears
 the full flag.
@@ -1600,7 +1606,7 @@ programs and the user applications may submit agent dispatch packets
 to the service queue or any user mode queue.  The service queue
 shares the same structure as the regular HSA queue.  The default
 service queues are monitored by the runtime.
-\input{api/altlatex/group__API__agent__dispatch}
+\input{api/altlatex/group__agent__dispatch}
 
 
 \hypertarget{extensions}{}\section{Extensions to the
@@ -1651,11 +1657,11 @@ Foundation. Multi-vendor enumerations begin at the value of
 1000000. For example, using the examples above, the
 \reftyp{hsa\_vendor\_extension\_t} enumeration might be:
 
-\input{api/altlatex/group__ENU__vendor__ext}
+\input{api/altlatex/group__vendor__ext}
 
 HSA defines the following query function for vendor extensions:
 
-\input{api/altlatex/group__API__query__vendorextension}
+\input{api/altlatex/group__query__vendorextension}
 
 \subsection{Example Definition And Usage of an Extension}
 An example that shows a hypothetical single-vendor extension ``Foo''
@@ -1866,7 +1872,7 @@ the HSA PRM. The core runtime structure that represents a
 BRIG is named \reftyp{hsa\_brig\_t}. This structure is an in-memory
 representation of the BRIG. It is defined as follows:
 
-\input{api/altlatex/group__STR__brig}
+\input{api/altlatex/group__brig}
 
 Of the different sections in BRIG, the .directive section provides
 information to the finalizer on functions, kernels, and global
@@ -1884,7 +1890,7 @@ type \reftyp{hsa\_brig\_directive\_offset\_t} to represent the
 .directive section offset. It is typedef to an unsigned 32 bit
 integer and is defined by all implementations as follows:
 
-\input{api/altlatex/group__TDF__brig__directive__offset}
+\input{api/altlatex/group__brig__directive__offset}
 
 There are different types of directives specified in the PRM. Of
 these, the control directives are a means to allow implementations
@@ -1906,11 +1912,11 @@ this directive in the HSAIL kernel.
 The \reftyp{hsa\_control\_directives\_t} structure is defined as
 follows:
 
-\input{api/altlatex/group__STR__control__directive}
+\input{api/altlatex/group__control__directive}
 
 Where, the \reftyp{hsa\_control\_directive\_present64\_t} is defined
 as a 64bit unsigned integer.
-\input{api/altlatex/group__TDF__control__directive__present64__t}
+\input{api/altlatex/group__control__directive__present64__t}
 
 The enumeration \reftyp{hsa\_control\_directive\_present64\_t} is a
 bit set indicating which control directives have been specified. It
@@ -1918,7 +1924,7 @@ is accessible via a mask,
 \reftyp{hsa\_control\_directives\_present\_mask\_t}, which
 is defined as follows:
 
-\input{api/altlatex/group__ENU__directive__present}
+\input{api/altlatex/group__directive__present}
 
 User can choose to either break on exceptions or just detect them.
 The PRM defines the policy to be exception-type specific, i.e.\ different
@@ -1936,7 +1942,7 @@ HSAIL control directives. If any of the functions the kernel calls
 have an enablebreakexceptions control directive, then they must be
 equal to or a subset of this union.
 
-\input{api/altlatex/group__ENU__exception__type}
+\input{api/altlatex/group__exception__type}
 
 \subsection{Code Objects}\label{finalize:codeobject}
 
@@ -1977,30 +1983,30 @@ code entity that the finalizer has produced code for. Each
 The kinds of code objects that can be contained in a
 \reftyp{hsa\_compilationunit\_code\_t} is defined by the following
 structure:
-\input{api/altlatex/group__ENU__codekind}
+\input{api/altlatex/group__codekind}
 
 The \reftyp{hsa\_code\_entry\_t} structure is defined as follows:
-\input{api/altlatex/group__STR__codeentry}
+\input{api/altlatex/group__codeentry}
 
 The current version number and type of the HSA code object
 format are defined as follows:
 
-\input{api/altlatex/group__ENU__codeversion}
+\input{api/altlatex/group__codeversion}
 
 Every \reftyp{hsa\_*\_code\_t} code objects start with a common
 header that also contains what kind of code object it is. The common
 header, \reftyp{hsa\_code\_t}, is defined as follows:
-\input{api/altlatex/group__STR__codeheader}
+\input{api/altlatex/group__codeheader}
 
 A bit set of flags providing information about the code in a
 compilation unit. Unused flags must be 0. The
 \reftyp{hsa\_code\_properties32\_t} must be used as a type for this
 flag. The values/mask currently supported is defined as follows:
-\input{api/altlatex/group__ENU__codeproperties}
+\input{api/altlatex/group__codeproperties}
 
 The \reftyp{hsa\_compilationunit\_code\_t} structure is defined as
 follows:
-\input{api/altlatex/group__STR__compilationunit}
+\input{api/altlatex/group__compilationunit}
 
 Both the \reftyp{hsa\_compilationunit\_t} and
 \reftyp{hsa\_*\_code\_t} objects can have implementation define data
@@ -2025,7 +2031,7 @@ size field.
 The \reftyp{hsa\_kernel\_code\_t} is the output of
 \reffun{hsa\_finalize\_brig} API and is defined as follows.
 
-\input{api/altlatex/group__STR__code__object}
+\input{api/altlatex/group__code__object}
 
 \subsection{Finalize BRIG API}
 The \reffun{hsa\_finalize\_brig} API accepts \reftyp{hsa\_brig\_t} as
@@ -2039,7 +2045,7 @@ referenced in the kernel being finalized may not be resolved with
 the information provided at its finalization. User is allowed to
 define callbacks that can resolve the symbols declared in the global
 segment, with the following signature:
-\input{api/altlatex/group__TDF__hsa__map__symbol__address}
+\input{api/altlatex/group__hsa__map__symbol__address}
 
 The finalization step, when successfully executed, can have two
 distinct outputs. The first is the compilation unit code object,
@@ -2055,7 +2061,7 @@ compilationunit\_debug} need to be allocated, the user is expected
 to provide callbacks for memory allocation.
 
 The callback is required to have the following signature:
-\input{api/altlatex/group__TDF__hsa__alloc__t}
+\input{api/altlatex/group__hsa__alloc__t}
 
 Where caller is the opaque pointer passed to the
 \reffun{hsa\_finalize\_brig} that is calling back this function.
@@ -2071,7 +2077,7 @@ is optional and is required when the user passes in a flag at
 finalization to generate debug information. This callback, when
 defined, must have the same signature as \reftyp{hsa\_alloc\_t} above.
 
-\input{api/altlatex/group__API__finalize__brig}
+\input{api/altlatex/group__finalize__brig}
 
 HSAIL does not define a set of options that a finalizer
 needs to specify. To ensure portability, \reffun{hsa\_finalize\_brig}
@@ -2087,7 +2093,7 @@ reclaim all memory used by the
 contains) and associated \reftyp{hsa\_compilationunit\_debug\_t}. It
 will also unregister the ISA memory if appropriate.
 
-\input{api/altlatex/group__API__finalize__destroy}
+\input{api/altlatex/group__finalize__destroy}
 
 Note that destroying does not impact any memory segments that may
 have been allocated/reserved for use in a kernel from this object.
@@ -2100,7 +2106,7 @@ represents, and in order for the users of the core runtime to build
 file containers, serialization and deserialization API are defined
 by the core runtime. The definition is as follows:
 
-\input{api/altlatex/group__API__finalize__serial}
+\input{api/altlatex/group__finalize__serial}
 
 \hypertarget{coreapi_group_mem}{}\section{Group Memory
 Usage}\label{coreapi_group_mem}
@@ -2233,13 +2239,13 @@ the rdimage HSAIL operation. \reffun{hsa\_create\_sampler\_handle}
 creates a sampler handle from an agent independent sampler descriptor
 (\reftyp{hsa\_sampler\_descriptor\_t}).
 
-\newpage
 \hypertarget{Images API}{\section{API} \label{images_api}}
-\input{api/altlatex/group__API__images}
+\input{api/altlatex/group__images}
 
 \chapter{Component Initiated Dispatches} \label{architected}
 \hypertarget{architectedchptr}{}
 %% \input{compdispatch}
+
 \hyperlink{coreapi}{Core API
 Documentation}\hypertarget{coreapi_dtde}{}\section{Component-\/\-Initiated
 Dispatch}\label{coreapi_dtde}
@@ -2259,10 +2265,8 @@ spill/arg/private space) on the component. This usage model obviously
 requires dynamic component-\/side memory allocation, for both host and
 component memory.
 
-Some requirements to do component-\/initiated dispatch\-:
-
+Some requirements to do component-\/initiated dispatch:
 \begin{itemize}
-
 \item Ability to dynamically choose a kernel to dispatch\-: Let us
 assume for example that there are three kernels (A, B and C). If the
 host launches A, then the user has the choice of launching B or C,
@@ -2349,7 +2353,7 @@ kernels failed, an error code will be returned.
 
 \chapter{Error Status Structure and Defined Values}
 \label{errstatus} \hypertarget{errstatus}{}
-\input{api/altlatex/group__ENU__status}
+\input{api/altlatex/group__status}
 
 \hypertarget{coreapi_dtde}{}\section{Error States in Core API and
 Extentions} \label{coreapi_dtde}
