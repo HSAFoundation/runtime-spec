@@ -17,9 +17,12 @@ def myitertext(self):
   if self.text:
     mytex = text2tex(self.text)
     if tag == 'emphasis':
-      yield '\\hsaarg{' + mytex + '}'
+      yield '\\textit{' + mytex + '}'
     elif tag == 'ref':
-      yield '\\hsatyp{' + self.get('refid') + '}{' + mytex + '}'
+      # brutal hardcoding in order to find out if it is a function name
+      if mytex[:5] == "hsa\_" and mytex[-2:] != "_t":
+        mytex = "\\reffun{" + mytex + "}"
+      yield '\\hyperlink{' + self.get('refid') + '}{' + mytex + '}'
     else:
       yield mytex
   for e in self:
@@ -43,8 +46,8 @@ def process_file(file):
   # Process typedefs
   typedefs = root.findall(".//memberdef[@kind='typedef']")
   for typedef in typedefs:
-    typ = typedef.find('type').text;
-    if typ is not None:
+    typetext = node2tex(typedef.find('type'));
+    if typetext[:5] in ['struc','union']:
       continue
     tex.write("\n\n")
     # begin box
@@ -53,7 +56,7 @@ def process_file(file):
     # of pointers to functions using the type itself is tricky.
     definition = node2tex(typedef.find('definition'))
     name = node2tex(typedef.find('name'))
-    newname = " \\hsadef{" + typedef.get('id') + "}{" + name + "}"
+    newname = " \\hypertarget{" + typedef.get('id') + "}{\\textbf{" + name + "}}"
     definition = definition.replace(name, newname, 1)
     tex.write(definition + "\n")
     # end box
@@ -66,8 +69,8 @@ def process_file(file):
     # begin box
     tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
     # enum name
-    tex.write('enum ' + "\\hsadef{" + enum.get('id') + "}")
-    tex.write("{" + node2tex(enum.find('name')) + "}" + "\n")
+    tex.write('enum ' + "\\hypertarget{" + enum.get('id') + "}")
+    tex.write("{\\textbf{" + node2tex(enum.find('name')) + "}}" + "\n")
     # end box
     tex.write('\\end{tcolorbox}\n')
     # brief
@@ -77,7 +80,8 @@ def process_file(file):
     tex.write('\\begin{longtable}{@{}>{\\hangindent=2em}p{\\linewidth}}' + "\n")
     vals = []
     for val in enum.findall("enumvalue"):
-      valtxt = node2tex(val.find('name'))
+      valtxt = "\\hypertarget{" + val.get('id') + "}{"
+      valtxt += "\\refenu{" + node2tex(val.find('name')) + "}}"
       valtxt += ' ' + node2tex(val.find('initializer'))
       valdesc = node2tex(val.find('detaileddescription'))
       if valdesc != '':
@@ -98,9 +102,9 @@ def process_file(file):
     tex.write("\n\n")
     # begin box
     tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
-    # typedef name
-    tex.write(typ + " \\hsadef{" + typedef.get('id') + "}")
-    tex.write("{" + node2tex(typedef.find('name')) + "}" + "\n")
+    # name
+    tex.write(typ + " \\hypertarget{" + typedef.get('id') + "}")
+    tex.write("{\\textbf{" + node2tex(typedef.find('name')) + "}}" + "\n")
     # members. Doxygen stores their info in a separate file.
     membersfile = typedef.find('type/ref').get('refid') + ".xml"
     memberstree = ET.parse(os.path.join('xml',membersfile))
@@ -110,16 +114,18 @@ def process_file(file):
     vals = []
     fields = []
     for member in members:
-      namenode = node2tex(member.find('name'))
-      # value string
-      txt = "\\hspace{1.7em}" + node2tex(member.find('type'))
-      txt += " \\hsaarg{" + namenode + "}"
+      name = node2tex(member.find('name'))
+      # type + field name
+      txt = "\\hspace{1.7em}"
+      txt += node2tex(member.find('type'))
+      txt += " \\reffld{" + name + "}"
+      txt += node2tex(member.find('argsstring')) # array length, if any
       bitfield = member.find('bitfield')
       if bitfield is not None:
         txt += " : " + node2tex(bitfield)
       vals.append(txt)
-      # field string
-      txt = "\hsaarg{" + namenode + "}" + "\\\\"
+      # field name + description
+      txt = "\\reffld{" + name + "}" + "\\\\"
       txt += "\\hspace{2em}"
       txt += node2tex(member.find('detaileddescription/para'))
       fields.append(txt)
@@ -130,7 +136,7 @@ def process_file(file):
     # brief
     tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\n")
     # data fields
-    tex.write("\\noindent\\textbf{Data Fields}\\\\[-5mm]" + "\n")
+    tex.write("\\noindent\\textbf{Data Fields}\\\\[-6mm]" + "\n")
     tex.write("\\begin{longtable}{@{}>{\\hangindent=2em}p{\\textwidth}}" + "\n")
     tex.write("\\\\[2mm]\n".join(fields))
     tex.write("\n\\end{longtable}" + "\n\n")
@@ -144,8 +150,8 @@ def process_file(file):
     # signature - return value
     tex.write(node2tex(func.find('type')) + " ")
     # signature - func name
-    tex.write("\\hsadef{" + func.get('id') + "}")
-    tex.write("{" + node2tex(func.find('name')) + "}(")
+    tex.write("\\hypertarget{" + func.get('id') + "}")
+    tex.write("{\\textbf{" + node2tex(func.find('name')) + "}}(")
     # signature - parameters
     sigargs = func.findall("param")
     if sigargs:
