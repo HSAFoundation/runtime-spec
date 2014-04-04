@@ -6,7 +6,7 @@ import os
 
 # escape characters to make them Latex-friendly
 def text2tex(text):
-  text = text.replace("_", "\\_")
+  # no need to escape underscores if 'underscore' package is used
   return text
 
 # custom text (Latex) iterator that consumes XML
@@ -40,7 +40,7 @@ def node2tex(node):
 def process_file(file):
   tree = ET.parse(os.path.join('xml',file))
   root = tree.getroot()
-  texfilename = os.path.splitext(file)[0] + ".tex"
+  texfilename = (os.path.splitext(file)[0] + ".tex").replace("__", "-")
   tex = open(os.path.join("altlatex", texfilename), "w+")
 
   # Process typedefs
@@ -200,8 +200,11 @@ def process_file(file):
       tex.write('\\noindent\\begin{longtable}{@{}>{\\hangindent=2em}p{\\linewidth}}' + "\n")
       arglst = []
       for ret in rets:
-        argtxt = node2tex(ret.find('parameternamelist/parametername/ref')) + "\\\\"
-        argtxt += "\\hspace{2em}" + node2tex(ret.find('parameterdescription'))
+        argtxt = node2tex(ret.find('parameternamelist/parametername/ref'))
+        retdesc = node2tex(ret.find('parameterdescription'))
+        # allow empty return value descriptions
+        if retdesc != "":
+          argtxt +=  "\\\\" + "\\hspace{2em}" + retdesc
         arglst.append(argtxt)
       tex.write("\\\\[2mm]\n".join(arglst))
       tex.write("\n\\end{longtable}" + "\n")
@@ -220,7 +223,7 @@ def process_file(file):
     paraslst = []
     for para in paras:
       # information about parameters is also in the detaileddescription, so skip that
-      if para.find('parameterlist') is None:
+      if para.find('parameterlist') is None and para.find("simplesect[@kind='return']") is None:
         paraslst.append(node2tex(para))
     if paraslst:
       tex.write('\\vspace{-4mm}')
