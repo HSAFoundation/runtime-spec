@@ -4,6 +4,11 @@ import xml.etree.ElementTree as ET
 import sys
 import os
 
+# replace underscores with dashes in label and their references
+# this replacement is introduced by the underscore package
+def under2dash(text):
+  return text.replace("_","-")
+
 # escape characters to make them Latex-friendly
 def text2tex(text):
   # no need to escape underscores if 'underscore' package is used
@@ -22,7 +27,7 @@ def myitertext(self):
       # brutal hardcoding in order to find out if it is a function name
       if mytex[:5] == "hsa\_" and mytex[-2:] != "_t":
         mytex = "\\reffun{" + mytex + "}"
-      yield '\\hyperlink{' + self.get('refid') + '}{' + mytex + '}'
+      yield '\\hyperlink{' + under2dash(self.get('refid')) + '}{' + mytex + '}'
     else:
       yield mytex
   for e in self:
@@ -56,7 +61,7 @@ def process_file(file):
     # of pointers to functions using the type itself is tricky.
     definition = node2tex(typedef.find('definition'))
     name = node2tex(typedef.find('name'))
-    newname = " \\hypertarget{" + typedef.get('id') + "}{\\textbf{" + name + "}}"
+    newname = " \\hypertarget{" + under2dash(typedef.get('id')) + "}{\\textbf{" + name + "}}"
     definition = definition.replace(name, newname, 1)
     tex.write(definition + "\n")
     # end box
@@ -69,7 +74,7 @@ def process_file(file):
     # begin box
     tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
     # enum name
-    tex.write('enum ' + "\\hypertarget{" + enum.get('id') + "}")
+    tex.write('enum ' + "\\hypertarget{" + under2dash(enum.get('id')) + "}")
     tex.write("{\\textbf{" + node2tex(enum.find('name')) + "}}" + "\n")
     # end box
     tex.write('\\end{tcolorbox}\n')
@@ -80,7 +85,7 @@ def process_file(file):
     tex.write('\\begin{longtable}{@{}>{\\hangindent=2em}p{\\linewidth}}' + "\n")
     vals = []
     for val in enum.findall("enumvalue"):
-      valtxt = "\\hypertarget{" + val.get('id') + "}{"
+      valtxt = "\\hypertarget{" + under2dash(val.get('id')) + "}{"
       valtxt += "\\refenu{" + node2tex(val.find('name')) + "}}"
       valtxt += ' ' + node2tex(val.find('initializer'))
       valdesc = node2tex(val.find('detaileddescription'))
@@ -103,8 +108,8 @@ def process_file(file):
     # begin box
     tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
     # name
-    tex.write(typ + " \\hypertarget{" + typedef.get('id') + "}")
-    tex.write("{\\textbf{" + node2tex(typedef.find('name')) + "}}" + "\n")
+    actname = typedef.find('type/ref').text
+    tex.write("typedef " + typ + " " + actname + " \{\n")
     # members. Doxygen stores their info in a separate file.
     membersfile = typedef.find('type/ref').get('refid') + ".xml"
     memberstree = ET.parse(os.path.join('xml',membersfile))
@@ -123,13 +128,15 @@ def process_file(file):
       bitfield = member.find('bitfield')
       if bitfield is not None:
         txt += " : " + node2tex(bitfield)
-      vals.append(txt)
+      vals.append(txt + ";\\\\\n")
       # field name + description
       txt = "\\reffld{" + name + "}" + "\\\\"
       txt += "\\hspace{2em}"
       txt += node2tex(member.find('detaileddescription/para'))
       fields.append(txt)
-    tex.write("\\\\\n".join(vals))
+    tex.write(''.join(vals) + "\} ")
+    tex.write(" \\hypertarget{" + under2dash(typedef.get('id')) + "}")
+    tex.write("{\\textbf{" + node2tex(typedef.find('name')) + "}}")
     tex.write("\n\\end{longtable}" + "\n\n")
     # end box
     tex.write('\\end{tcolorbox}\n')
@@ -150,7 +157,7 @@ def process_file(file):
     # signature - return value
     tex.write(node2tex(func.find('type')) + " ")
     # signature - func name
-    tex.write("\\hypertarget{" + func.get('id') + "}")
+    tex.write("\\hypertarget{" + under2dash(func.get('id')) + "}")
     tex.write("{\\textbf{" + node2tex(func.find('name')) + "}}(")
     # signature - parameters
     sigargs = func.findall("param")
