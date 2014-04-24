@@ -5,7 +5,7 @@ import sys
 import os
 
 # replace underscores with dashes in label and their references
-# this replacement is introduced by the underscore package
+# this replacement is required by the 'underscore' package
 def under2dash(text):
   return text.replace("_","-")
 
@@ -25,7 +25,7 @@ def myitertext(self):
       yield '\\textit{' + mytex + '}'
     elif tag == 'ref':
       # brutal hardcoding in order to find out if it is a function name
-      if mytex[:5] == "hsa\_" and mytex[-2:] != "_t":
+      if mytex[:4] == "hsa_" and mytex[-2:] != "_t":
         mytex = "\\reffun{" + mytex + "}"
       yield '\\hyperlink{' + under2dash(self.get('refid')) + '}{' + mytex + '}'
     else:
@@ -42,7 +42,7 @@ def node2tex(node):
     return ''
   return ''.join(myitertext(node)).encode("utf-8").strip()
 
-def process_file(file):
+def process_file(file, listings):
   tree = ET.parse(os.path.join('xml',file))
   root = tree.getroot()
   texfilename = (os.path.splitext(file)[0] + ".tex").replace("__", "-")
@@ -66,6 +66,8 @@ def process_file(file):
     tex.write(definition + "\n")
     # end box
     tex.write('\\end{tcolorbox}\n')
+    # brief
+    tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\\\\")
 
   # Process enums
   enums = root.findall(".//memberdef[@kind='enum']")
@@ -158,7 +160,9 @@ def process_file(file):
     tex.write(node2tex(func.find('type')) + " ")
     # signature - func name
     tex.write("\\hypertarget{" + under2dash(func.get('id')) + "}")
-    tex.write("{\\textbf{" + node2tex(func.find('name')) + "}}(")
+    funcname = node2tex(func.find('name'))
+    tex.write("{\\textbf{" + funcname + "}}(")
+    listings.write(funcname + ",")
     # signature - parameters
     sigargs = func.findall("param")
     if sigargs:
@@ -168,6 +172,8 @@ def process_file(file):
       for arg in sigargs:
         argtxt = "\\hspace{1.7em}" + node2tex(arg.find('type'))
         argtxt += " \\hsaarg{" + node2tex(arg.find('declname')) + "}"
+        argtxt += node2tex(arg.find('array')) # array length, if any
+
         arglst.append(argtxt)
       tex.write(",\\\\\n".join(arglst))
       tex.write(")\\end{longtable}")
@@ -243,14 +249,19 @@ def main():
   outdir = 'altlatex'
   if not os.path.exists(outdir):
     os.makedirs(outdir)
+  listings = open(os.path.join("altlatex", "listings.tex"), "w+")
+  listings.write("\\lstset{emph={")
   for file in os.listdir('xml'):
     if file.find("group__") != 0:
       # other files(ex: structs) are recursively processed through their group
       continue
     sys.stdout.write('Processing ' + file + "...")
-    process_file(file)
+    process_file(file, listings)
     print('OK')
+  listings.write("}}")
+  listings.close()
   return
+
 
 if __name__ == "__main__":
     sys.exit(main())

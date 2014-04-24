@@ -2,9 +2,7 @@
 // Company name is "ACME" and extension is "Foo"
 #define HSA_EXT_ACME_MYDEFINE1 0x1000
 #define HSA_EXT_ACME_MYDEFINE2 0x0100
-#define HSA_EXT_ACME_MYDEFINE3 0x0010
-#define HSA_EXT_ACME_MYDEFINE4 0x0001
-  
+
 // The structure which defines the version, functions, and data for
 // the extension:
 typedef struct hsa_ext_acme_foo_s {
@@ -16,10 +14,10 @@ typedef struct hsa_ext_acme_foo_s {
     // Data:
     unsigned foo_data1;
 } hsa_ext_acme_foo_t;
- 
+
 main() {
     struct hsa_ext_acme_foo_t acmeFoo;
-    hsa_status_t status = hsa_query_vendor_extension( HSA_EXT_ACME_FOO, &acmeFoo);
+    hsa_status_t status = hsa_vendor_extension_query(HSA_EXT_ACME_FOO, &acmeFoo);
     if (status == HSA_STATUS_SUCCESS) {
         (*(acmeFoo.function2))(0, 0);
     }

@@ -1,16 +1,23 @@
-\documentclass[final]{book}
+\documentclass[draft]{book}
+\newcommand{\docversion}{0.180}
+
+\usepackage{dejavu}
 
 % Needed so characters such as underscore are recognized in PDF
 % viewers. Otherwise searching for say `hsa_open` produces no
 % results
 \usepackage[T1]{fontenc}
 
-\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
+% If draft, use narrow margins (better for printing)
+\usepackage{ifdraft}
+\ifdraft{\usepackage[top=.5cm,bottom=.5cm,left=.5cm,right=.5cm]{geometry}}
+        {\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}}
+
 \usepackage[toc,page]{appendix}
 \usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
   \definecolor{lightgray}{gray}{0.9}
 \usepackage{makeidx}
-\usepackage{natbib}
+%\usepackage{natbib}
 \usepackage[final]{graphicx}
 \usepackage{sidecap}
 \usepackage{float}
@@ -21,17 +28,23 @@
 % allow tables across page breaks
 \usepackage{longtable}
 
-% useful for state diagrams...for anything more complicated, use SVG
+
+% Use Tikz for simple diagrams
 \usepackage{tikz}
-\usetikzlibrary{arrows,automata,positioning}
+\usetikzlibrary{arrows,automata,positioning,chains}
 \tikzset{
     % define global arrow tip format
     >=angle 45}
+
 
 \usepackage{ifthen}
 \usepackage{textcomp}
 \usepackage{paralist}
 \usepackage{framed}
+\usepackage{times}
+\usepackage[titles]{tocloft}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
 
 % avoid escaping underscores e.g. hsa_open instead of hsa\_open
 % Note: this package requires that no label or included file have any
@@ -67,10 +80,7 @@
            ]{hyperref}
 \usepackage{pspicture}
 \fi
-\usepackage{times}
-\usepackage{sectsty}
-\usepackage{amssymb}
-\usepackage[titles]{tocloft}
+
 \lstset{language=C++,
         inputencoding=utf8,
         basicstyle=\small,
@@ -81,22 +91,18 @@
         frame=none,
         backgroundcolor=\color{lightgray},
         keywordstyle=,
-        emph={hsa_status_query_description, hsa_notification_callback_register, hsa_error_callback_register, hsa_open, hsa_close, hsa_context_acquire, hsa_context_release, hsa_topology_table_create, hsa_topology_table_destroy, hsa_clock_convert_time_component_to_host, hsa_clock_convert_convert_time_host_to_component, hsa_signal_create, hsa_signal_bind, hsa_signal_unbind, hsa_signal_destroy, hsa_signal_get_timeout, hsa_signal_send_relaxed, hsa_signal_add_release, hsa_signal_add_relaxed, hsa_signal_and_release, hsa_signal_and_relaxed, hsa_signal_or_release, hsa_signal_or_relaxed, hsa_signal_xor_release, hsa_signal_xor_relaxed, hsa_signal_exchange_release, hsa_signal_exchange_relaxed, hsa_signal_decrement_release, hsa_signal_decrement_relaxed, hsa_signal_cas_release, hsa_signal_max, hsa_signal_min, hsa_signal_send_release, hsa_signal_subtract_release, hsa_signal_subtract_relaxed, hsa_signal_increment_release, hsa_signal_increment_relaxed, hsa_signal_query_acquire, hsa_signal_wait_acquire, hsa_signal_wait_acquire_release, hsa_queue_create, hsa_queue_inactivate, hsa_queue_destroy, hsa_queue_get_read_index_relaxed, hsa_queue_get_read_index_acquire, hsa_queue_get_write_index_relaxed, hsa_queue_get_write_index_acquire, hsa_queue_set_write_index_relaxed, hsa_queue_set_write_index_release, hsa_queue_cas_write_index, hsa_queue_cas_write_index_release, hsa_queue_cas_write_index_acquire, hsa_queue_cas_write_index_relaxed, hsa_queue_cas_write_index_acquire_release, hsa_queue_add_write_index_relaxed, hsa_queue_add_write_index_acquire, hsa_queue_add_write_index_release, hsa_queue_add_write_index_acquire_release, hsa_queue_error_string_from_code, hsa_aql_dispatch_packet_validate, hsa_finalize_brig, hsa_compilationunit_code_destroy, hsa_compilationunit_debug_destroy, hsa_compilationunit_serialize, hsa_compilationunit_deserialize, hsa_symbol_bind_code_object, hsa_symbol_map_query_by_name, hsa_symbol_map_query_by_offset, hsa_symbol_destroy, hsa_memory_register, hsa_memory_deregister, hsa_memory_allocate, hsa_memory_allocate_component_local, hsa_memory_free_component_local, hsa_memory_copy_component_local_to_system, hsa_memory_copy_kernarg_to_system, hsa_memory_copy_system_to_kernarg, hsa_register_agent_dispatch_callback, hsa_extension_query, hsa_vendor_extension_query,hsa_image_get_format_capability, hsa_image_get_info,hsa_image_create_handle,hsa_image_import,hsa_image_export,hsa_image_copy,hsa_image_clear,hsa_image_destroy_handle,hsa_sampler_create_handle,hsa_sampler_destroy_handle},emphstyle={\textbf},
-        morekeywords={uint64_t, uint32_t, uint8_t, hsa_status_t,hsa_notification_info_t, hsa_async_error_info_t, hsa_segment_t, hsa_memory_descriptor_t, hsa_cache_descriptor_t, hsa_tlb_descriptor_t, hsa_property_t,hsa_agent_type_t,hsa_agent_t, hsa_platform_t, hsa_topology_header_t, signal_value_t, hsa_signal_condition_t,hsa_interrupt_condition_t,hsa_group_execution_info_t, hsa_queue_mailbox_t, hsa_queue_t, hsa_aql_packet_header_t, hsa_aql_dispatch_packet_t, hsa_aql_barrier_packet_t, hsa_aql_agent_dispatch_packet_t, hsa_service_queue_type_t,hsa_symbol_t, hsa_symbol_map_t, hsa_profile_t,hsa_exception_kind_mask_t,hsa_control_directive_present_mask_t,hsa_control_directives_t, hsa_code_version_t,hsa_code_t, hsa_kernel_code_t, hsa_brig_t, hsa_code_entry_t, hsa_code_kind_t,hsa_code_properties_mask_t,hsa_compilationunit_code_t, hsa_compilationunit_debug_t, hsa_extension_t,hsa_vendor_extension_, hsa_image_handle_t},
+        emphstyle={\textbf},
         commentstyle=\color{ForestGreen},
         morecomment=[l][\color{green}]{\#}
 }
-\usepackage{fancyhdr}
-\usepackage{quotchap}
-\usepackage{enumitem}
+% include automatically-generated Listing commands
+\input{api/altlatex/listings}
 
 % every section in a new page
 \usepackage{etoolbox}
-
 \pretocmd{\section}{%
   \ifnum\value{section}=0 \else\clearpage\fi
 }{}{}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -152,7 +158,7 @@
 \fancyhead{} % clear all header fields
 \fancyfoot{} % clear all footer fields
 \fancyfoot[LE,RO]{\scriptsize{\thepage}}
-\fancyfoot[LO,RE]{\scriptsize{HSA Runtime Programming Guide and API Reference}}
+\fancyfoot[LO,RE]{\scriptsize{HSA Runtime Programming Guide and API Reference v\docversion $\:$-$\:$\today}}
 \fancyhead[RE]{\scriptsize{\leftmark}}
 \fancyhead[LO]{\scriptsize{\rightmark}}
 
@@ -164,8 +170,7 @@
 \includegraphics[width=.5\textwidth]{fig/foundation.png}
 \vspace*{7cm}
 \begin{center}
-{\Large HSA Core API Programmers Reference Manual\\[1ex]\large
-0.179}\\
+{\Large HSA Core API Programmers Reference Manual\\[1ex]\large\docversion}\\
 \vspace*{1cm}
 \vspace*{0.5cm}
 {\small \today}\\
@@ -305,8 +310,44 @@ and associated data structures.
 
 \begin{figure}
   \centering
-  \includegraphics[width=0.5\textwidth]{fig/swarch}
-  \centering
+  \tikzstyle{lang}=[rectangle,draw,fill=black!30,align=center,minimum width=1.25cm,minimum height=.75cm]
+  \tikzstyle{hsa}=[rectangle,draw,fill=black!10,align=center,minimum height=.75cm]
+  \tikzstyle{comp}=[rectangle,draw,minimum height=.75cm]
+  \begin{tikzpicture}[thick,auto, node distance=1.5cm]
+    \scriptsize
+    \node[lang] (l0) {OpenCL\texttrademark \\ app};
+    \node[lang,below of=l0] (r0) {OpenCL\texttrademark \\ runtime};
+
+    \node[lang,right of=l0] (l1) {Java \\ app};
+    \node[lang,below of=l1] (r1) {JVM};
+
+    \node[inner sep=0,below right=.75cm of l1] (k) {...};
+
+    \node[lang,above right=.75cm of k] (l2) {OpenMP \\ app};
+    \node[lang,below of=l2] (r2) {OpenMP \\ runtime};
+
+    \node[lang,right of=l2] (l3) {DSL \\ app};
+    \node[lang,below of=l3] (r3) {DSL \\ runtime};
+
+    \node[hsa,minimum width=3.5cm,below=2cm of k] (h) {HSA runtime};
+    \node[hsa,minimum width=3cm,right=1.5cm of h] (hf) {HSA finalizer};
+    \tiny
+    \node[comp, below=.75cm of h.west,anchor=west] (c1) {HSA component 1};
+    \node[below=.5cm of h.south,anchor=south]       (cAny)  {...};
+    \node[comp,below=.75cm of h.east,anchor=east]  (cN) {HSA component N};
+
+    \path[->]
+       (l0) edge (r0)
+       (l1) edge (r1)
+       (l2) edge (r2)
+       (l3) edge (r3)
+       (r0.south) edge (h)
+       (r1) edge (h)
+       (r2) edge (h)
+       (r3.south) edge (h)
+       (h) edge[dashed] (hf)
+    ;
+  \end{tikzpicture}
   \caption{HSA Software Architecture}
   \label{fig:swarch}
 \end{figure}
@@ -314,14 +355,15 @@ and associated data structures.
 Figure~\ref{fig:swarch} shows how the HSA Core Runtime fits into a
 typical software architecture stack.
 
-At the top of the stack is a programming model such as OpenCL™, Java, OpenMP, or
-a domain-specific language (DSL). The programming model must include some way
-to indicate a parallel region that can be accelerated. For example, OpenCL has
-calls to \texttt{clEnqueueNDRangeKernel} with associated kernels and grid
-ranges. Java has the stream and lambda APIs, which provide support for both
-multi-core CPUs and HSA Components. OpenMP contains OMP pragmas that mark
-parallel for loops and control other aspects of the parallel implementation.
-Other programming models can also build on this same infrastructure.
+At the top of the stack is a programming model such as OpenCL\texttrademark,
+Java, OpenMP, or a domain-specific language (DSL). The programming model must
+include some way to indicate a parallel region that can be accelerated. For
+example, OpenCL has calls to \texttt{clEnqueueNDRangeKernel} with associated
+kernels and grid ranges. Java has the stream and lambda APIs, which provide
+support for both multi-core CPUs and HSA Components. OpenMP contains OMP pragmas
+that mark parallel for loops and control other aspects of the parallel
+implementation.  Other programming models can also build on this same
+infrastructure.
 
 The language compiler is responsible for generating HSAIL code for the parallel
 regions. HSA supports several options for when HSAIL is generated and
@@ -418,17 +460,17 @@ the finalization step, including the allocation of memory to hold the kernel
 arguments and the spill/arg/private memory. The interface for kernel arguments
 between the runtime and the kernel ISA (instruction set architecture) is also
 architected at the HSA level. This is covered in the HSAIL ABI, which specifies
-the in-\/memory layout of the kernarg segment. Users can determine the layout of
+the in-memory layout of the kernarg segment. Users can determine the layout of
 the kernarg memory segment at compile time merely by examining the signature of
 the HSAIL function. The finalizer is required to support this ABI and thus there
 is no need for runtime metadata to specify the position or format of arguments.
 This step can be done once for each AQL packet creation.
 
-Optimized implementations can cache the result of this step and re-\/use the AQL
+Optimized implementations can cache the result of this step and re-use the AQL
 packet for subsequent launches. Care must be taken to ensure that the AQL
 Dispatch packet (and the associated kernel and spill/arg/private memory) is not
-re-\/used before the launch completes. For simple cases, (that is, a
-single-\/thread, synchronous launch, the AQL dispatch packet(s) can be declared
+re-used before the launch completes. For simple cases, (that is, a
+single-thread, synchronous launch, the AQL dispatch packet(s) can be declared
 as a static variable and initialized at the same time the code is
 finalized. More advanced cases can create and track several AQL Dispatch
 packet(s) for a single kernel code object.
@@ -546,9 +588,8 @@ with value 0. Description of every core runtime API call that returns
 (e.g. negative value in a size for allocation) or systemic errors (e.g. an
 asynchronous activity lead to a failure that cascaded into a failure in this
 API). The constants used for error status are restricted to the negative range
-of values within the \reftyp{hsa_status_t} enumeration. Errors must always
-have a negative value. The name of any constant that indicates an error status
-is prefixed by \refenu{HSA_STATUS_ERROR}.
+of values within the \reftyp{hsa_status_t} enumeration. The name of any constant
+that indicates an error status is prefixed by \refenu{HSA_STATUS_ERROR}.
 
 While the name of the constant in itself is informative for success, info or
 error status, there may be scenarios where\begin{inparaenum}[(i)]\item the user
@@ -594,9 +635,7 @@ generates an error, the action that initiated the activity may have
 concluded. To deal with asynchronous errors, the core runtime supports
 asynchronous error callbacks. The asynchronous error callback may be registered
 by means of the \reffun{hsa_open} API discussed in Section~\ref{init} or via
-\reffun{hsa_error_callback_register} API. Details on how association of the
-callback can be done with asynchronous activities are discussed in
-Sections~\ref{init} and \ref{architected-queue}.
+\reffun{hsa_error_callback_register} API.
 
 \subsection{Asynchronous Notification Example}
 \lstinputlisting{example/asyncerror.c}
@@ -857,7 +896,6 @@ shown in Figure~\ref{fig:queuestate}.
   packet processor (see Section~\ref{dispatch-packet}) will be signaled with
   either the completion information or an error. Inactivating a queue that is
   already is in the inactive state has no effect.
-
 \item[Destroyed] The queue has been destroyed by the user. The resources
   allocated to the queue and the memory for the queue are no longer valid. The
   queue structure is no longer valid.
@@ -1225,7 +1263,7 @@ hsa_memory_allocate_component_local(1024, component, &component_ptr);
 
 To access component memory from the host, the user can call
 \reffun{hsa_memory_copy_component_local_to_host} in similar fashion as in
-memcpy. This interface allows the user to perform component-\/to-\/host memory
+memcpy. This interface allows the user to perform component-to-host memory
 copy. For example:
 
 \begin{lstlisting}
@@ -1241,60 +1279,58 @@ copies 1024 bytes from system to component local memory.
 The user should not register or deregister component local memory.
 
 
-\hypertarget{coredebug}{}\section{Execution Control}\label{coredebug}
+%\hypertarget{coredebug}{}\section{Execution Control}\label{core debug}
+% As per the systems architecture specification, the HSA system must support
+% debugging of a HSAIL kernel. The HSA Programmers Reference Manual (PRM)
+% describes that the debug section could hold debug data and such a section can be
+% placed within a function. This allows the high-level compiler that generates
+% HSAIL to embed debug specific information. This information makes its way into
+% the debug section in the brig. This information can be used for associating a
+% HSAIL level instruction to the higher level functionality. In addition to this,
+% the PRM also discusses the \refhsl{debugtrap_u32} that halts the current
+% wavefront and transfers control to the agent. The single operand to
+% \refhsl{debugtrap_u32}, \char`\"{}src\char`\"{} is passed to the agent and can
+% be used to identify the trap.
 
-As per the systems architecture specification, the HSA system must support
-debugging of a HSAIL kernel. The HSA Programmers Reference Manual (PRM)
-describes that the debug section could hold debug data and such a section can be
-placed within a function. This allows the high-level compiler that generates
-HSAIL to embed debug specific information. This information makes its way into
-the debug section in the brig. This information can be used for associating a
-HSAIL level instruction to the higher level functionality. In addition to this,
-the PRM also discusses the \refhsl{debugtrap_u32} that halts the current
-wavefront and transfers control to the agent. The single operand to
-\refhsl{debugtrap_u32}, \char`\"{}src\char`\"{} is passed to the agent and can
-be used to identify the trap.
+% To support this infrastructure in the runtime, the Core API defines a structure
+% that can be used to exchange information between the kernel executing on the HSA
+% component and the agent.
 
-To support this infrastructure in the runtime, the Core API defines a structure
-that can be used to exchange information between the kernel executing on the HSA
-component and the agent.
+% The core runtime defines a structure, mailbox, whose purpose is to exchange
+% information as a part of execution control. Mailbox is a synchronous
+% communication mechanism between the HSA component and any agents. The HSA
+% component indicates a \refhsl{debugtrap_u32} or syscall activity by sending a
+% signal indicating it has written to some location in the mailbox. The HSA PRM
+% defines:
 
-The core runtime defines a structure, mailbox, whose purpose is to exchange
-information as a part of execution control. Mailbox is a synchronous
-communication mechanism between the HSA component and any agents. The HSA
-component indicates a \refhsl{debugtrap_u32} or syscall activity by sending a
-signal indicating it has written to some location in the mailbox. The HSA PRM
-defines:
+% \begin{description}
+% \item \refhsl{queueactivegroupcount_global_u32} {\itshape dest, address}
+%   Returns the maximum number of work-groups that can be executed in parallel for
+%   dispatches executed on the User Mode Queue with address.
+% \item \refhsl{activegroupid} index that ranges from 0 through
+%   \refhsl{queueactivegroupcount_global_u32}-1.
+% \end{description}
 
-\begin{description}
-\item \refhsl{queueactivegroupcount_global_u32} {\itshape dest, address}
-  Returns the maximum number of work-groups that can be executed in parallel for
-  dispatches executed on the User Mode Queue with address.
+% The mailbox is an array of structures of size
+% \refhsl{queueactivegroupcount_global_u32}. Since \refhsl{activegroupid} is
+% always unique within a queue for any concurrent execution of kernels in that
+% queue, indexing into the mailbox by different work items happens without
+% conflicts. When a workgroup encounters a syscall or a \refhsl{debugtrap_u32},
+% the component indexes into its mailbox by accessing it via
+% \refhsl{activegroupid} from within the \refhsl{queueptr}. Once the corresponding
+% mailbox is accessed, pertinent information (see structure below) for each work
+% group is populated.  Subsequently the component sets the full flag, sends a
+% signal to agent by accessing the \reffld{mailbox_signal} inside the queue
+% structure (see Section~\ref{architected-queue}), and waits for the full flag to
+% be emptied. The mailbox structure is defined as follows.
+% \input{api/altlatex/group-interrupt-condition}
+% \input{api/altlatex/group-execution-info}
 
-\item \refhsl{activegroupid} index that ranges from 0 through
-  \refhsl{queueactivegroupcount_global_u32}-1.
-\end{description}
+% The agent waits on the signal, processes the mailbox, and clears the full
+% flag. If this kernel had a debugtrap_u32, a simple check for debugtrap can be
+% written the following way:
 
-The mailbox is an array of structures of size
-\refhsl{queueactivegroupcount_global_u32}. Since \refhsl{activegroupid} is
-always unique within a queue for any concurrent execution of kernels in that
-queue, indexing into the mailbox by different work items happens without
-conflicts. When a workgroup encounters a syscall or a \refhsl{debugtrap_u32},
-the component indexes into its mailbox by accessing it via
-\refhsl{activegroupid} from within the \refhsl{queueptr}. Once the corresponding
-mailbox is accessed, pertinent information (see structure below) for each work
-group is populated.  Subsequently the component sets the full flag, sends a
-signal to agent by accessing the \reffld{mailbox_signal} inside the queue
-structure (see Section~\ref{architected-queue}), and waits for the full flag to
-be emptied. The mailbox structure is defined as follows.
-\input{api/altlatex/group-interrupt-condition}
-\input{api/altlatex/group-execution-info}
-
-The agent waits on the signal, processes the mailbox, and clears the full
-flag. If this kernel had a debugtrap_u32, a simple check for debugtrap can be
-written the following way:
-
-\lstinputlisting{example/mailbox-simple.c}
+% \lstinputlisting{example/mailbox-simple.c}
 
 \hypertarget{agent}{}\section{Agent Dispatch Support}\label{agent}
 
@@ -1312,8 +1348,7 @@ runtime. \input{api/altlatex/group-agent-dispatch}
 
 When an implementor of the core runtime specification is not supporting any of
 the extension API, they will return
-\refenu{HSA_STATUS_ERROR_EXTENSION_NOT_SUPPORTED} as a return status for
-that API.
+\refenu{HSA_STATUS_ERROR_EXTENSION_UNSUPPORTED} as a return status for that API.
 
 Individual vendors may define vendor extensions to HSA core runtime, or multiple
 vendors may collaborate to define an extension. The difference is in the naming
@@ -1363,7 +1398,7 @@ HSA defines the following query function for vendor extensions:
 An example that shows a hypothetical single-vendor extension ``Foo'' registered
 by company ``ACME''. The example includes four defines and two API functions.
 Note the use of the structure \reftyp{hsa_svext_acme_foo_t} and how this
-interacts with the \reffun{hsa_query_vendor_extension} API call.
+interacts with the \reffun{hsa_vendor_query_extension} API call.
 
 \lstinputlisting{example/extension.c}
 
@@ -1565,7 +1600,7 @@ of the HSA PRM. The core runtime structure that represents a BRIG is named
 \reftyp{hsa_brig_t}. This structure is an in-memory representation of the
 BRIG. It is defined as follows:
 
-\input{api/altlatex/group-brig}
+[DELETED CODE]
 
 Of the different sections in BRIG, the .directive section provides information
 to the finalizer on functions, kernels, and global declarations, etc. The
@@ -1582,7 +1617,7 @@ directive section. HSA core runtime defines a type
 offset. It is typedef to an unsigned 32 bit integer and is defined by all
 implementations as follows:
 
-\input{api/altlatex/group-brig-directive-offset}
+[DELETED CODE]
 
 There are different types of directives specified in the PRM. Of these, the
 control directives are a means to allow implementations to pass information to
@@ -1602,18 +1637,18 @@ structure match the value for this directive in the HSAIL kernel.
 The \reftyp{hsa_control_directives_t} structure is defined as
 follows:
 
-\input{api/altlatex/group-control-directive}
+[DELETED CODE]
 
 Where, the \reftyp{hsa_control_directive_present64_t} is defined as a 64bit
 unsigned integer.
-\input{api/altlatex/group-control-directive-present64-t}
+[DELETED CODE]
 
 The enumeration \reftyp{hsa_control_directive_present64_t} is a bit set
 indicating which control directives have been specified. It is accessible via a
 mask, \reftyp{hsa_control_directives_present_mask_t}, which is defined as
 follows:
 
-\input{api/altlatex/group-directive-present}
+[DELETED CODE]
 
 User can choose to either break on exceptions or just detect them. The PRM
 defines the policy to be exception-type specific, i.e.\ different IEEE
@@ -1629,12 +1664,7 @@ values in HSAIL control directives. If any of the functions the kernel calls
 have an enablebreakexceptions control directive, then they must be equal to or a
 subset of this union.
 
-\input{api/altlatex/group-exception-type}
-
-% TODO(mmario): sticking this here because it was not introduced
-% anywhere in the text and otherwise it will go undefined.
-Finally, the dimensions are defined as
-\input{api/altlatex/group-dim3}
+[DELETED CODE]
 
 \subsubsection{Code Objects}\label{finalize:codeobject}
 
@@ -1668,32 +1698,22 @@ finalizer has produced code for. Each \reftyp{hsa_code_entry_t} variable
 contains an offset to a \reftyp{hsa_*code_t} object that describes that code
 entity (function/kernel/etc).
 
-The kinds of code objects that can be contained in a
-\reftyp{hsa_compilationunit_code_t} is defined by the following
-structure:
-\input{api/altlatex/group-codekind}
-
-The \reftyp{hsa_code_entry_t} structure is defined as follows:
-\input{api/altlatex/group-codeentry}
-
-The current version number and type of the HSA code object format are defined as
-follows:
-
-\input{api/altlatex/group-codeversion}
+[DELETED CODE]
 
 Every \reftyp{hsa_*_code_t} code objects start with a common header that also
 contains what kind of code object it is. The common header,
 \reftyp{hsa_code_t}, is defined as follows:
-\input{api/altlatex/group-codeheader}
+[DELETED CODE]
 
 A bit set of flags providing information about the code in a compilation
 unit. Unused flags must be 0. The \reftyp{hsa_code_properties32_t} must be
 used as a type for this flag. The values/mask currently supported is defined as
-follows: \input{api/altlatex/group-codeproperties}
+follows:
+[DELETED CODE]
 
 The \reftyp{hsa_compilationunit_code_t} structure is defined as
 follows:
-\input{api/altlatex/group-compilationunit}
+[DELETED CODE]
 
 Both the \reftyp{hsa_compilationunit_t} and \reftyp{hsa_*_code_t} objects
 can have implementation define data towards the end of the structure. All
@@ -1715,8 +1735,7 @@ read the object's size field.
 
 The \reftyp{hsa_kernel_code_t} is the output of
 \reffun{hsa_finalize_brig} API and is defined as follows.
-
-\input{api/altlatex/group-code-object}
+[DELETED CODE]
 
 \subsubsection{Finalize BRIG API}
 The \reffun{hsa_finalize_brig} API accepts \reftyp{hsa_brig_t} as an input
@@ -1728,7 +1747,7 @@ on the component is generated. However, all the symbols referenced in the
 kernel being finalized may not be resolved with the information provided at its
 finalization. User is allowed to define callbacks that can resolve the symbols
 declared in the global segment, with the following signature:
-\input{api/altlatex/group-map-symbol-address}
+[DELETED CODE]
 
 The finalization step, when successfully executed, can have two distinct
 outputs. The first is the compilation unit code object,
@@ -1743,7 +1762,7 @@ the memory for {\itshape compilationunit_debug} need to be allocated, the user
 is expected to provide callbacks for memory allocation.
 
 The callback is required to have the following signature:
-\input{api/altlatex/group-alloc-t}
+[DELETED CODE]
 
 Where caller is the opaque pointer passed to the \reffun{hsa_finalize_brig}
 that is calling back this function. {\itshape byte_size} is the size in bytes
@@ -1752,8 +1771,7 @@ alignment of the memory allocated. Must be a power of 2. {\itshape address} is
 pointer to location that will be updated with address of allocated memory if
 successful, or NULL if not successful. {\itshape return value} is the HSA
 status of the allocation.
-
-\input{api/altlatex/group-finalize-brig}
+[DELETED CODE]
 
 HSAIL does not define a set of options that a finalizer needs to specify. To
 ensure portability, \reffun{hsa_finalize_brig} must not return an error status
@@ -1764,11 +1782,6 @@ and is required when the user passes in a flag at finalization to generate debug
 information. This callback, when defined, must have the same signature as
 \reftyp{hsa_alloc_t} above.
 
-% TODO(mmario): sticking this here because it was not introduced
-% anywhere in the text and otherwise it will go undefined.
-\input{api/altlatex/group-compilation-debug}
-
-
 \subsubsection{Freeing The Compilation Unit Code/Debug Object}
 The core runtime also provides a corresponding destruction API that destroys the
 compilation unit code and debug objects. This will reclaim all memory used by
@@ -1776,7 +1789,7 @@ the \reftyp{hsa_compilationunit_code_t} (including the ISA it contains) and
 associated \reftyp{hsa_compilationunit_debug_t}. It will also unregister the
 ISA memory if appropriate.
 
-\input{api/altlatex/group-finalize-destroy}
+[DELETED CODE]
 
 Note that destroying does not impact any memory segments that may have been
 allocated/reserved for use in a kernel from this object. It merely releases
@@ -1789,7 +1802,7 @@ and in order for the users of the core runtime to build file containers,
 serialization and deserialization API are defined by the core runtime. The
 definition is as follows:
 
-\input{api/altlatex/group-finalize-serial}
+[DELETED CODE]
 
 \hypertarget{groupmem}{}\subsection{Group Memory
   Usage}\label{groupmem} Group memory can be allocated either
@@ -1860,14 +1873,13 @@ developer to control the location of the image data storage and manage memory
 more efficiently.
 
 The HSA image format is specified using a format descriptor
-(\reftyp{hsa_image_format_t}) that contains information about the image
-channel type and the channel order. The image channel type describes how the
-data is to be interpreted along with the bit size, and image channel order
-describes the number and the order. Not all image channel types and channel
-order combinations are valid on a HSA gent. All HSA agents have to support a
-required minimum set of image formats (see HSA Programmer's Reference
-Manual). An application can query image format capabilities using
-\reffun{hsa_image_get_format_capability}.
+(\reftyp{hsa_image_format_t}) that contains information about the image channel
+type and the channel order. The image channel type describes how the data is to
+be interpreted along with the bit size, and image channel order describes the
+number and the order. Not all image channel types and channel order combinations
+are valid on a HSA agent. All HSA agents have to support a required minimum set
+of image formats (see HSA Programmer's Reference Manual). An application can
+query image format capabilities using \reffun{hsa_image_get_format_capability}.
 
 An implementation-independent image format descriptor
 (\reftyp{hsa_image_descriptor_t}) is composed of geometry along with the
@@ -1880,14 +1892,15 @@ The memory requirements (\reftyp{hsa_image_info_t}) include the size of the
 memory needed as well as any alignment constraints. An application can either
 allocate new memory for the image data, or sub-allocate a memory block from an
 existing memory if the memory size allows. Before the image data is used, a HSA
-agent -specific image handle must be created using it and if necessary, cleared
+agent-specific image handle must be created using it and if necessary, cleared
 and prepared according to the intended use.
 
-A HSA agent-specific image handle (\reftyp{hsa_image_handle_t}) is used by
-the HSAIL language for reading or writing using HSAIL rdimage, ldimage and
-stimage operations. \reffun{hsa_image_create_handle} creates an image handle
-from a implementation-independent image format descriptor and independently
-allocated image data that conforms to the requirements provided by
+A HSA agent-specific image handle (\reftyp{hsa_image_handle_t}) is used by the
+HSAIL language for reading or writing using HSAIL \refhsl{rdimage},
+\refhsl{ldimage} and \refhsl{stimage}
+operations. \reffun{hsa_image_create_handle} creates an image handle from a
+implementation-independent image format descriptor and independently allocated
+image data that conforms to the requirements provided by
 \reffun{hsa_image_get_info}.
 
 It must be noted that while the image data technically accessible from its
@@ -1910,17 +1923,18 @@ proper synchronization and preparation of images on accesses from other image
 operations. See HSA System Architecture spec 2.13 for the HSA Image memory
 model.
 
-A HSA agent-specific sampler handle (\reftyp{hsa_sampler_handle_t}) is used
-by the HSAIL language to describe how images are processed by the rdimage HSAIL
-operation. \reffun{hsa_sampler_create_handle} creates a sampler handle from
-an agent independent sampler descriptor (\reftyp{hsa_sampler_descriptor_t}).
+A HSA agent-specific sampler handle (\reftyp{hsa_sampler_handle_t}) is used by
+the HSAIL language to describe how images are processed by the \refhsl{rdimage}
+HSAIL operation. \reffun{hsa_sampler_create_handle} creates a sampler handle
+from an agent independent sampler descriptor
+(\reftyp{hsa_sampler_descriptor_t}).
 
 \section{Component Initiated Dispatches} \label{architected}
 \hypertarget{architectedchptr}{}
 %% \input{compdispatch}
 
 Due to architected support for a queue and design of AQL, HSA supports
-component-\/initiated dispatch, which is the ability for a kernel to dispatch a
+component-initiated dispatch, which is the ability for a kernel to dispatch a
 new kernel by writing an AQL packet directly to a user queue. In simple use
 cases, the AQL packet can be created on the host and passed as a parameter to
 the kernel. This eliminates the need to do dynamic memory allocation on the
@@ -1929,9 +1943,9 @@ time the first kernel is launched (so that the AQL packets can be
 preallocated). HSA also supports more advanced use cases where the AQL packet is
 dynamically allocated (including the memory space for kernel arguments and
 spill/arg/private space) on the component. This usage model obviously requires
-dynamic component-\/side memory allocation, for both host and component memory.
+dynamic component-side memory allocation, for both host and component memory.
 
-Some requirements to do component-\/initiated dispatch:
+Some requirements to do component-initiated dispatch:
 \begin{itemize}
 \item Ability to dynamically choose a kernel to dispatch: Let us assume for
   example that there are three kernels (A, B and C). If the host launches A,
@@ -1950,9 +1964,9 @@ Some requirements to do component-\/initiated dispatch:
   AQL\-Packet: The HSA queue information resides in the runtime layer of the
   stack. This needs to be exchanged with the compiler so it can be stored in the
   global space. This way, when the compiler sees the queue, it knows where to
-  pick the HSA queue information to write the AQL\-Packet.
+  pick the HSA queue information to write the AQL-Packet.
 
-\item Ability to notify the completion of all the component-\/initiated
+\item Ability to notify the completion of all the component-initiated
   dispatches on the host:
 
 \begin{itemize}
@@ -2029,6 +2043,12 @@ following actions will allow a component to initiate a dispatch:
 
 \section{Architected Queuing Language Support}
 \input{api/altlatex/group-aql}
+
+\section{Finalizer}
+\input{api/altlatex/group-FinalizerCoreApi}
+
+\section{Linker Service Layer}
+\input{api/altlatex/group-HsailLinkerServiceLayer}
 
 \section{Images and Samplers}
 \input{api/altlatex/group-images}

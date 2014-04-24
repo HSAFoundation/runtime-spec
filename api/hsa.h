@@ -51,6 +51,11 @@ typedef enum {
      */
     HSA_STATUS_ERROR_INVALID_CONTEXT,
     /**
+     * The topology information is out-of-date because the available HW has
+     * changed.
+     */
+    HSA_STATUS_ERROR_TOPOLOGY_CHANGE,
+    /**
      * TODO.
      */
     HSA_STATUS_INFO_UNRECOGNIZED_OPTIONS,
@@ -101,13 +106,13 @@ typedef enum {
     /**
      * TODO.
      */
-    HSA_STATUS_UNSUPPORTED_IMAGE_FORMAT,
+    HSA_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED,
     /**
      * TODO.
      */
-    HSA_STATUS_IMAGE_SIZE_NOT_SUPPORTED
+    HSA_STATUS_ERROR_IMAGE_SIZE_UNSUPPORTED
 } hsa_status_t;
-
+/** @} */
 
 /** \defgroup context TODO
  *  @{
@@ -122,8 +127,8 @@ typedef uint64_t hsa_runtime_context_t;
  * @brief Initialize the HSA runtime.
  *
  * @details Initializes the HSA runtime if it is not already initialized. It is
- * allowed for applications to invoke ::hsa_open multiple times. The HSA open
- * call returns a new context at every invocation.  Reference counting is a
+ * allowed for applications to invoke this function multiple times. The open
+ * call returns a new context for every invocation.  Reference counting is a
  * mechanism that allows the runtime to keep a count of the number of different
  * usages of the runtime API within the same application process. This ensures
  * that the runtime stays active until ::hsa_close is called by the user when
@@ -135,7 +140,7 @@ typedef uint64_t hsa_runtime_context_t;
  * callback and associate it with the context returned by the ::hsa_open
  * call. Each open call increments the reference count before returning success.
  *
- * @param[out] context A type for reference counting. User allocated.
+ * @param[out] context A valid pointer to a runtime context.
  *
  * @retval ::HSA_STATUS_SUCCESS
  *
@@ -185,7 +190,7 @@ hsa_status_t hsa_close(hsa_runtime_context_t *context);
  * @brief Increment reference count of a context, if it is not currently zero.
  *
  * @param[in] input_context The context that the user is explicitly reference
- *      counting. User allocated.
+ *      counting.
  *
  * @retval ::HSA_STATUS_SUCCESS
  *
@@ -201,7 +206,7 @@ hsa_status_t hsa_context_acquire(hsa_runtime_context_t *input_context);
  * @brief Decrement reference count of a context.
  *
  * @param[in] input_context The context that the user is explicitly reference
- * counting. User allocated.
+ * counting.
  *
  * @retval ::HSA_STATUS_SUCCESS
  *
@@ -211,50 +216,27 @@ hsa_status_t hsa_context_acquire(hsa_runtime_context_t *input_context);
 hsa_status_t hsa_context_release(hsa_runtime_context_t *input_context);
 /** @} */
 
-/**
- * @brief Queries additional information on synchronous errors.
- *
- * @details Returns success if one or both of the @a status_info and @a
- * status_info_string have been successfully updated with information regarding
- * the input @a input_status.
- *
- * @param[in] input_status Any unsuccessful API return status that the user is
- *      seeking more information on.
- *
- * @param[in] status_info User allocated. In addition to the string. This value
- *      could be 0 and in itself (without @a status_info_string) may not be
- *      independently interpreted by the user.
- *
- * @param[out] status_info_string A ISO/IEC 646 encoded English language string
- *      that potentially describes the error status. The string terminates in a
- *      ISO 646 defined NUL char.
- *
- * @retval ::HSA_STATUS_SUCCESS
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If a NULL value is passed for
- * either of the arguments.
+/** \addtogroup status
+ *  @{
  */
-hsa_status_t hsa_status_query_description(hsa_status_t input_status,
-      uint64_t *status_info,
-      char * const * status_info_string);
 
 /**
  * @brief Notification information.
  */
-typedef struct _hsa_notification_info_s{
+typedef struct _hsa_notification_info_s {
    /**
-    * The info status enum value.
+    * Notification type.
     */
     hsa_status_t status;
-  /**
-   * A pointer to more information, this could be pointing to implementation
-   * specific details that could be useful to some tools or to binary data.
-   */
+   /**
+    * A pointer to more information, this could be pointing to implementation
+    * specific details that could be useful to some tools or to binary data.
+    */
     void *info;
-  /**
-   * ISO/IEC 646 character encoding must be used. A string indicating some error
-   * information. The string should be NUL terminated per ISO 646.
-   */
+   /**
+    * A string containing further information. ISO/IEC 646 character encoding
+    * must be used. The string should be NUL terminated.
+    */
     char *string_info;
   /**
    * A pointer to user supplied data.
@@ -265,12 +247,11 @@ typedef struct _hsa_notification_info_s{
 /**
  * @brief TODO
  */
-typedef struct _hsa_async_error_info_s{
+typedef struct _hsa_async_error_info_s {
     /**
-     * Indicates the type of the error, based on this, the user knows if and
-     * packet_id is available in one of the reserved words.
+     * Error type.
      */
-    hsa_status_t error_type;
+    hsa_status_t status;
 
     /**
      * The queue that processed the entity that caused the asynchronous error.
@@ -283,10 +264,10 @@ typedef struct _hsa_async_error_info_s{
      */
     void *info;
 
-    /**
-     * ISO/IEC 646 character encoding must be used. A string indicating some
-     * error information. The string should be NUL terminated per ISO 646.
-     */
+   /**
+    * A string containing further information. ISO/IEC 646 character encoding
+    * must be used. The string should be NUL terminated.
+    */
     char *string_info;
 
     /**
@@ -296,23 +277,22 @@ typedef struct _hsa_async_error_info_s{
 
     /**
      * System timestamp to indicate when the error was discovered, the
-     * implementation may chose to always return 0 and user must take it into
-     * account when utilizing the timestamp.
+     * implementation may chose to always return 0.
      */
     uint64_t timestamp;
 
     /**
-     * Additional info to be interpreted based on @a error_type.
+     * Additional info to be interpreted based on @a status.
      */
     uint64_t reserved1;
 
     /**
-     * Additional info to be interpreted based on @a error_type.
+     * Additional info to be interpreted based on @a status.
      */
     uint64_t reserved2;
 
     /**
-     * Additional info to be interpreted based on @a error_type.
+     * Additional info to be interpreted based on @a status.
      */
     uint64_t reserved3;
 
@@ -321,29 +301,23 @@ typedef struct _hsa_async_error_info_s{
 /**
  * @brief Register a notification callback.
  *
- * @param[in] callback The callback that the user is registering, which will be
- *      invoked with info as a parameter.
+ * @param[in] callback The callback that the user is registering
  *
  * @param[in] user_data The user data to call the callback with. The @a
- *      user_data field of @a info will be filled with value when the callback
- *      is called.
+ * user_data field of the notification information is populated with this value
+ * before the callback is invoked.
  *
  * @param[in] context Identifies a particular runtime context that this callback
- *      is registered for. When a callback is registered for a particular
- *      context, it will only be invoked if the notification is for an action in
- *      that context.
+ * is registered for. When a callback is registered for a particular context, it
+ * will only be invoked if the notification is for an action in that context.
  *
  * @retval ::HSA_STATUS_SUCCESS
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure in
- * allocation of an internal structure required by the core runtime library in
- * the context of registering a callback. This error may also occur when the
- * core runtime library needs to spawn threads or create internal OS-specific
- * events.
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a info is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a callback is NULL.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_CONTEXT If the context is invalid
+ * @retval ::HSA_STATUS_ERROR_INVALID_CONTEXT If the context is NULL or invalid
  * (e.g. referenced counted to 0).
  */
 hsa_status_t hsa_notification_callback_register(void ( *callback)(const hsa_notification_info_t *info),
@@ -355,34 +329,57 @@ hsa_status_t hsa_notification_callback_register(void ( *callback)(const hsa_noti
  *
  * @details When a callback is registered for a particular context, it will only
  * be invoked if the notification is for an action in that context. For example,
- * if a queue was created for a runtime context @a c1 and a callback registered
- * for a context @a c2 but not for @a c1, any error on the queue, such as a
- * packet processing error, will not trigger the execution of asynchronous error
- * callback registered for context @a c1.
+ * if a queue was created for a runtime context @a c1 and a callback has been
+ * registered only for context @a c2, then any error on the queue, such as a
+ * packet processing error, will not trigger any asynchronous error callback.
  *
- * @param[in] callback The callback that the user is registering, the callback
- *      is called with info structure. User can read the structure and access
- *      its elements.
+ * @param[in] callback The callback that the user is registering
  *
- * @param[in] user_data The user data to call the callback with. info.user_data
- *      will be filled with value when the callback is called.
+ * @param[in] user_data The user data to call the callback with. The @a
+ * user_data field of the error information is populated with this value before
+ * the callback is invoked.
  *
  * @param[in] context The runtime context that this callback is being registered
- *      for.
+ * for.
  *
  * @retval ::HSA_STATUS_SUCCESS
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure in
- * allocation of an internal structure required by the core runtime library in
- * the context of registering a callback. This error may also occur when the
- * core runtime library needs to spawn threads or create internal OS-specific
- * events.
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a info is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_CONTEXT If the context is NULL or invalid
+ * (e.g. referenced counted to 0).
  */
 hsa_status_t hsa_error_callback_register(void ( *callback)(const hsa_async_error_info_t *info),
     void *user_data,
     hsa_runtime_context_t *context);
+
+/**
+ * @brief Queries additional information on synchronous errors.
+ *
+ * @details Returns success if one or both of the @a status_info and @a
+ * status_info_string have been successfully updated with information regarding
+ * the input status.
+ *
+ * @param[in] input_status Any unsuccessful API return status that the user is
+ * seeking more information on.
+ *
+ * @param[out] status_info Pointer to additional information about the
+ * error. This value could be 0 and in itself (without @a status_info_string)
+ * may not be independently interpreted by the user.
+ *
+ * @param[out] status_info_string A ISO/IEC 646 encoded English language string
+ * that potentially describes the error status. The string terminates in a ISO
+ * 646 defined NUL char.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If a NULL value is passed for
+ * either of the arguments.
+ */
+hsa_status_t hsa_status_query_description(hsa_status_t input_status,
+      uint64_t *status_info,
+      char * const * status_info_string);
+
 /** @} */
 
 /** \defgroup topology TODO
@@ -408,25 +405,25 @@ typedef enum {
      * them.
      */
     AGENT_DISPATCH = 4
-}hsa_agent_type_t;
+} hsa_agent_type_t;
 
 
 /**
  * @brief HSA agent.
  */
-typedef struct hsa_agent_s{
+typedef struct hsa_agent_s {
     /**
      * ID of the node this agent/component belongs to.
      */
-    uint32_t hsa_node_id;
+    uint32_t node_id;
 
     /**
      * Unique identifier for an HSA agent.
      */
-    uint32_t agent_id;
+    uint32_t id;
 
     /**
-     * Identifier for the type of this agent.
+     * Agent type, bit-field.
      */
     hsa_agent_type_t agent_type;
 
@@ -451,22 +448,16 @@ typedef struct hsa_agent_s{
     uint64_t *property_table;
 
     /**
-     * Number of the different types of memories available to this agent. Zero
-     * indicates that no information is available.
-     */
-    uint32_t number_memory_descriptors;
-
-    /**
      * Array of memory descriptor offsets.  Number of elements in array equals
      * @a number_memory_descriptors.
     */
     uint32_t *memory_descriptors;
 
     /**
-     * Number of caches available to this agent/component. Zero indicates that
-     * no information is available.
+     * Number of the different types of memories available to this agent. Zero
+     * indicates that no information is available.
      */
-    uint32_t number_cache_descriptors;
+    uint32_t number_memory_descriptors;
 
     /**
      * Array of cache descriptor offsets.  Number of elements in array equals @a
@@ -475,14 +466,20 @@ typedef struct hsa_agent_s{
     uint32_t  *cache_descriptors;
 
     /**
-     * Number of subagents.
+     * Number of caches available to this agent/component. Zero indicates that
+     * no information is available.
      */
-    uint32_t number_of_subagents;
+    uint32_t number_cache_descriptors;
 
     /**
      * Subagent list of offsets, points to the offsets in the topology table.
      */
     uint32_t *subagent_offset_list;
+
+    /**
+     * Number of subagents.
+     */
+    uint32_t number_subagents;
 
     /**
      * Wave front size, i.e. number of work-items in a wavefront.
@@ -515,7 +512,7 @@ typedef struct hsa_agent_s{
 /**
  * @brief Memory segment.
  */
-typedef struct hsa_segment_s{
+typedef struct hsa_segment_s {
     /**
      * Global segment.
      */
@@ -554,16 +551,16 @@ typedef struct hsa_segment_s{
  * may choose not to provide memory bandwidth or latency information, which case
  * zero is returned.
  */
-typedef struct hsa_memory_descriptor_s{
+typedef struct hsa_memory_descriptor_s {
     /**
      * ID of the node this memory belongs to.
      */
-    uint32_t hsa_node_id;
+    uint32_t node_id;
 
     /**
      * Unique for this memory with in the system.
      */
-    uint32_t hsa_memory_id;
+    uint32_t id;
 
     /**
      * Information on segments that can use this memory.
@@ -594,12 +591,12 @@ typedef struct hsa_cache_descriptor_s {
     /**
      * ID of the node this memory belongs to.
      */
-    uint32_t hsa_node_id;
+    uint32_t node_id;
 
     /**
      * Unique identified for this cache with in the system.
      */
-    uint32_t hsa_cache_id;
+    uint32_t id;
 
     /**
      * Number of levels of cache (for a multi-level cache).
@@ -607,7 +604,9 @@ typedef struct hsa_cache_descriptor_s {
     uint8_t levels;
 
     /**
-     * Associativity of this cache. The array has size @a levels.
+     * Associativity of this cache. The array has size @a levels. Associativity
+     * is expressed as a power of two, where 1 means 'direct mapped', and 255
+     * means 'full associative'. Zero is reserved.
      */
     uint8_t *associativity;
 
@@ -622,7 +621,8 @@ typedef struct hsa_cache_descriptor_s {
     uint64_t *cache_line_size;
 
     /**
-     * Cache inclusive with the level above?. The array has size @a levels - 1.
+     * Cache inclusivity with respect to the level above. The array has size @a
+     * levels, where @a is_inclusive[@a levels - 1] is always zero.
      */
     uint8_t *is_inclusive;
 
@@ -631,22 +631,29 @@ typedef struct hsa_cache_descriptor_s {
 /**
  * @brief Topology header.
  */
-typedef struct hsa_topology_table_s{
+typedef struct hsa_topology_table_s {
+
     /**
-     * Size of the header.
+     * Table base address.
      */
-    uint32_t header_size_bytes;
+    void  *base_address;
+
+    /**
+     * Size of the table.
+     */
+    uint32_t size;
 
     /**
      * Constant observable timestamp value increase rate is in the range
      * 1-400MHz.
      */
-    uint32_t hsa_system_timestamp_frequency_mhz;
+    uint32_t system_timestamp_frequency_mhz;
 
     /**
-     * Number of different nodes in this platform configuration.
+     * Maximum duration of a signal wait operation. Expressed as a count based
+     * on the timestamp frequency.
      */
-    uint8_t number_of_nodes;
+    uint64_t signal_maximum_wait;
 
     /**
      * IDs of the nodes.
@@ -654,10 +661,9 @@ typedef struct hsa_topology_table_s{
     uint32_t *node_id;
 
     /**
-     * Number of agent offsets specified in this structure. Zero indicates that
-     * no information is available.
+     * Number of different nodes in this platform configuration.
      */
-    uint32_t number_agents;
+    uint8_t number_nodes;
 
     /**
      * Agent list, refers to the offsets in platform table.
@@ -665,10 +671,10 @@ typedef struct hsa_topology_table_s{
     uint32_t *agent_offset_list_bytes;
 
     /**
-     * Number of the different types of memories available to this agent. Zero
-     * indicates that no information is available.
+     * Number of agent offsets specified in this structure. Zero indicates that
+     * no information is available.
      */
-    uint32_t number_memory_descriptors;
+    uint32_t number_agents;
 
     /**
      * Each element in the array carries an offset into the topology table to
@@ -678,10 +684,10 @@ typedef struct hsa_topology_table_s{
     uint32_t *memory_descriptor_offset_list_bytes;
 
     /**
-     * Number of caches available to this agent/component. Zero indicates that
-     * no information is available.
+     * Number of the different types of memories available to this agent. Zero
+     * indicates that no information is available.
      */
-    uint32_t number_cache_descriptors;
+    uint32_t number_memory_descriptors;
 
     /**
      * Array of offsets (into the topology table) to cache descriptors. Number
@@ -690,15 +696,10 @@ typedef struct hsa_topology_table_s{
     uint32_t  *cache_descriptors_offset_list_bytes;
 
     /**
-     * Size of the table.
+     * Number of caches available to this agent/component. Zero indicates that
+     * no information is available.
      */
-    uint32_t table_size;
-
-    /**
-     * Table base address, points to the table which starts with
-     * ::hsa_platform_t structure.
-     */
-    void  *topology_table_base;
+    uint32_t number_cache_descriptors;
 
 } hsa_topology_table_t;
 
@@ -710,11 +711,9 @@ typedef struct hsa_topology_table_s{
  *
  * @retval ::HSA_STATUS_SUCCESS
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a header is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a table is NULL.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure in
- * allocation of an internal structure required by the core runtime or in the
- * creation of table header or the actual table.
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES
  */
 hsa_status_t hsa_topology_table_create(hsa_topology_table_t **table);
 
@@ -725,6 +724,7 @@ hsa_status_t hsa_topology_table_create(hsa_topology_table_t **table);
  *
  * @retval ::HSA_STATUS_SUCCESS
  *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a table is NULL.
  */
 hsa_status_t hsa_topology_table_destroy(hsa_topology_table_t *table);
 /** @} */
@@ -741,7 +741,7 @@ typedef struct hsa_tlb_descriptor_s{
     /**
      * id of the node this memory belongs to.
      */
-    uint32_t hsa_node_id;
+    uint32_t node_id;
 
     /**
      * unique identified for this tlb with in the system.
@@ -812,7 +812,7 @@ typedef enum {
  * @param host_time
  *      output, time per host frequency.
  *
- * @return TODO
+ * @return TODO. TODO.
  */
 hsa_status_t hsa_clock_convert_time_component_to_host(uint64_t component_time,
     uint64_t *host_time);
@@ -827,8 +827,7 @@ hsa_status_t hsa_clock_convert_time_component_to_host(uint64_t component_time,
  *
  * @return TODO.
  */
-hsa_status_t hsa_clock_convert_convert_time_host_to_component(uint64_t host_time,
-    uint64_t *component_time);
+hsa_status_t hsa_clock_convert_convert_time_host_to_component(uint64_t host_time, uint64_t *component_time);
 /** @} */
 
 
@@ -842,19 +841,10 @@ hsa_status_t hsa_clock_convert_convert_time_host_to_component(uint64_t host_time
 typedef uint64_t hsa_signal_handle_t;
 
 /**
- * @brief Signal value.
+ * @brief Signal value. The value occupies 32 bits in small machine mode, and 64
+ * bits in large machine mode.
  */
-typedef union signal_value_s {
-    /**
-    * Signal value in the small machine model.
-    */
-    int32_t value32;
-
-    /**
-    * Signal value in the large machine model.
-    */
-    int64_t value64;
-} hsa_signal_value_t;
+typedef intptr_t hsa_signal_value_t;
 
 /**
  * @brief Wait condition operator.
@@ -1214,15 +1204,6 @@ hsa_status_t hsa_signal_decrement_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t value);
 
 /**
- * @brief Returns the maximum amount of time an implementation can spend in a
- * wait operation on the signal.
- *
- * @return Signal timeout. The returned value is in the units of the system-wide
- * clock whose frequency is available in the topology table.
- */
-uint64_t hsa_signal_get_timeout();
-
-/**
  * @brief Wait until the value of a signal satisfies a given condition, or a
  * user-provided timeout has elapsed.
  *
@@ -1520,7 +1501,7 @@ typedef struct hsa_aql_dispatch_packet_s{
   uint64_t reserved3;
 
   /**
-   * HSA signaling object handle used to indicate completion of the job.
+   * Signaling object handle used to indicate completion of the job.
    */
   hsa_signal_handle_t completion_signal;
 
@@ -1553,24 +1534,9 @@ typedef struct hsa_aql_agent_dispatch_packet_s {
   uint64_t return_location;
 
   /**
-   * 64-bit direct or indirect argument.
+   * 64-bit direct or indirect arguments.
    */
-  uint64_t arg0;
-
-  /**
-   * 64-bit direct or indirect argument.
-   */
-  uint64_t arg1;
-
-  /**
-   * 64-bit direct or indirect argument.
-   */
-  uint64_t arg2;
-
-  /**
-   * 64-bit direct or indirect argument.
-   */
-  uint64_t arg3;
+  uint64_t arg[4];
 
   /**
    * Reserved. Must be 0.
@@ -1578,7 +1544,7 @@ typedef struct hsa_aql_agent_dispatch_packet_s {
   uint64_t reserved3;
 
   /**
-   * HSA signaling object handle used to indicate completion of the job.
+   * Signaling object handle used to indicate completion of the job.
    */
   hsa_signal_handle_t completion_signal;
 
@@ -1604,29 +1570,9 @@ typedef struct hsa_aql_barrier_packet_s {
   uint32_t reserved3;
 
   /**
-   * Dependent signal object.
+   * Array of dependent signal objects.
    */
-  hsa_signal_handle_t dep_signal0;
-
-  /**
-   * Dependent signal object.
-   */
-  hsa_signal_handle_t dep_signal1;
-
-  /**
-   * Dependent signal object.
-   */
-  hsa_signal_handle_t dep_signal2;
-
-  /**
-   * Dependent signal object.
-   */
-  hsa_signal_handle_t dep_signal3;
-
-  /**
-   * Dependent signal object.
-   */
-  hsa_signal_handle_t dep_signal4;
+  hsa_signal_handle_t dep_signal[5];
 
   /**
    * Reserved. Must be zero.
@@ -1634,7 +1580,7 @@ typedef struct hsa_aql_barrier_packet_s {
   uint64_t reserved4;
 
   /**
-   * HSA signaling object handle used to indicate completion of the job.
+   * Signaling object handle used to indicate completion of the job.
    */
   hsa_signal_handle_t completion_signal;
 
@@ -1681,7 +1627,7 @@ typedef enum {
  * @brief User mode queue. Queues are read-only: HSA agents can only modify the
  * contents of the buffer pointed by @a base_address.
  */
-typedef struct hsa_queue_s{
+typedef struct hsa_queue_s {
   /**
    * Queue type.
    */
@@ -1712,15 +1658,13 @@ typedef struct hsa_queue_s{
   uint32_t size;
 
   /**
-   * Queue identifier which is unique-per-process.
+   * Queue identifier which is unique per process.
    */
   uint32_t queue_id;
 
   /**
    * A pointer to another user mode queue that can be used by the HSAIL kernel
-   * to request system services. Provided by the application to the runtime API
-   * call when the queue is created. May be NULL, the system provided service
-   * queue or an application managed queue.
+   * to request system services.
    */
   uint64_t service_queue;
 
@@ -1734,23 +1678,18 @@ typedef enum {
    * Do not return a service queue, the service queue pointer will be set to
    * NULL by the runtime.
    */
-  NONE=0,
+  HSA_SERVICE_QUEUE_TYPE_NONE=0,
 
   /**
    * Use a common runtime provided service queue.
    */
-  COMMON,
-
-  /**
-   * Create a new service queue.
-   */
-  NEW,
+  HSA_SERVICE_QUEUE_TYPE_COMMON,
 
   /**
    * Create a queue that runtime will not manage, the application has to manage
    * the queue manually.
    */
-  APPLICATION_MANAGED
+  HSA_SERVICE_QUEUE_TYPE_MANAGED
 } hsa_service_queue_type_t;
 
 /**
@@ -1761,18 +1700,12 @@ typedef enum {
  * @param[in] size Size of the queue memory in number of packets in is expected
  * to hold. Required to be aligned with a power of two number of AQL packets.
  *
- * @param[in] queue_type Type of the queue (only type 0, which is default
- * in-order issue queue, is supported at this time).
+ * @param[in] queue_type Type of the queue.
  *
- * @param[in] service_queue_type The user can choose between NONE (no service
- * queue), COMMON (runtime provided service queue that is shared), NEW (require
- * the runtime to create a new queue).
+ * @param[in] service_queue_type Type of the service queue created by the
+ * runtime.
  *
  * @param[out] queue The queue structure, filled up and returned by the runtime.
- *
- * @param[out] mailbox Mailbox to gather execution information to be used for
- * debug trap. User may pass NULL here if the user doesn't want the mailbox
- * created.
  *
  * @retval ::HSA_STATUS_SUCCESS
  *
@@ -1789,10 +1722,9 @@ typedef enum {
  */
 hsa_status_t hsa_queue_create(const hsa_agent_t *component,
                                          size_t size,
-                                         uint32_t queue_type,
+                                         hsa_queue_type_t queue_type,
                                          hsa_service_queue_type_t service_queue_type,
-                                         hsa_queue_t **queue,
-                                         hsa_queue_mailbox_t *mailbox);
+                                         hsa_queue_t **queue);
 
 /**
  * @brief Destroy a user mode queue.
@@ -2027,371 +1959,158 @@ typedef struct hsa_symbol_map_s{
 } hsa_symbol_map_t;
 /** @} **/
 
-/** \addtogroup hsail_profile
+
+/** \defgroup FinalizerCoreApi Finalizer Core API
  *  @{
  */
+
 /**
- * @brief TODO
+ * @brief BrigProfile is used to specify the kind of profile. This controls what
+ * features of HSAIL are supported. For more information see HSA Programmer's
+ * Reference Manual.
  */
-typedef enum {
-    /**
-     * The base profile, as defined in PRM/SAR.
-     */
-    HSA_PROFILE_BASE = 0,
+typedef uint8_t hsa_brig_profile8_t;
 
-    /**
-     * The full profile, as defined in PRM/SAR.
-     */
-    HSA_PROFILE_FULL = 1
-}hsa_profile_t;
-/** @} **/
-
-typedef uint16_t hsa_exception_kind16_t;
-
-/** \defgroup exception_type TODO
- *  @{
- */
 /**
- * @brief Exception values.
+ * @brief BRIG profile values.
  */
 typedef enum {
   /**
-   * IEEE 754 INVALID operation exception.
+   * The base profile, as defined in PRM/SAR.
    */
-  HSA_EXCEPTION_INVALID_OPERATION = 1,
+  HSA_BRIG_PROFILE_BASE = 0,
 
   /**
-   * An operation on finite operands gives an exact infinite result.
+   * The full profile, as defined in PRM/SAR.
    */
-  HSA_EXCEPTION_DIVIDE_BY_ZERO = 2,
+  HSA_BRIG_PROFILE_FULL = 1
+} hsa_brig_profile_t;
 
-  /**
-   * A result is too large to be represented correctly.
-   */
-  HSA_EXCEPTION_OVERFLOW = 4,
-
-  /**
-   * A result is very small (outside the normal range) and inexact.
-   */
-  HSA_EXCEPTION_UNDERFLOW = 8,
-
-  /**
-   * Returns correctly rounded result by default.
-   */
-  HSA_EXCEPTION_INEXACT = 16
-
-}hsa_exception_kind_mask_t ;
-/** @} **/
-
-
-/** \addtogroup control_directive_present64_t
- *  @{
- */
 /**
- * @brief TODO
+ * @brief BrigMachineModel is used to specify the kind of machine model. This
+ * controls the size of addresses used for segment and flat addresses. For more
+ * information see HSA Programmer's Reference Manual.
  */
-typedef uint64_t hsa_control_directive_present64_t;
-/** @} */
+typedef uint8_t hsa_brig_machine_model8_t;
 
-typedef uint32_t hsa_kernel_code_version32_t;
-
-/** \addtogroup directive_present
- *  @{
- */
 /**
- * @brief Mask indicating which control directives have been specified.
+ * @brief Machine model.
  */
 typedef enum {
   /**
-   * Mask that indicates break on exceptions is required by the user, the kernel
-   * pauses execution and the queue mailbox signal is signaled and mailbox
-   * updated.
+   * Use 32 bit addresses for global segment and flat addresses.
    */
-  HSA_CONTROL_DIRECTIVE_ENABLE_BREAK_EXCEPTIONS = 0,
+  HSA_BRIG_MACHINE_SMALL = 0,
 
   /**
-   * says that exceptions are recorded.
+   * Use 64 bit addresses for global segment and flat addresses.
    */
-  HSA_CONTROL_DIRECTIVE_ENABLE_DETECT_EXCEPTIONS = 1,
-
-  /**
-   * says that max for dynamic group size is specified.
-   */
-  HSA_CONTROL_DIRECTIVE_MAX_DYNAMIC_GROUP_SIZE = 2,
-
-  /**
-   * If enabled.
-   */
-  HSA_CONTROL_DIRECTIVE_MAX_FLAT_GRID_SIZE = 4,
-
-  /**
-   * If enabled.
-   */
-  HSA_CONTROL_DIRECTIVE_MAX_FLAT_WORKGROUP_SIZE = 8,
-
-  /**
-   * If enabled.
-   */
-  HSA_CONTROL_DIRECTIVE_REQUESTED_WORKGROUPS_PER_CU = 16,
-
-  /**
-   * If enabled.
-   */
-  HSA_CONTROL_DIRECTIVE_REQUIRED_GRID_SIZE = 32,
-
-  /**
-   * If enabled.
-   */
-  HSA_CONTROL_DIRECTIVE_REQUIRED_WORKGROUP_SIZE = 64,
-
-  /**
-   * If enabled.
-   */
-  HSA_CONTROL_DIRECTIVE_REQUIRED_DIM = 128,
-
-  /**
-   * If enabled.
-   */
-  HSA_CONTROL_DIRECTIVE_REQUIRE_NO_PARTIAL_WORKGROUPS = 256
-
-} hsa_control_directive_present_mask_t;
-
-/** @} **/
-
-
-/** \defgroup dim3 TODO
- *  @{
- */
-/**
- * @brief 3D Dimensions.
- */
-typedef struct hsa_dim3_s {
-     /**
-      * X dimension.
-      */
-      uint32_t x;
-     /**
-      * Y dimension.
-      */
-      uint32_t y;
-     /**
-      * Z dimension.
-      */
-      uint32_t z;
-} hsa_dim3_t;
-
-// TODO(mmario): parse this guy instead of the simplified version
-/* typedef struct hsa_dim3_s { */
-/*   union { */
-/*     struct { */
-/*       // X-dimension. */
-/*       uint32_t x; */
-/*       // Y-dimension. */
-/*       uint32_t y; */
-/*       // Z-dimension. */
-/*       uint32_t z; */
-/*     }; */
-/*     // Array of dimensions. */
-/*     uint32_t dim[3]; */
-/*   }; */
-/** @} **/
-
-
-/** \defgroup control_directive TODO
- *  @{
- */
-/**
- * @brief Control directives.
- */
-typedef struct hsa_control_directives_s {
-  /**
-   If the value is 0 then there are no control directives specified and the rest
-   of the fields can be ignored. The bits are accessed using the
-   hsa_control_directives_present_mask_t. Any control directive that is not
-   enabled in this bit set must have the value of all 0s.
-   */
-  hsa_control_directive_present64_t enabled_control_directives;
-
-  /**
-   If enable break exceptions is not enabled in @a enabled_control_directives,
-   then must be 0, otherwise must be non-0 and specifies the set of HSAIL
-   exceptions that must have the BREAK policy enabled.  If the HSAIL kernel
-   being finalized has any enablebreakexceptions control directives, then the
-   values specified by this argument are unioned with the values in these
-   control directives. If any of the functions the kernel calls have an
-   enablebreakexceptions control directive, then they must be equal or a subset
-   of, this union.
-   */
-  hsa_exception_kind16_t enable_break_exceptions;
-
-  /**
-   If enable detect exceptions is not enabled in @a enabled_control_directives,
-   then must be 0, otherwise must be non-0 and specifies the set of HSAIL
-   exceptions that must have the DETECT policy enabled.  If the kernel being
-   finalized has any enabledetectexceptions control directives, then the values
-   specified by this argument are unioned with the values in these control
-   directives. If any of the functions the kernel calls have an
-   enabledetectexceptions control directive, then they must be equal or a subset
-   of, this union.
-   */
-  hsa_exception_kind16_t enable_detect_exceptions;
-
-  /**
-   If max dynamic group size is not enabled in @a enabled_control_directives
-   then this must be 0, and any amount of dynamic group segment can be allocated
-   for a dispatch, otherwise the value specifies the maximum number of bytes of
-   dynamic group segment that can be allocated for a dispatch. If the kernel
-   being finalized has any maxdynamicsize control directives, then the values
-   must be the same, and must be the same as this argument if it is
-   enabled. This value can be used by the finalizer to determine the maximum
-   number of bytes of group memory used by each work-group by adding this value
-   to the group memory required for all group segment variables used by the
-   kernel and all functions it calls, and group memory used to implement other
-   HSAIL features such as fbarriers and the detect exception operations. This
-   can allow the finalizer to determine the expected number of work-groups that
-   can be executed by a compute unit and allow more resources to be allocated to
-   the work-items if it is known that fewer work-groups can be executed due to
-   group memory limitations.
-   */
-  uint32_t max_dynamic_group_size;
-
-  /**
-   If this is not enabled in @a enabled_control_directives then must be 0,
-   otherwise must be greater than 0.  See HSA Programmer's Reference Manual
-   description of maxflatgridsize control directive.
-   */
-  uint32_t max_flat_grid_size;
-
-  /**
-   If this is not enabled in @a enabled_control_directives then must be 0,
-   otherwise must be greater than 0.  See HSA Programmer's Reference Manual
-   description of maxflatgridsize control directive.
-   */
-  uint32_t max_flat_workgroup_size;
-
-  /**
-   If this is not enabled in @a enabled_control_directives then must be 0 and
-   the finalizer may generate ISA that could result in any number of work-groups
-   executing on a single compute unit.  Otherwise, the finalizer will attempt to
-   generate ISA that will allow the specified number of work-groups to execute
-   on a single compute unit. This is only a hint and can be ignored by the
-   finalizer. If the kernel being finalized, or any of the functions it calls,
-   has the same control directive, then the values must be the same or the
-   finalization can fail. This can be used to determine the number of resources
-   that should be allocated to a single work-group and work-item.
-   */
-  uint32_t requested_workgroups_per_cu;
-
-  /**
-   If not enabled then all elements for Dim3 must be 0, otherwise every element
-   must be greater than 0. See HSA Programmer's Reference Manual description of
-   requiredgridsize control directive.
-   */
-  hsa_dim3_t required_grid_size;
-
-  /**
-   If not enabled then all elements for Dim3 must be 0, and the produced code
-   can be dispatched with any legal work-group range consistent with the
-   dispatch dimensions. Otherwise, the code produced must always be dispatched
-   with the specified work-group range. No element of the specified range must
-   be 0. It must be consistent with required_dim and max_flat_workgroup_size. If
-   the kernel being finalized, or any of the functions it calls, has a
-   requiredworkgroupsize control directive, then the values must be the
-   same. Specifying a value can allow the finalizer to optimize work-group id
-   operations, and if the number of work-items in the work-group is less than
-   the WAVESIZE then barrier operations can be optimized to just a memory fence.
-   */
-  hsa_dim3_t required_workgroup_size;
-
-  /**
-   If disabled then must be 0 and the produced kernel code can be dispatched
-   with 1, 2 or 3 dimensions. If enabled then the value is 1..3 and the code
-   produced must only be dispatched with a dimension that matches. Other values
-   are illegal. If the kernel being finalized, or any of the functions it calls,
-   has a requireddimsize control directive, then the values must be the
-   same. This can be used to optimize the code generated to compute the absolute
-   and flat work-group and work-item id, and the dim HSAIL operations.
-  */
-  uint8_t required_dim;
-
-  /**
-   * Reserved. Must be 0.
-   */
-  uint8_t reserved[75];
-
-} hsa_control_directives_t;
-/** @} **/
-
-
-
-/// The current version number of the HSA code object
-/// format.
-typedef uint32_t hsa_code_kind32_t;
-
-/** \defgroup codeversion TODO
- *  @{
- */
+  HSA_BRIG_MACHINE_LARGE = 1
+} hsa_brig_machine_model_t;
 
 /**
- * @brief TODO.
+ * @brief Currently no target options. If added they will be of the form:
+ * HSA_TARGET_xxx = 1.
  */
-typedef uint32_t hsa_code_version32_t;
+typedef uint16_t hsa_brig_target_options16_t;
+
+
+// TODO(mmario): enums cannot be empty, so commented for now
+//enum {
+//} hsa_brig_target_options_t;
 
 /**
- * @brief TODO.
+ * @brief TODO kzhuravl 4/21/2014 write description.
  */
+typedef uint32_t hsa_brig_section_id32_t;
+
+/**
+* @brief Brig sections.
+*/
 typedef enum {
   /**
-   * Code version
+   * Data section, containing all character strings and byte data used in the
+   * finalization unit.
    */
-  HSA_CODE_VERSION = 0
-} hsa_code_version_t;
-/** @} **/
+  HSA_BRIG_SECTION_DATA = 0,
 
-/** \defgroup codeheader TODO
- *  @{
- */
+  /**
+   * All of the executable operations. Most operations contain offsets to the
+   * .operand section.
+   */
+  HSA_BRIG_SECTION_CODE = 1,
+
+  /**
+   * The operands, such as immediate constants, registers, and address
+   * expressions, that appear in the operations.
+   */
+  HSA_BRIG_SECTION_OPERAND = 2
+} hsa_brig_section_id_t;
+
 /**
- * @brief TODO.
+ * @brief TODO kzhuravl 4/21/2014 write description.
  */
-typedef struct hsa_code_s {
+typedef struct hsa_brig_section_header_s {
   /**
-   The code format version. The version of this definition is specified by
-   HSA_CODE_VERSION. Must match the value in the hsa_compilationunit_code_t that
-   contains it.
+   * TODO kzhuravl 4/21/2014 write description.
    */
-  hsa_code_version32_t code_version;
+  uint32_t byte_count;
 
   /**
-   The byte size of the struct that contains this hsa_code_t. Must be set to
-   sizeof(hsa_*_code_t). Used for backward compatibility.
+   * TODO kzhuravl 4/21/2014 write description.
    */
-  uint32_t struct_byte_size;
+  uint32_t header_byte_count;
 
   /**
-   Offset from base of hsa_code_t to compilationunit_code_t that contains this
-   hsa_code_t to the base of this hsa_code_t. Can be used to navigate back to
-   the enclosing compilation unit. Since hsa_compilationunit_code_t is always at
-   offset 0, this value must be negative.
+   * TODO kzhuravl 4/21/2014 write description.
    */
-  int64_t compilationunit_byte_offset;
+  uint32_t name_length;
 
   /**
-   * Type of code object.
+   * TODO kzhuravl 4/21/2014 write description.
    */
-  hsa_code_kind32_t code_type;
+  uint8_t name[1];
+} hsa_brig_section_header_t;
 
-} hsa_code_t;
-/** @} **/
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef struct hsa_brig_module_s {
+  /**
+   * TODO kzhuravl 4/21/2014 write description.
+   */
+  uint32_t section_count;
 
-typedef uint8_t powertwo8_t;
-/// Value expressed as a power of two.
+  /**
+   * TODO kzhuravl 4/21/2014 write description.
+   */
+  hsa_brig_section_header_t *section[1];
+} hsa_brig_module_t;
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef struct hsa_brig_module_handle_s {
+  /**
+   * TODO
+   */
+  uint64_t handle;
+} hsa_brig_module_handle_t;
+
+/**
+ * @brief TODO kzhuravl 4/9/2014 write description.
+ */
+typedef uint32_t hsa_brig_code_section_offset32_t;
+
+/**
+ * @brief Value expressed as a power of two.
+ */
 typedef uint8_t hsa_powertwo8_t;
 
 /**
- * @brief TODO
+ * @brief Power of two between 1 and 256.
  */
-enum hsa_powertwo_t {
+typedef enum {
   HSA_POWERTWO_1 = 0,
   HSA_POWERTWO_2 = 1,
   HSA_POWERTWO_4 = 2,
@@ -2401,21 +2120,497 @@ enum hsa_powertwo_t {
   HSA_POWERTWO_64 = 6,
   HSA_POWERTWO_128 = 7,
   HSA_POWERTWO_256 = 8
-};
+} hsa_powertwo_t;
 
-/** \defgroup code_object TODO
- *  @{
+/**
+ * @brief The set of exceptions supported by HSAIL. This is represented as a
+ * bit set.
  */
+typedef uint16_t hsa_exception_kind16_t;
+
+/**
+ * @brief HSAIL exceptions.
+ */
+typedef enum {
+  /**
+   * Operations are performed on values for which the results are not defined.
+   * These are:
+   *   - Operations on signaling NaN (sNaN) floating-point values.
+   *   - Signalling comparisons: comparisons on quiet NaN (qNaN)
+   *     floating-point values.
+   *   - Multiplication: mul(0.0, infinity) or mul(infinity, 0.0).
+   *   - Fused multiply add: fma(0.0, infinity, c) or fma(infinity, 0.0, c)
+   *     unless c is a quiet NaN, in which case it is implementation-defined
+   *     if an exception is generated.
+   *   - Addition, subtraction, or fused multiply add: magnitude subtraction
+   *     of infinities, such as: add(positive infinity, negative infinity),
+   *     sub(positive infinity, positive infinity).
+   *   - Division: div(0.0, 0.0) or div(infinity, infinity).
+   *   - Square root: sqrt(negative).
+   *   - Conversion: A cvt with a floating-point source type, an integer
+   *     destination type, and a nonsaturating rounding mode, when the source
+   *     value is a NaN, infinity, or the rounded value, after any flush to
+   *     zero, cannot be represented precisely in the integer type of the
+   *     destination.
+   */
+  HSA_EXCEPTION_INVALID_OPERATION = 1,
+
+  /**
+   * A finite non-zero floating-point value is divided by zero. It is
+   * implementation defined if integer div or rem operations with a divisor of
+   * zero will generate a divide by zero exception.
+   */
+  HSA_EXCEPTION_DIVIDE_BY_ZERO = 2,
+
+  /**
+   * The floating-point exponent of a value is too large to be represented.
+   */
+  HSA_EXCEPTION_OVERFLOW = 4,
+
+  /**
+   * A non-zero tiny floating-point value is computed and either the ftz
+   * modifier is specified, or the ftz modifier was not specified and the value
+   * cannot be represented exactly.
+   */
+  HSA_EXCEPTION_UNDERFLOW = 8,
+
+  /**
+   * A computed floating-point value is not represented exactly in the
+   * destination. This can occur due to rounding. In addition, it is
+   * implementation defined if operations with the ftz modifier that cause a
+   * value to be flushed to zero generate the inexact exception.
+   */
+  HSA_EXCEPTION_INEXACT = 16
+} hsa_exception_kind_t;
+
+/**
+ * @brief In HSA a dispatch grid can have up to three dimensions referred to as
+ * X, Y and Z.
+ */
+typedef enum {
+  /**
+   * X dimension.
+   */
+  HSA_DIM_X = 0,
+
+  /**
+   * Y dimension.
+   */
+  HSA_DIM_Y = 1,
+
+  /**
+   * Z dimension.
+   */
+  HSA_DIM_Z = 2,
+} hsa_dim_t;
+
+/**
+ * @brief In HSA a dispatch grid can have up to three dimensions referred to as
+ * x, y and z.
+ */
+typedef struct hsa_dim3_s {
+  union {
+    struct {
+      /**
+       * X dimension.
+       */
+      uint32_t x;
+
+      /**
+       * Y dimension.
+       */
+      uint32_t y;
+
+      /**
+       * Z dimension.
+       */
+      uint32_t z;
+    };
+
+    /**
+     * The dimensions may also be accessed as an array using the HsaDim.
+     */
+    uint32_t dim[3];
+  };
+} hsa_dim3_t;
+
+/**
+ * @brief Bit set of control directives supported in HSAIL. See HSA Programmer's
+ * Reference Manual description of control directives with the same name for
+ * more information. For control directives that have an associated value, the
+ * value is given by the field in hsa_control_directives_t. For control
+ * directives that are only present of absent (such as
+ * requirenopartialworkgroups) they have no corresponding field as the presence
+ * of the bit in this mask is sufficient.
+ */
+typedef uint64_t hsa_control_directive_present64_t;
+
+/**
+ * @brief HSAIL control directives.
+ */
+typedef enum {
+  /**
+   * If not enabled then must be 0, otherwise must be non-0 and specifies the
+   * set of HSAIL exceptions that must have the BREAK policy enabled.  If this
+   * set is not empty then the generated code may have lower performance than if
+   * the set is empty. If the kernel being finalized has any
+   * enablebreakexceptions control directives, then the values specified by this
+   * argument are unioned with the values in these control directives.  If any
+   * of the functions the kernel calls have an enablebreakexceptions control
+   * directive, then they must be equal or a subset of, this union.
+   */
+  HSA_CONTROL_DIRECTIVE_ENABLE_BREAK_EXCEPTIONS = 0,
+
+  /**
+   * If not enabled then must be 0, otherwise must be non-0 and specifies the
+   * set of HSAIL exceptions that must have the DETECT policy enabled.  If this
+   * set is not empty then the generated code may have lower performance than if
+   * the set is empty. However, an implementation should endeavour to make the
+   * performance impact small. If the kernel being finalized has any
+   * enabledetectexceptions control directives, then the values specified by
+   * this argument are unioned with the values in these control directives. If
+   * any of the functions the kernel calls have an enabledetectexceptions
+   * control directive, then they must be equal or a subset of, this union.
+   */
+  HSA_CONTROL_DIRECTIVE_ENABLE_DETECT_EXCEPTIONS = 1,
+
+  /**
+   * If not enabled then must be 0, and any amount of dynamic group segment can
+   * be allocated for a dispatch, otherwise the value specifies the maximum
+   * number of bytes of dynamic group segment that can be allocated for a
+   * dispatch. If the kernel being finalized has any maxdynamicsize control
+   * directives, then the values must be the same, and must be the same as this
+   * argument if it is enabled. This value can be used by the finalizer to
+   * determine the maximum number of bytes of group memory used by each
+   * work-group by adding this value to the group memory required for all group
+   * segment variables used by the kernel and all functions it calls, and group
+   * memory used to implement other HSAIL features such as fbarriers and the
+   * detect exception operations. This can allow the finalizer to determine the
+   * expected number of work-groups that can be executed by a compute unit and
+   * allow more resources to be allocated to the work-items if it is known that
+   * fewer work-groups can be executed due to group memory limitations.
+   */
+  HSA_CONTROL_DIRECTIVE_MAX_DYNAMIC_GROUP_SIZE = 2,
+
+  /**
+   * If not enabled then must be 0, otherwise must be greater than 0. Specifies
+   * the maximum number of work-items that will be in the grid when the kernel
+   * is dispatched. For more information see HSA Programmer's Reference Manual.
+   */
+  HSA_CONTROL_DIRECTIVE_MAX_FLAT_GRID_SIZE = 4,
+
+  /**
+   * If not enabled then must be 0, otherwise must be greater than 0. Specifies
+   * the maximum number of work-items that will be in the work-group when the
+   * kernel is dispatched. For more information see HSA Programmer's Reference
+   * Manual.
+   */
+  HSA_CONTROL_DIRECTIVE_MAX_FLAT_WORKGROUP_SIZE = 8,
+
+  /**
+   * If not enabled then must be 0, and the finalizer is free to generate ISA
+   * that may result in any number of work-groups executing on a single compute
+   * unit. Otherwise, the finalizer should attempt to generate ISA that will
+   * allow the specified number of work-groups to execute on a single compute
+   * unit. This is only a hint and can be ignored by the finalizer. If the
+   * kernel being finalized, or any of the functions it calls, has a requested
+   * control directive, then the values must be the same. This can be used to
+   * determine the number of resources that should be allocated to a single
+   * work-group and work-item. For example, a low value may allow more resources
+   * to be allocated, resulting in higher per work-item performance, as it is
+   * known there will never be more than the specified number of work-groups
+   * actually executing on the compute unit.  Conversely, a high value may
+   * allocate fewer resources, resulting in lower per work-item performance,
+   * which is offset by the fact it allows more work-groups to actually execute
+   * on the compute unit.
+   */
+  HSA_CONTROL_DIRECTIVE_REQUESTED_WORKGROUPS_PER_CU = 16,
+
+  /**
+   * If not enabled then all elements for Dim3 must be 0, otherwise every
+   * element must be greater than 0. Specifies the grid size that will be used
+   * when the kernel is dispatched. For more information see HSA Programmer's
+   * Reference Manual.
+   */
+  HSA_CONTROL_DIRECTIVE_REQUIRED_GRID_SIZE = 32,
+
+  /**
+   * If not enabled then all elements for Dim3 must be 0, and the produced code
+   * can be dispatched with any legal work-group range consistent with the
+   * dispatch dimensions. Otherwise, the code produced must always be dispatched
+   * with the specified work-group range. No element of the specified range must
+   * be 0. It must be consistent with required_dimensions and
+   * max_flat_workgroup_size. If the kernel being finalized, or any of the
+   * functions it calls, has a requiredworkgroupsize control directive, then the
+   * values must be the same. Specifying a value can allow the finalizer to
+   * optimize work-group id operations, and if the number of work-items in the
+   * work-group is less tha the WAVESIZE then barrier operations can be
+   * optimized to just a memory fence.
+   */
+  HSA_CONTROL_DIRECTIVE_REQUIRED_WORKGROUP_SIZE = 64,
+
+  /**
+   * If not enabled then must be 0 and the produced kernel code can be
+   * dispatched with 1, 2 or 3 dimensions. If enabled then the value is 1..3 and
+   * the code produced must only be dispatched with a dimension that
+   * matches. Other values are illegal. If the kernel being finalized, or any of
+   * the functions it calls, has a requireddimsize control directive, then the
+   * values must be the same. This can be used to optimize the code generated to
+   * compute the absolute and flat work-group and work-item id, and the dim
+   * HSAIL operations.
+   */
+  HSA_CONTROL_DIRECTIVE_REQUIRED_DIM = 128,
+
+  /**
+   * Specifies that the kernel must be dispatched with no partial work-groups.
+   * It can be placed in either a kernel or a function code block. This is only
+   * a hint and can be ignored by the finalizer.
+   *
+   * It is undefined if the kernel is dispatched with any dimension of the grid
+   * size not being an exact multiple of the corresponding dimension of the
+   * work-group size.
+   *
+   * A finalizer might be able to generate better code for currentworkgroupsize
+   * if it knows there are no partial work-groups, because the result becomes
+   * the same as the workgroupsize operation. An HSA component might be able to
+   * dispatch a kernel more efficiently if it knows there are no partial
+   * work-groups.
+   *
+   * The control directive applies to the whole kernel and all functions it
+   * calls. It can appear multiple times in a kernel or function. If it appears
+   * in a function (including external functions), then it must also appear in
+   * all kernels that call that function (or have been specified when the
+   * finalizer was invoked), either directly or indirectly.
+   *
+   * If require no partial work-groups is specified when the finalizer is
+   * invoked, the kernel behaves as if the requirenopartialworkgroups control
+   * directive has been specified.
+   *
+   * \note require_no_partial_work_groups does not have a field since having the
+   * bit set in enabledControlDirectives indicates that the cpntrol directive is
+   * present.
+   */
+  HSA_CONTROL_DIRECTIVE_REQUIRE_NO_PARTIAL_WORKGROUPS = 256
+} hsa_control_directive_present_t;
+
+/**
+ * @brief The hsa_control_directives_t specifies the values for the HSAIL
+ * control directives. These control how the finalizer generates code. This
+ * struct is used both as an argument to hsaFinalizeKernel to specify values for
+ * the control directives, and is used in HsaKernelCode to record the values of
+ * the control directives that the finalize used when generating the code which
+ * either came from the finalizer argument or explicit HSAIL control
+ * directives. See the definition of the control directives in HSA Programmer's
+ * Reference Manual which also defines how the values specified as finalizer
+ * arguments have to agree with the control directives in the HSAIL code.
+ */
+typedef struct hsa_control_directives_s {
+  /**
+   * This is a bit set indicating which control directives have been
+   * specified. If the value is 0 then there are no control directives specified
+   * and the rest of the fields can be ignored. The bits are accessed using the
+   * hsa_control_directives_present_mask_t. Any control directive that is not
+   * enabled in this bit set must have the value of all 0s.
+   */
+  hsa_control_directive_present64_t enabled_control_directives;
+
+  /**
+   * If enableBreakExceptions is not enabled then must be 0, otherwise must be
+   * non-0 and specifies the set of HSAIL exceptions that must have the BREAK
+   * policy enabled. If this set is not empty then the generated code may have
+   * lower performance than if the set is empty. If the kernel being finalized
+   * has any enablebreakexceptions control directives, then the values specified
+   * by this argument are unioned with the values in these control
+   * directives. If any of the functions the kernel calls have an
+   * enablebreakexceptions control directive, then they must be equal or a
+   * subset of, this union.
+   */
+  hsa_exception_kind16_t enable_break_exceptions;
+
+  /**
+   * If enableDetectExceptions is not enabled then must be 0, otherwise must be
+   * non-0 and specifies the set of HSAIL exceptions that must have the DETECT
+   * policy enabled. If this set is not empty then the generated code may have
+   * lower performance than if the set is empty. However, an implementation
+   * should endeavour to make the performance impact small. If the kernel being
+   * finalized has any enabledetectexceptions control directives, then the
+   * values specified by this argument are unioned with the values in these
+   * control directives. If any of the functions the kernel calls have an
+   * enabledetectexceptions control directive, then they must be equal or a
+   * subset of, this union.
+   */
+  hsa_exception_kind16_t enable_detect_exceptions;
+
+  /**
+   * If maxDynamicGroupSize is not enabled then must be 0, and any amount of
+   * dynamic group segment can be allocated for a dispatch, otherwise the value
+   * specifies the maximum number of bytes of dynamic group segment that can be
+   * allocated for a dispatch. If the kernel being finalized has any
+   * maxdynamicsize control directives, then the values must be the same, and
+   * must be the same as this argument if it is enabled. This value can be used
+   * by the finalizer to determine the maximum number of bytes of group memory
+   * used by each work-group by adding this value to the group memory required
+   * for all group segment variables used by the kernel and all functions it
+   * calls, and group memory used to implement other HSAIL features such as
+   * fbarriers and the detect exception operations. This can allow the finalizer
+   * to determine the expected number of work-groups that can be executed by a
+   * compute unit and allow more resources to be allocated to the work-items if
+   * it is known that fewer work-groups can be executed due to group memory
+   * limitations.
+   */
+  uint32_t max_dynamic_group_size;
+
+  /**
+   * If maxFlatGridSize is not enabled then must be 0, otherwise must be greater
+   * than 0. See HSA Programmer's Reference Manual description of
+   * maxflatgridsize control directive.
+   */
+  uint32_t max_flat_grid_size;
+
+  /**
+   * If maxFlatWorkgroupSize is not enabled then must be 0, otherwise must be
+   * greater than 0. See HSA Programmer's Reference Manual description of
+   * maxflatworkgroupsize control directive.
+   */
+  uint32_t max_flat_workgroup_size;
+
+  /**
+   * If requestedWorkgroupsPerCu is not enabled then must be 0, and the
+   * finalizer is free to generate ISA that may result in any number of
+   * work-groups executing on a single compute unit. Otherwise, the finalizer
+   * should attempt to generate ISA that will allow the specified number of
+   * work-groups to execute on a single compute unit. This is only a hint and
+   * can be ignored by the finalizer. If the kernel being finalized, or any of
+   * the functions it calls, has a requested control directive, then the values
+   * must be the same. This can be used to determine the number of resources
+   * that should be allocated to a single work-group and work-item. For example,
+   * a low value may allow more resources to be allocated, resulting in higher
+   * per work-item performance, as it is known there will never be more than the
+   * specified number of work-groups actually executing on the compute
+   * unit. Conversely, a high value may allocate fewer resources, resulting in
+   * lower per work-item performance, which is offset by the fact it allows more
+   * work-groups to actually execute on the compute unit.
+   */
+  uint32_t requested_workgroups_per_cu;
+
+  /**
+   * If not enabled then all elements for Dim3 must be 0, otherwise every
+   * element must be greater than 0. See HSA Programmer's Reference Manual
+   * description of requiredgridsize control directive.
+   */
+  hsa_dim3_t required_grid_size;
+
+  /**
+   * If requiredWorkgroupSize is not enabled then all elements for Dim3 must be
+   * 0, and the produced code can be dispatched with any legal work-group range
+   * consistent with the dispatch dimensions. Otherwise, the code produced must
+   * always be dispatched with the specified work-group range. No element of the
+   * specified range must be 0. It must be consistent with required_dimensions
+   * and max_flat_workgroup_size. If the kernel being finalized, or any of the
+   * functions it calls, has a requiredworkgroupsize control directive, then the
+   * values must be the same. Specifying a value can allow the finalizer to
+   * optimize work-group id operations, and if the number of work-items in the
+   * work-group is less than the WAVESIZE then barrier operations can be
+   * optimized to just a memory fence.
+   */
+  hsa_dim3_t required_workgroup_size;
+
+  /**
+   * If requiredDim is not enabled then must be 0 and the produced kernel code
+   * can be dispatched with 1, 2 or 3 dimensions. If enabled then the value is
+   * 1..3 and the code produced must only be dispatched with a dimension that
+   * matches. Other values are illegal. If the kernel being finalized, or any of
+   * the functions it calls, has a requireddimsize control directive, then the
+   * values must be the same. This can be used to optimize the code generated to
+   * compute the absolute and flat work-group and work-item id, and the dim
+   * HSAIL operations.
+   */
+  uint8_t required_dim;
+
+  /**
+   * Reserved. Must be 0.
+   */
+  uint8_t reserved[75];
+} hsa_control_directives_t;
+
+/**
+ * @brief The kinds of code objects that can be contained in
+ * ::hsa_code_descriptor_t.
+ */
+typedef uint32_t hsa_code_kind32_t;
+
+/**
+ * @brief Type of code object.
+ */
+typedef enum {
+  /**
+   * Not a code object.
+   */
+  HSA_CODE_NONE = 0,
+
+  /**
+   * HSAIL kernel that can be used with an AQL dispatch packet.
+   */
+  HSA_CODE_KERNEL = 1,
+
+  /**
+   * HSAIL indirect function.
+   */
+  HSA_CODE_INDIRECT_FUNCTION = 2,
+
+  /**
+   * HSA runtime code objects. For example, partially linked code objects.
+   */
+  HSA_CODE_RUNTIME_FIRST = 0x40000000,
+  HSA_CODE_RUNTIME_LAST = 0x7fffffff,
+
+  /**
+   * Vendor specific code objects.
+   */
+  HSA_CODE_VENDOR_FIRST = 0x80000000,
+  HSA_CODE_VENDOR_LAST = 0xffffffff,
+} hsa_code_kind_t;
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef uint32_t hsa_program_call_convention_id32_t;
+
 /**
  * @brief TODO.
  */
-typedef struct hsa_kernel_code_s{
+typedef enum {
+  HSA_PROGRAM_CALL_CONVENTION_FINALIZER_DETERMINED = -1
+} hsa_program_call_convention_id_t;
 
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef struct hsa_code_handle_s {
+ /**
+  * TODO.
+  */
+  uint64_t handle;
+} hsa_code_handle_t;
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef struct hsa_debug_information_handle_s {
+ /**
+  * TODO.
+  */
+  uint64_t handle;
+} hsa_debug_information_handle_t;
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef struct hsa_code_descriptor_s {
   /**
-   * Common header that all code objects start with. code.type must be
-   * HSA_CODE_KERNEL.
+   * Type of code object.
    */
-  hsa_code_t code;
+  hsa_code_kind32_t code_type;
 
   /**
    * The amount of group segment memory required by a work-group in bytes. This
@@ -2433,27 +2628,41 @@ typedef struct hsa_kernel_code_s{
   /**
    * The amount of memory required for the combined private, spill and arg
    * segments for a work-item in bytes.
-  */
+   */
   uint32_t workitem_private_segment_byte_size;
 
   /**
    * Number of fbarrier's used in the kernel and all functions it calls. If the
    * implementation uses group memory to allocate the fbarriers then that amount
-   * must already be included in the @a workgroup_group_segment_byte_size total.
+   * must already be included in the workgroupGroupSegmentByteSize total.
    */
   uint32_t workgroup_fbarrier_count;
 
   /**
-   * The values are the actually values used by the finalizer in generating the
-   * code. This may be the union of values specified as finalizer arguments and
-   * explicit HSAIL control directives. If a finalizer implementation ignores a
-   * control directive, and not generate constrained code, then the control
-   * directive will not be marked as enabled even though it was present in the
-   * HSAIL or finalizer argument. The values are intended to reflect the
-   * constraints that the code actually requires to correctly execute, not the
-   * values that were actually specified at finalize time.
+   * Opaque handle to code object.
    */
-  hsa_control_directives_t control_directive;
+  hsa_code_handle_t code;
+
+  /**
+   * The maximum byte alignment of variables used by the kernel in the kernarg
+   * memory segment. Expressed as a power of two. Must be at least
+   * ::HSA_POWERTWO_16
+   */
+  hsa_powertwo8_t kernarg_segment_alignment;
+
+  /**
+   * The maximum byte alignment of variables used by the kernel in the group
+   * memory segment. Expressed as a power of two. Must be at least
+   * ::HSA_POWERTWO_16
+   */
+  hsa_powertwo8_t group_segment_alignment;
+
+  /**
+   * The maximum byte alignment of variables used by the kernel in the private
+   * memory segment. Expressed as a power of two. Must be at least
+   * ::HSA_POWERTWO_16
+   */
+  hsa_powertwo8_t private_segment_alignment;
 
   /**
    * Wavefront size expressed as a power of two. Must be a power of 2 in range
@@ -2464,579 +2673,801 @@ typedef struct hsa_kernel_code_s{
   hsa_powertwo8_t wavefront_size;
 
   /**
-   * The maximum byte alignment of variables used by the kernel in the specified
-   * memory segment. Expressed as a power of two. Must be at least
-   * HSA_POWERTWO_16.
+   * Program call convention id this code descriptor holds.
    */
-  hsa_powertwo8_t kernarg_segment_alignment;
-  /**
-   * TODO.
-   */
-  hsa_powertwo8_t group_segment_alignment;
-  /**
-   * TODO.
-   */
-  hsa_powertwo8_t private_segment_alignment;
+  hsa_program_call_convention_id32_t program_call_convention;
 
   /**
-   * The optimization level specified when the kernel was finalized.
+   * Domain module handle this code descriptor associated with.
    */
-  uint8_t optimization_level;
+  hsa_brig_module_handle_t module;
 
   /**
-   * Reserved. Must be 0.
-   * Component specific fields can follow this field.
+   * BRIG directive offset this code descriptor associated with.
    */
-  uint8_t reserved1[3];
-
-} hsa_kernel_code_t;
-/** @} */
-
-
-/** \defgroup brig TODO
- *  @{
- */
-/**
- * @brief BRIG representation.
- */
-typedef struct hsa_brig_s{
-    /**
-     * From PRM: string section, containing all character strings and byte data
-     * used in the compilation unit.
-     */
-    uint8_t *string_section;
-
-    /**
-     * The directives, which provide information for the finalizer. The
-     * directives do not generate code.
-     */
-    uint8_t *directive_section;
-
-    /**
-     * All of the executable operations. Most operations contain offsets to the
-     * .operand section.
-     */
-    uint8_t *code_section;
-
-    /**
-     * The operands, such as immediate constants, registers, and address
-     * expressions, that appear in the operations.
-     */
-    uint8_t *operand_section;
-} hsa_brig_t;
-/** @} */
-
-
-/** \defgroup codeentry TODO
- *  @{
- */
-/**
- * @brief TODO
- */
-typedef struct hsa_code_entry_s {
-  /**
-   * ID of the entity that generated the code. For HSAIL will be the BRIG
-   * directive offset of the kernel or function declaration. The array of
-   * hsa_code_entry_t are required to be ordered in ascending code_id to allow
-   * faster lookup.
-   */
-  uint64_t code_id;
+  hsa_brig_code_section_offset32_t symbol;
 
   /**
-   * Byte offset from start of hsa_compilationunit_code_t to corresponding
-   * hsa_code_t. Every hsacode_t starts with a common hsa_code_t, and its
-   * code_type field indicates what specific hsa_code_t it is.
+   * The HSAIL profile defines which features are used. This information is from
+   * the HSAIL version directive. If this hsa_compilationunit_code_t is not
+   * generated from an HSAIL compilation unit then must still indicate what
+   * profile is being used.
    */
-  int64_t code_byte_offset;
-} hsa_code_entry_t;
-/** @} */
-
-
-
-/** \defgroup codekind TODO
- *  @{
- */
-/**
- * @brief TODO.
- */
-typedef enum {
-  /**
-   * Not a code object.
-   */
-  HSA_CODE_NONE = 0,
+  hsa_brig_profile8_t hsail_profile;
 
   /**
-   * HSAIL kernel that can be used with an AQL dispatch packet.
+   * The HSAIL machine model gives the address sizes used by the
+   * code. This information is from the HSAIL version directive. If
+   * not generated from an HSAIL compilation unit then must still
+   * indicate for what machine mode the code is generated.
    */
-  HSA_CODE_KERNEL = 1,
+  hsa_brig_machine_model8_t hsail_machine_model;
 
   /**
-   * HSAIL function.
+   * The HSAIL target features. There are currently no target options
+   * so this field must be 0. If target options are added they will
+   * be specified by the HSAIL version directive. If this
+   * hsa_compilationunit_code_t is not generated from an HSAIL
+   * compilation unit then must be 0.
    */
-  HSA_CODE_FUNCTION = 2,
+  hsa_brig_target_options16_t hsail_target_options;
 
   /**
-   * HSA runtime code objects. For example, partially linked code objects.
+   * Opaque handle to debug information.
    */
-  HSA_CODE_RUNTIME_FIRST = 0x40000000,
-  /**
-   * TODO.
-   */
-  HSA_CODE_RUNTIME_LAST = 0x7fffffff,
-
-  /**
-   * Vendor specific code objects.
-   */
-  HSA_CODE_VENDOR_FIRST = 0x80000000,
-  /**
-   * TODO.
-   */
-  HSA_CODE_VENDOR_LAST = 0xffffffff,
-} hsa_code_kind_t;
-/** @} */
-
-
-typedef uint8_t hsa_machine_model8_t;
-typedef uint8_t hsa_profile8_t;
-typedef uint32_t hsa_code_properties32_t;
-typedef uint16_t hsa_target_options16_t;
-
-
-/** \defgroup codeproperties TODO
- *  @{
- */
-/**
- * @brief TODO
- */
-typedef enum {
-  /**
-   * The code is position independent (can be executed at any address that meets
-   * the alignment requirement).
-   */
-  HSA_CODE_PROPERTY_PIC = 1
-} hsa_code_properties_mask_t;
-/** @} */
-
-/** \defgroup compilationunit TODO
- *  @{
- */
-/**
- * @brief TODO
- */
-typedef struct hsa_compilationunit_code_s{
-  /**
-   * The code format version. The version of this definition is specified by
-   * HSA_CODE_VERSION.
-   */
-  hsa_code_version32_t code_version;
-
-  /**
-   * The byte size of this struct. Must be set to
-   * sizeof(hsa_compilationunit_code_t). Used for backward compatibility.
-   */
-  uint32_t struct_byte_size;
+  hsa_debug_information_handle_t debug_information;
 
   /**
    * The vendor of the HSA Component on which this Kernel Code object can
-   * execute. ISO/IEC 624 character encoding must be used. If the name is less
-   * than 16 characters then remaining characters must be set to 0.
+   * execute. ISO/IEC 624 character encoding must be used. If the
+   * name is less than 24 characters then remaining characters must
+   * be set to 0.
    */
-  char component_vendor[16];
+  char agent_vendor[24];
 
   /**
    * The vendor's name of the HSA Component on which this Kernel Code object can
-   * execute. ISO/IEC 646 character encoding must be used. If the name is less
-   * than 16 characters then remaining characters must be set to 0.
+   * execute. ISO/IEC 624 character encoding must be used. If the name is less
+   * than 24 characters then remaining characters must be set to 0.
    */
-  char component_name[16];
+  char agent_name[24];
 
   /**
-   * Byte offset from start of hsa_compilationunit_code_t to an array of
-   * code_entry_count elements of type hsa_code_entry_t. Since
-   * hsa_compilationunit_code_t is always at offset 0, this value must be
-   * positive.
-   */
-  int64_t code_entry_byte_offset;
-
-  /**
-   * Number of code entries in this compilation unit.
-   */
-  uint32_t code_entry_count;
-
-  /**
-   * The required alignment of this hsa_compilationunit_code_t expressed as a
-   * power of 2. The Finalizer must set this to the value required by the HSA
-   * component it will execute on and the assumptions of the machine code it
-   * contains.
-   */
-  hsa_powertwo8_t code_alignment;
-
-  /**
-   * Must be 0.
-   */
-  uint8_t reserved[3];
-
-  /**
-   The size of the single contiguous block of memory which includes this
-   hsa_compilationunit_code_t header and all following hsa_*_code_t and
-   associated machine code.
-   */
-  uint64_t code_size_bytes;
-
-  /**
-   The base address that this hsa_compilationunit_code_t must be allocated in
-   order to execute the code it contains. The address must be a multiple of the
-   alignment specified by the alignment field. If the code is position
-   independent (can be executed at any address that meets the alignment
-   requirement), then this field must be 0.
-   */
-  uint64_t code_base_address;
-
-  /**
-   A bit set of flags providing information about the code in this compilation
-   unit. Unused flags must be 0.
-   */
-  hsa_code_properties32_t code_properties;
-
-  /**
-   The HSAIL major version. This information is from the HSAIL version
-   directive. If this hsa_compilationunit_code_t is not generated from an HSAIL
-   compilation unit then must be 0.
+   * The HSAIL major version. This information is from the HSAIL version
+   * directive. If this hsa_compilationunit_code_t is not generated from an
+   * HSAIL compilation unit then must be 0.
    */
   uint32_t hsail_version_major;
 
   /**
-   The HSAIL minor version. This information is from the HSAIL version
-   directive. If this hsa_compilationunit_code_t is not generated from an HSAIL
-   compilation unit then must be 0.
+   * The HSAIL minor version. This information is from the HSAIL version
+   * directive. If this hsa_compilationunit_code_t is not generated from an
+   * HSAIL compilation unit then must be 0.
    */
   uint32_t hsail_version_minor;
 
   /**
-   The HSAIL profile defines which features are used. This information is from
-   the HSAIL version directive. If this hsa_compilationunit_code_t is not
-   generated from an HSAIL compilation unit then must still indicate what
-   profile is being used.
+   * Reserved. Must be 0.
    */
-  hsa_profile8_t hsail_profile;
+  uint64_t reserved1;
 
   /**
-   The HSAIL machine model gives the address sizes used by the code. This
-   information is from the HSAIL version directive. If not generated from an
-   HSAIL compilation unit then must still indicate for what machine mode the
-   code is generated.
+   * The values should be the actually values used by the finalizer in
+   * generating the code. This may be the union of values specified as finalizer
+   * arguments and explicit HSAIL control directives. If the finalizer chooses
+   * to ignore a control directive, and not generate constrained code, then the
+   * control directive should not be marked as enabled even though it was
+   * present in the HSAIL or finalizer argument. The values are intended to
+   * reflect the constraints that the code actually requires to correctly
+   * execute, not the values that were actually specified at finalize time.
    */
-  hsa_machine_model8_t hsail_machine_model;
+  hsa_control_directives_t control_directive;
+} hsa_code_descriptor_t;
 
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef struct hsa_runtime_caller_s {
   /**
-   The HSAIL target features. There are currently no target options so this
-   field must be 0. If target options are added they will be specified by the
-   HSAIL version directive. If this hsa_compilationunit_code_t is not generated
-   from an HSAIL compilation unit then must be 0.
+   * TODO
    */
-  hsa_target_options16_t hsail_target_options;
-
-} hsa_compilationunit_code_t;
-/** @} */
-
-typedef uint64_t hsa_debug_info_t;
-typedef uint64_t hsa_finalize_compilationunit_caller_t;
-
-/** \addtogroup brig_directive_offset
- *  @{
- */
-/**
- * @brief TODO.
- */
-typedef uint32_t hsa_brig_directive_offset_t;
-/** @} */
-
-/** \defgroup map_symbol_address TODO
- *  @{
- */
-/**
- * @brief TODO.
- */
-typedef hsa_status_t (*hsa_map_symbol_address_t)(hsa_finalize_compilationunit_caller_t caller, hsa_brig_directive_offset_t symbol_directive, uint64_t* address);
-/** @} */
-
-/** \defgroup compilation_debug TODO
- *  @{
- */
-/**
- * @brief Debug unit.
- */
-typedef struct hsa_compilationunit_debug_s {
-   /**
-    * HSA does not define the debug format, it is device specific. It is not
-    * required to be implemented as a contiguous region of memory.
-    */
-  uint64_t reserved;
-} hsa_compilationunit_debug_t;
-/** @} */
-
-/** \defgroup alloc_t TODO
- *  @{
- */
-/**
- * @brief TODO.
- */
-typedef void* hsa_finalize_brig_caller_t;
-/** @} */
+  uint64_t caller;
+} hsa_runtime_caller_t;
 
 /**
- * @brief TODO.
+ * @brief TODO kzhuravl 4/21/2014 write description.
  */
-typedef hsa_status_t (*hsa_alloc_t)(
-      hsa_finalize_brig_caller_t caller,
-      size_t byte_size,
-      size_t byte_alignment,
-      void** address);
-
-/** \defgroup finalize_brig TODO
- *  @{
- */
+typedef struct hsa_finalization_request_s {
+  /**
+   * TODO
+   */
+  hsa_brig_module_handle_t module;
+  /**
+   * TODO
+   */
+  hsa_brig_code_section_offset32_t symbol;
+  /**
+   * TODO
+   */
+  hsa_program_call_convention_id32_t program_call_convention;
+} hsa_finalization_request_t;
 
 /**
- * @brief Finalize BRIG.
- *
- * @details The input pointer must reference an in memory location of the
- * BRIG. Also, the BRIG must contain at the minimum the 4 basic BRIG sections
- * (.strings, .directives, .code, .operands). All symbols in the symbol/offset
- * table must be resolved.
- *
- * @param caller Opaque pointer and will be passed to all call back functions
- *      made by this call of the finalizer.
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef struct hsa_finalization_descriptor_s {
+  /**
+   * TODO
+   */
+  uint32_t code_descriptor_count;
+  /**
+   * TODO
+   */
+  uint32_t reserved1;
+  /**
+   * TODO
+   */
+  hsa_code_descriptor_t code_descriptors[1];
+} hsa_finalization_descriptor_t;
 
- * @param component input. A valid pointer to the hsa_agent_t.
- *
- * @param brig input. A pointer to the in memory BRIG structure.
- *
- * @param code_count The number of kernels plus functions to produce
- *      hsa_kernel_code_t and hsa_function_code_t objects for in the generated
- *      hsa_compilationunit_code_t.
- *
- * @param code_directive A pointer to an array with code_count entries of
- *      hsa_brig_directive_offset_t. Each entry is the offset in the directive
- *      section of the passed brig of a kernel or function definition. These
- *      will be the kernels and functions that will have code objects generated
- *      in the produced hsa_compilationunit_code_t.
- *
- * @param control_directives The control directives that can be specified to
- *      influence how the finalizer generates code. If NULL then no control
- *      directives are used.
- *
- * @param map_symbol_address Used by the finalizer to obtain the segment address
- *      for global segment symbols. The value of caller will be passed to every
- *      call.
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef hsa_status_t (*hsa_symbol_definition_t)(
+  hsa_runtime_caller_t caller,
+  hsa_brig_module_handle_t module,
+  hsa_brig_code_section_offset32_t symbol,
+  hsa_brig_module_handle_t *definition_module,
+  hsa_brig_module_t *definition_module_brig,
+  hsa_brig_code_section_offset32_t *definition_symbol);
 
- * @param allocate_compilationunit_code The callback function that the finalizer
- *      will use to allocate the contiguous block of memory that will be used
- *      for the hsa_compilationunit_code_t that is returned. It is the
- *      responsibility of the call of the finalizer to deallocate this memory,
- *      even if the finalizer does not report success.
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef hsa_status_t (*hsa_symbol_address_t)(
+  hsa_runtime_caller_t caller,
+  hsa_brig_module_handle_t module,
+  hsa_brig_code_section_offset32_t symbol,
+  uint64_t *symbol_address);
 
- * @param allocate_compilationunit_debug The callback function that the
- *      finalizer will use to allocate the memory that will be used for the
- *      hsa_compilationunit_debug_t that is returned. It is the responsibility
- *      of the call of the finalizer to destroy this memory, even if the
- *      finalizer does not report success.
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef hsa_status_t (*hsa_error_message_t)(
+  hsa_runtime_caller_t caller,
+  hsa_brig_module_handle_t module,
+  hsa_brig_code_section_offset32_t statement,
+  uint32_t indent_level,
+  const char *message);
+
+/**
+ * @brief Invoke the finalizer on the provided list of kernels and indirect
+ *        functions that are in HSAIL modules in HSAIL program.
  *
- * @param optimization_level an implementation defined value that control the
- *      level of optimization performed by the finalizer.
+ * @details TODO.
  *
- * @param options implementation defined options that can be specified to the
- *      finalizer.  compilationunit_code: if the return status is success then a
- *      pointer to the generated hsa_compilationunit_code_t for the HSA
- *      component must be written.
+ * @param[in] caller Opaque pointer which is passed to all call back functions
+ * made by this call of the finalizer.
  *
- * @param compilationunit_code TODO.
+ * @param[in] agent The HSA agent for which code must be produced.
  *
- * @param compilationunit_debug TODO.
+ * @param[in] program_agent_id TODO.
+ *
+ * @param[in] program_agent_count TODO.
+ *
+ * @param[in] finalization_request_count The number of kernels and indirect
+ * functions that are in HSAIL modules in HSAIL program.
+ *
+ * @param[in] finalization_request_list List of kernels and indirect functions
+ * that are in HSAIL modules in HSAIL program.
+ *
+ * @param[in] control_directives The control directives that can be specified to
+ * influence how the finalizer generates code. If NULL then no control
+ * directives are used. If this call is successful and control_directives is not
+ * NULL, then the resulting hsa_code_descriptor_t object will have control
+ * directives which were used by the finalizer.
+ *
+ * @param[in] symbol_definition Call back function to get the definition of a
+ * module scope variable/fbarrier or kernel/function. Refer to the description
+ * of this call back function for more information.
+ *
+ * @param[in] symbol_address Call back function to get the address of global
+ * segment variables, kernel table variables, indirect function table
+ * variable. Refer to the description of this call back function for more
+ * information.
+ *
+ * @param[in] error_message Call back function to get the string representation
+ * of the error message.  Refer to the description of this call back function
+ * for more information.
+ *
+ * @param[in] optimization_level An implementation defined value that control
+ * the level of optimization performed by the finalizer.
+ *
+ * @param[in] options Implementation defined options that can be specified to
+ * the finalizer.
+ *
+ * @param[in] debug_information TODO.
+ *
+ * @param[out] finalization_descriptor TODO.
  *
  * @retval ::HSA_STATUS_SUCCESS
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a brig is NULL or invalid, or
- * if @a kernel_directive is invalid.
- *
- * @retval ::HSA_STATUS_INFO_UNRECOGNIZED_OPTIONS If the options are not
- * recognized, no error is returned, just an info status is used to indicate
- * invalid options.
- *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If the finalize API cannot
- * allocate memory for compilationunit_code and compilationunitdebug or the
- * deserialize cannot allocate memory for code_object.
-*
- * @retval ::HSA_STATUS_ERROR_DIRECTIVE_MISMATCH If the directive in the control
- * directive structure and in the HSAIL kernel mismatch or if the same directive
- * is used with a different value in one of the functions used by this kernel.
- *
  */
-hsa_status_t hsa_finalize_brig( hsa_finalize_compilationunit_caller_t caller,
-  hsa_agent_t* component,
-  hsa_brig_t* brig,
-  size_t code_count,
-  hsa_brig_directive_offset_t* code_directive,
-  hsa_control_directives_t* control_directives,
-  hsa_map_symbol_address_t map_symbol_address,
-  hsa_alloc_t allocate_compilationunit_code,
-  hsa_alloc_t allocate_compilationunit_debug,
+hsa_status_t hsa_finalize(
+  hsa_runtime_caller_t caller,
+  hsa_agent_t *agent,
+  uint32_t program_agent_id,
+  uint32_t program_agent_count,
+  size_t finalization_request_count,
+  hsa_finalization_request_t *finalization_request_list,
+  hsa_control_directives_t *control_directives,
+  hsa_symbol_definition_t symbol_definition,
+  hsa_symbol_address_t symbol_address,
+  hsa_error_message_t error_message,
   uint8_t optimization_level,
-  const char* options,
-  hsa_compilationunit_code_t** compilationunit_code,
-  hsa_compilationunit_debug_t** compilationunit_debug);
+  const char *options,
+  int debug_information,
+  hsa_finalization_descriptor_t **finalization_descriptor);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] finalization_descriptor TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_destroy_finalization_descriptor(
+  hsa_finalization_descriptor_t *finalization_descriptor);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] caller TODO.
+ *
+ * @param[in] agent TODO.
+ *
+ * @param[in] finalization_descriptor TODO.
+ *
+ * @param[in] error_message TODO.
+ *
+ * @param[in] debug_information TODO.
+ *
+ * @param[in] serialized_object TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_serialize_finalization_descriptor(
+  hsa_runtime_caller_t caller,
+  hsa_agent_t *agent,
+  hsa_finalization_descriptor_t *finalization_descriptor,
+  hsa_error_message_t error_message,
+  int debug_information,
+  void *serialized_object);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] caller TODO.
+ *
+ * @param[in] serialized_object TODO.
+ *
+ * @param[in] agent TODO.
+ *
+ * @param[in] program_agent_id TODO.
+ *
+ * @param[in] program_agent_count TODO.
+ *
+ * @param[in] symbol_address TODO.
+ *
+ * @param[in] error_message TODO.
+ *
+ * @param[in] debug_information TODO.
+ *
+ * @param[out] finalization_descriptor TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_deserialize_finalization_descriptor(
+  hsa_runtime_caller_t caller,
+  void *serialized_object,
+  hsa_agent_t *agent,
+  uint32_t program_agent_id,
+  uint32_t program_agent_count,
+  hsa_symbol_address_t symbol_address,
+  hsa_error_message_t error_message,
+  int debug_information,
+  hsa_finalization_descriptor_t **finalization_descriptor);
 /** @} */
 
 
-/** \defgroup finalize_destroy TODO
+/** \defgroup HsailLinkerServiceLayer HSAIL Linker Service Layer
  *  @{
  */
 
 /**
- * @brief Destroys the compilation unit code object.
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef struct hsa_program_handle_s {
+  /**
+   * TODO
+   */
+  uint64_t handle;
+} hsa_program_handle_t;
+
+/**
+ * @brief Create a program.
  *
- * @param[in] object A pointer to the compilation unit object that needs to be
- *        destroyed.
+ * @details TODO.
+ *
+ * @param[in] agents TODO.
+ *
+ * @param[in] agent_count TODO.
+ *
+ * @param[in] machine_model TODO.
+ *
+ * @param[in] profile TODO.
+ *
+ * @param[out] program A valid pointer to a program handle.
  *
  * @retval ::HSA_STATUS_SUCCESS
- *
- * @retval ::HSA_STATUS_ERROR_RESOURCE_FREE If some of the resources consumed
- * during initialization by the runtime could not be freed.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a object is NULL or does not
- * point to a valid code object.
  */
-hsa_status_t hsa_compilationunit_code_destroy(hsa_compilationunit_code_t *object);
-
+hsa_status_t hsa_create_program(
+  hsa_agent_t *agents,
+  uint32_t agent_count,
+  hsa_brig_machine_model8_t machine_model,
+  hsa_brig_profile8_t profile,
+  hsa_program_handle_t *program);
 
 /**
- * @brief Destroys the compilation unit debug object.
+ * @brief TODO kzhuravl 4/21/2014 write description.
  *
- * @param[in] object A pointer to the compilation unit debug object that needs
- *        to be destroyed.
+ * @details TODO.
+ *
+ * @param[in] program Program handle.
+ *
+ */
+hsa_status_t hsa_destroy_program(
+  hsa_program_handle_t program);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program Program handle.
+ *
+ * @param[in] brig_module TODO.
+ *
+ * @param[in] module TODO.
  *
  * @retval ::HSA_STATUS_SUCCESS
- *
- * @retval ::HSA_STATUS_ERROR_RESOURCE_FREE If some of the resources consumed
- * during initialization by the runtime could not be freed.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a object is NULL or does not
- * point to a valid code object.
-*/
-hsa_status_t hsa_compilationunit_debug_destroy(hsa_compilationunit_debug_t *object);
-/** @} */
-
-
-/** \defgroup finalize_serial TODO
- *  @{
  */
+hsa_status_t hsa_add_module(
+  hsa_program_handle_t program,
+  hsa_brig_module_t *brig_module,
+  hsa_brig_module_handle_t *module);
+
 /**
- * @brief Serialize a code object.
+ * @brief TODO kzhuravl 4/21/2014 write description.
  *
- * @param[in] code_object The code object to serialize.
+ * @details TODO.
  *
- * @param allocate_compilationunit_code TODO.
+ * @param[in] program TODO.
  *
- * @param[out] serialized_object Pointer to the serialized object.
+ * @param[in] agent TODO.
+ *
+ * @param[in] finalization_request_count TODO.
+ *
+ * @param[in] finalization_request_list TODO.
+ *
+ * @param[in] control_directives TODO.
+ *
+ * @param[in] error_message TODO.
+ *
+ * @param[in] optimization_level TODO.
+ *
+ * @param[in] options TODO.
+ *
+ * @param[in] debug_information TODO.
  *
  * @retval ::HSA_STATUS_SUCCESS
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a code_object or is NULL or
- * does not point to a valid code object. If @a serialized_object is either null
- * or is not valid or the size is 0.
- *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If no memory can be allocated for
- * @a serialized_object.
-*/
-hsa_status_t hsa_compilationunit_serialize(hsa_compilationunit_code_t *code_object,
-    hsa_alloc_t allocate_compilationunit_code,
-    void *serialized_object);
+ */
+hsa_status_t finalize(
+  hsa_program_handle_t program,
+  hsa_agent_t *agent,
+  size_t finalization_request_count,
+  hsa_finalization_request_t *finalization_request_list,
+  hsa_control_directives_t *control_directives,
+  hsa_error_message_t error_message,
+  uint8_t optimization_level,
+  const char *options,
+  int debug_information);
 
 /**
- * @brief Recreate a serialized code object.
+ * @brief TODO kzhuravl 4/21/2014 write description.
  *
- * @param[in] serialized_object Pointer to the serialized object.
+ * @details TODO.
  *
- * @param[out] code_object The code object generated as a part of
- *      serialization. Runtime allocated.
+ * @param[in] program TODO.
+ *
+ * @param[in] agent TODO.
+ *
+ * @param[in] program_agent_id TODO.
  *
  * @retval ::HSA_STATUS_SUCCESS
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a serialized_object is either
- * null or is not valid or the size is 0.
- *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If no memory can be allocated for
- * @a code_object.
-*/
-hsa_status_t hsa_compilationunit_deserialize( void *serialized_object,
-    hsa_compilationunit_code_t **code_object);
-/** @} */
-
-
-/** \addtogroup bind_kernel_code
- *  @{
  */
+hsa_status_t hsa_query_program_agent_id(
+  hsa_program_handle_t program,
+  hsa_agent_t *agent,
+  uint32_t *program_agent_id);
+
 /**
- * @brief TODO
+ * @brief TODO kzhuravl 4/21/2014 write description.
  *
- * @param kernel
- *      input. A pointer to the kernel code object.
- * @param symbol_map
- *      input. A pointer to the symbol information structure.
- * @param output_kernel
- *      runtime allocated, output. A pointer to the kernel code object.
-*/
-hsa_status_t hsa_symbol_bind_code_object( hsa_code_t *kernel,
-    hsa_symbol_map_t *symbol_map,
-    hsa_code_t *output_kernel);
-/** @} */
-
-
-/** \addtogroup query_symbol
- *  @{
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[out] program_agent_count TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
  */
-/**
- * @brief TODO.
- *
- * @param symbol_map input. a pointer to the kernel code object.
- *
- * @param brig input. the brig this symbol table came from.
- *
- * @param symbol_name input. the name of the symbol.
- *
- * @param symbol_details runtime allocated, output. Structure with symbol
- *      details.
-*/
-hsa_status_t hsa_symbol_map_query_by_name(hsa_symbol_map_t *symbol_map,
-    hsa_brig_t brig,
-    char *symbol_name,
-    hsa_symbol_t *symbol_details);
+hsa_status_t hsa_query_program_agent_count(
+  hsa_program_handle_t program,
+  uint32_t *program_agent_count);
 
 /**
- * @brief TODO.
+ * @brief TODO kzhuravl 4/21/2014 write description.
  *
- * @param symbol_map a pointer to the symbol map structure.
+ * @details TODO.
  *
- * @param brig the brig this symbol table came from.
+ * @param[in] program TODO.
  *
- * @param directive_section_offset TODO.
+ * @param[in] program_agent_count TODO.
  *
- * @param symbol_details structure with symbol details.
-*/
-hsa_status_t hsa_symbol_map_query_by_offset(hsa_symbol_map_t *symbol_map,
-    hsa_brig_t *brig,
-    uint32_t directive_section_offset,
-    hsa_symbol_t *symbol_details);
-
-/**
- * @brief TODO
+ * @param[in] agents TODO.
  *
- * @param symbol_map input. destroys the symbol map resources including any
- *      additional structures.
+ * @retval ::HSA_STATUS_SUCCESS
  */
-hsa_status_t hsa_symbol_destroy(hsa_symbol_map_t *symbol_map);
-/** @} */
+hsa_status_t hsa_query_program_agents(
+  hsa_program_handle_t program,
+  uint32_t program_agent_count,
+  hsa_agent_t *agents);
 
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[out] program_module_count TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_query_program_module_count(
+  hsa_program_handle_t program,
+  uint32_t *program_module_count);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] program_module_count TODO.
+ *
+ * @param[out] modules TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_query_program_modules(
+  hsa_program_handle_t program,
+  uint32_t program_module_count,
+  hsa_brig_module_handle_t *modules);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] module TODO.
+ *
+ * @param[out] brig_module TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_query_program_brig_module(
+  hsa_program_handle_t program,
+  hsa_brig_module_handle_t module,
+  hsa_brig_module_t *brig_module);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] agent TODO.
+ *
+ * @param[out] first_call_convention_id TODO.
+ *
+ * @param[out] call_convention_count TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_query_call_convention(
+  hsa_program_handle_t program,
+  hsa_agent_t *agent,
+  hsa_program_call_convention_id32_t *first_call_convention_id,
+  uint32_t *call_convention_count);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] module TODO.
+ *
+ * @param[in] symbol TODO.
+ *
+ * @param[in] error_message TODO.
+ *
+ * @param[in] address TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_define_program_allocation_global_variable_address(
+  hsa_program_handle_t program,
+  hsa_brig_module_handle_t module,
+  hsa_brig_code_section_offset32_t symbol,
+  hsa_error_message_t error_message,
+  void *address);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] module TODO.
+ *
+ * @param[in] symbol TODO.
+ *
+ * @param[out] address TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_query_program_global_variable_address(
+  hsa_program_handle_t program,
+  hsa_brig_module_handle_t module,
+  hsa_brig_code_section_offset32_t symbol,
+  uint64_t *address);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] module TODO.
+ *
+ * @param[in] symbol TODO.
+ *
+ * @param[in] agent TODO.
+ *
+ * @param[in] error_message TODO.
+ *
+ * @param[in] address TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_define_agent_allocation_global_variable_address(
+  hsa_program_handle_t program,
+  hsa_brig_module_handle_t module,
+  hsa_brig_code_section_offset32_t symbol,
+  hsa_agent_t *agent,
+  hsa_error_message_t error_message,
+  void *address);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] module TODO.
+ *
+ * @param[in] symbol TODO.
+ *
+ * @param[in] agent TODO.
+ *
+ * @param[out] address TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_query_agent_global_variable_address(
+  hsa_program_handle_t program,
+  hsa_brig_module_handle_t module,
+  hsa_brig_code_section_offset32_t symbol,
+  hsa_agent_t *agent,
+  uint64_t *address);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] module TODO.
+ *
+ * @param[in] symbol TODO.
+ *
+ * @param[out] address TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_query_kernel_descriptor_address(
+  hsa_program_handle_t program,
+  hsa_brig_module_handle_t module,
+  hsa_brig_code_section_offset32_t symbol,
+  uint64_t *address);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] module TODO.
+ *
+ * @param[in] symbol TODO.
+ *
+ * @param[out] address TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_query_indirect_function_descriptor_address(
+  hsa_program_handle_t program,
+  hsa_brig_module_handle_t module,
+  hsa_brig_code_section_offset32_t symbol,
+  uint64_t *address);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] error_message TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_validate_program(
+  hsa_program_handle_t program,
+  hsa_error_message_t error_message);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] module TODO.
+ *
+ * @param[in] error_message TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_validate_program_module(
+  hsa_program_handle_t program,
+  hsa_brig_module_handle_t module,
+  hsa_error_message_t error_message);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *        TODO kzhuravl 4/22/2014 do we need to include alignment?
+ */
+typedef hsa_status_t (*hsa_alloc_serialize_data_t)(
+  hsa_runtime_caller_t caller,
+  size_t byte_size,
+  void **address);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] caller TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] alloc_serialize_data TODO.
+ *
+ * @param[in] error_message TODO.
+ *
+ * @param[in] debug_information TODO.
+ *
+ * @param[in] serialized_object TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_serialize_program(
+  hsa_runtime_caller_t caller,
+  hsa_program_handle_t program,
+  hsa_alloc_serialize_data_t alloc_serialize_data,
+  hsa_error_message_t error_message,
+  int debug_information,
+  void *serialized_object);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef hsa_status_t (*hsa_program_allocation_symbol_address_t)(
+  hsa_runtime_caller_t caller,
+  const char *name,
+  uint64_t *symbol_adress);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ */
+typedef hsa_status_t (*hsa_agent_allocation_symbol_address_t)(
+  hsa_runtime_caller_t caller,
+  hsa_agent_t *agent,
+  const char *name,
+  uint64_t *symbol_adress);
+
+/**
+ * @brief TODO kzhuravl 4/21/2014 write description.
+ *
+ * @details TODO.
+ *
+ * @param[in] caller TODO.
+ *
+ * @param[in] serialized_object TODO.
+ *
+ * @param[in] program TODO.
+ *
+ * @param[in] program_allocation_symbol_address TODO.
+ *
+ * @param[in] agent_allocation_symbol_address TODO.
+ *
+ * @param[in] error_message TODO.
+ *
+ * @param[in] request_debug_information TODO.
+ *
+ * @param[out] program TODO.
+ *
+ * @retval ::HSA_STATUS_SUCCESS
+ */
+hsa_status_t hsa_deserialize_program(
+  hsa_runtime_caller_t caller,
+  void *serialized_object,
+  hsa_program_allocation_symbol_address_t program_allocation_symbol_address,
+  hsa_agent_allocation_symbol_address_t agent_allocation_symbol_address,
+  hsa_error_message_t error_message,
+  int request_debug_information,
+  hsa_program_handle_t **program);
+
+/** @} */
 
 /** \defgroup register TODO
  *  @{
@@ -3272,24 +3703,21 @@ typedef struct hsa_image_info_s {
  */
 typedef enum {
   /**
-   * Image handle is to be used by the HSA agent as read-only using an HSAIL
-   * roimg type.
+   * Image handle is to be used by the HSA agent as read-only using an HSAIL roimg type.
    */
-  HSA_AGENT_IMAGE_ACCESS_READ_ONLY,
+  HSA_IMAGE_ACCESS_PERMISSION_READ_ONLY,
 
   /**
-   * Image handle is to be used by the HSA agent as write-only using an HSAIL
-   * woimg type.
+   * Image handle is to be used by the HSA agent as write-only using an HSAIL woimg type.
    */
-  HSA_AGENT_IMAGE_ACCESS_WRITE_ONLY,
+  HSA_IMAGE_ACCESS_PERMISSION_WRITE_ONLY,
 
   /**
-   * Image handle is to be used by the HSA agent as read and/or write using an
-   * HSAIL rwimg type.
+   * Image handle is to be used by the HSA agent as read and/or write using an HSAIL   rwimg type.
    */
-  HSA_AGENT_IMAGE_ACCESS_READ_WRITE
+  HSA_IMAGE_ACCESS_PERMISSION_READ_WRITE
 
-} hsa_agent_image_access_t;
+} hsa_image_access_permission_t;
 
 /**
  * @brief Geometry associated with the HSA image (image dimensions allowed in
@@ -3526,7 +3954,7 @@ typedef struct hsa_sampler_handle_s {
 
 /**
  * @brief Sampler address modes. The sampler address mode describes the
- * processing of out-of-range image coordinates.The values match the HSAIL BRIG
+ * processing of out-of-range image coordinates. The values match the HSAIL BRIG
  * type BrigSamplerAddressing.
  */
 typedef enum {
@@ -3611,8 +4039,8 @@ typedef struct hsa_sampler_descriptor_s {
   hsa_sampler_filter_mode_t filter_mode;
 
   /**
-   * Sampler address mode describes the processing of out-of-range image.
-   * coordinates
+   * Sampler address mode describes the processing of out-of-range image
+   * coordinates.
    */
   hsa_sampler_addressing_mode_t address_mode;
 
@@ -3649,15 +4077,23 @@ hsa_status_t hsa_image_get_format_capability(const hsa_agent_t *agent,
  * @brief Inquires the required HSA component-specific image data details from a
  * implementation independent image descriptor.
  *
- * @details If successful, the function the queried HSA agent-specific image
- * data info is written to the location specified by @a image_info. Based on the
+ * @details If successful, the queried HSA agent-specific image data info is
+ * written to the location specified by @a image_info. Based on the
  * implementation the optimal image data size and alignment requirements could
  * vary depending on the image attributes specified in @a image_descriptor.
+ *
+ * The implementation must return the same image info requirements for different
+ * access permissions with exactly the same image descriptor as long as
+ * ::hsa_image_get_format_capability reports
+ * ::HSA_IMAGE_FORMAT_ACCESS_INVARIANT_IMAGE_DATA for the image format specified
+ * in the image descriptor.
  *
  * @param[in] agent HSA agent to be associated with the image.
  *
  * @param[in] image_descriptor Implementation-independent image descriptor
  * describing the image.
+ *
+ * @param[in] access_permission Access permission of the image by the HSA agent.
  *
  * @param[out] image_info Image info size and alignment requirements that the
  * HSA agent requires.
@@ -3666,15 +4102,16 @@ hsa_status_t hsa_image_get_format_capability(const hsa_agent_t *agent,
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments is NULL.
  *
- * @retval ::HSA_STATUS_UNSUPPORTED_IMAGE_FORMAT If the HSA agent does not
+ * @retval ::HSA_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED If the HSA agent does not
  * support the image format specified by the descriptor.
  *
- * @retval ::HSA_STATUS_IMAGE_SIZE_NOT_SUPPORTED If the HSA agent does not
+ * @retval ::HSA_STATUS_ERROR_IMAGE_SIZE_UNSUPPORTED If the HSA agent does not
  * support the image dimensions specified by the format descriptor.
  */
 hsa_status_t hsa_image_get_info(
                          const hsa_agent_t *agent,
                          const hsa_image_descriptor_t *image_descriptor,
+                         hsa_image_access_permission_t access_permission,
                          hsa_image_info_t *image_info);
 
 /**
@@ -3693,21 +4130,21 @@ hsa_status_t hsa_image_get_info(
  * responsibility and can only be freed until the memory is no longer needed and
  * any image handles using it are destroyed.
  *
- * @a agent_access defines how the HSA agent expects to use the image
- * handle. The image format specified in @a image_descriptor must be capable by
- * the HSA agent for the intended access pattern.
+ * @a access_permission defines how the HSA agent expects to use the image
+ * handle. The image format specified in the image descriptor must be capable by
+ * the HSA agent for the intended permission.
  *
- * Image handles with different agent_access can be created using the same image
+ * Image handles with different permissions can be created using the same image
  * data with exactly the same image descriptor as long as
  * ::HSA_IMAGE_FORMAT_ACCESS_INVARIANT_IMAGE_DATA is reported by
  * ::hsa_image_get_format_capability for the image format specified in the image
- * descriptor. Images of non-linear SRGB channel order types can share the same
- * image data with its equivalent linear RGB channel order types, provided the
- * rest of image descriptor parameters are identical.
+ * descriptor. Images of non-linear s-form channel order can share the same
+ * image data with its equivalent linear non-s form channel order, provided the
+ * rest of the image descriptor parameters are identical.
  *
  * If necessary, an application can use image operations (import, export, copy,
  * clear) to prepare the image for the intended use regardless of the access
- * pattern.
+ * permissions.
  *
  * @param[in] agent HSA agent to be associated with the image.
  *
@@ -3716,7 +4153,7 @@ hsa_status_t hsa_image_get_info(
  *
  * @param[in] image_data Address of the component-specific image data.
  *
- * @param[in] agent_access Access pattern of the image by the HSA agent.
+ * @param[in] access_permission Access permission of the image by the HSA agent.
  *
  * @param[out] image_handle Agent-specific image handle.
  *
@@ -3724,8 +4161,8 @@ hsa_status_t hsa_image_get_info(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments is NULL.
  *
- * @retval ::HSA_STATUS_UNSUPPORTED_IMAGE_FORMAT If the HSA agent does not have
- * the capability to support the image format using the specified @a
+ * @retval ::HSA_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED If the HSA agent does not
+ * have the capability to support the image format using the specified @a
  * agent_access.
  *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If the HSA agent cannot create
@@ -3736,7 +4173,7 @@ hsa_status_t hsa_image_create_handle(
                          const hsa_agent_t *agent,
                          const hsa_image_descriptor_t *image_descriptor,
                          const void *image_data,
-                         hsa_agent_image_access_t agent_access,
+                         hsa_image_access_permission_t access_permission,
                          hsa_image_handle_t *image_handle);
 
 /**
@@ -3748,8 +4185,8 @@ hsa_status_t hsa_image_create_handle(
  * implicitly derived from the image region.
  *
  * If @a completion_signal is NULL, the operation occurs
- * synchronously. Otherwise the function returns immediately and the @a
- * completion_signal is signaled when the operation completes.
+ * synchronously. Otherwise the function returns immediately and the
+ * completion signal is signaled when the operation completes.
  *
  * If @a src_row_pitch is smaller than the destination region width (in bytes),
  * then @a src_row_pitch = region width.
@@ -3772,7 +4209,7 @@ hsa_status_t hsa_image_create_handle(
  *
  * @param[in] src_slice_pitch Number of bytes in one slice of the source memory.
  *
- * @param[in] dest_image_handle Destination Image handle.
+ * @param[in] dst_image_handle Destination Image handle.
  *
  * @param[in] image_region Image region to be updated.
  *
@@ -3789,7 +4226,7 @@ hsa_status_t hsa_image_import (
                          const void *src_memory,
                          size_t src_row_pitch,
                          size_t src_slice_pitch,
-                         hsa_image_handle_t dest_image_handle,
+                         hsa_image_handle_t dst_image_handle,
                          const hsa_image_region_t *image_region,
                          const hsa_signal_handle_t *completion_signal);
 
@@ -3802,8 +4239,8 @@ hsa_status_t hsa_image_import (
  * derived from the image region.
  *
  * If @a completion_signal is NULL, the operation occurs
- * synchronously. Otherwise the function returns immediately and the @a
- * completion_signal is signaled when the operation completes.
+ * synchronously. Otherwise the function returns immediately and the
+ * completion signal is signaled when the operation completes.
  *
  * If @a dst_row_pitch is smaller than the source region width (in bytes), then
  * @a dst_row_pitch = region width.
@@ -3814,7 +4251,7 @@ hsa_status_t hsa_image_import (
  * It is the application's responsibility to avoid out of bounds memory access.
  *
  * None of the destination memory or image data memory in the previously created
- * ::hsa_image_create_handle image handle can overlap – overlapping of any of
+ * ::hsa_image_create_handle image handle can overlap. Overlapping of any of
  * the source and destination memory within the export operation produces
  * undefined results.
  *
@@ -3856,8 +4293,8 @@ hsa_status_t hsa_image_export(
  * derived from the image region.
  *
  * If @a completion_signal is NULL, the operation occurs
- * synchronously. Otherwise the function returns immediately and the @a
- * completion_signal is signaled when the operation completes.
+ * synchronously. Otherwise the function returns immediately and the
+ * completion signal is signaled when the operation completes.
  *
  * It is the application's responsibility to avoid out of bounds memory access.
  *
@@ -3902,8 +4339,8 @@ hsa_status_t hsa_image_copy(
  * from the image region.
  *
  * If @a completion_signal is NULL, the operation occurs
- * synchronously. Otherwise the function returns immediately and the @a
- * completion_signal is signaled when the operation completes.
+ * synchronously. Otherwise the function returns immediately and the
+ * completion signal is signaled when the operation completes.
  *
  * It is the application's responsibility to avoid out of bounds memory access.
  *
@@ -3932,7 +4369,7 @@ hsa_status_t hsa_image_copy(
  *
  * @retval ::HSA_STATUS_SUCCESS
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a component or @a
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a agent or @a
  * image_region are NULL.
  */
 hsa_status_t hsa_image_clear(
@@ -4146,18 +4583,6 @@ typedef enum {
 /** @} */
 
 
-/** \defgroup query_hsaextension TODO
- *  @{
- */
-/**
- * @brief Query HSA extension.
- *
- * @param[in] extension HSA extension that is being queried.
- */
-hsa_status_t hsa_extension_query(hsa_extension_t extension);
-/** @} */
-
-
 /** \defgroup query_vendorextension TODO
  *  @{
  */
@@ -4169,7 +4594,6 @@ hsa_status_t hsa_extension_query(hsa_extension_t extension);
  * pointers, and data values. If the extension is not supported, the extension
  * information is not modified and a error code is returned.
  *
- * @a vendor_extension.h defines a unique structure for each extension.
  *
  * @param[in] extension The vendor extension that is being queried.
  *
@@ -4183,7 +4607,19 @@ hsa_status_t hsa_extension_query(hsa_extension_t extension);
 hsa_status_t hsa_vendor_extension_query(hsa_vendor_extension_t extension, void *extension_structure);
 /** @} */
 
+/** \defgroup query_hsaextension TODO
+ *  @{
+ */
+/**
+ * @brief Query HSA extension.
+ *
+ * @param[in] extension HSA extension that is being queried.
+ */
+hsa_status_t hsa_extension_query(hsa_extension_t extension);
+/** @} */
+
+
 #ifdef __cplusplus
 }
 #endif  /*__cplusplus*/
-#endif /*HSACOREBASE_H*/
+#endif
