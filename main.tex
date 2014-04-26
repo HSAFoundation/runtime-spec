@@ -1,8 +1,6 @@
 \documentclass[draft]{book}
 \newcommand{\docversion}{0.180}
 
-\usepackage{dejavu}
-
 % Needed so characters such as underscore are recognized in PDF
 % viewers. Otherwise searching for say `hsa_open` produces no
 % results
@@ -36,6 +34,8 @@
     % define global arrow tip format
     >=angle 45}
 
+% allows width arithmetic, which is currently used by the API
+\usepackage{calc}
 
 \usepackage{ifthen}
 \usepackage{textcomp}
@@ -2044,10 +2044,10 @@ following actions will allow a component to initiate a dispatch:
 \section{Architected Queuing Language Support}
 \input{api/altlatex/group-aql}
 
-\section{Finalizer}
+\section{HSAIL Finalizer}
 \input{api/altlatex/group-FinalizerCoreApi}
 
-\section{Linker Service Layer}
+\section{HSAIL Linker (Service Layer)}
 \input{api/altlatex/group-HsailLinkerServiceLayer}
 
 \section{Images and Samplers}
