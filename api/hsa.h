@@ -393,18 +393,18 @@ typedef enum {
     /**
      * Host agent (CPU).
      */
-    HOST = 1,
+    HSA_AGENT_TYPE_HOST = 1,
 
     /**
      * HSA component.
      */
-    COMPONENT = 2,
+    HSA_AGENT_TYPE_COMPONENT = 2,
 
     /**
      * The agent is capable of agent dispatches, and can serve as a target for
      * them.
      */
-    AGENT_DISPATCH = 4
+    HSA_AGENT_TYPE_AGENT_DISPATCH = 4
 } hsa_agent_type_t;
 
 
@@ -1705,6 +1705,8 @@ typedef enum {
  * @param[in] service_queue_type Type of the service queue created by the
  * runtime.
  *
+ * @param [in] context Context to associate with this queue.
+ *
  * @param[out] queue The queue structure, filled up and returned by the runtime.
  *
  * @retval ::HSA_STATUS_SUCCESS
@@ -1724,6 +1726,7 @@ hsa_status_t hsa_queue_create(const hsa_agent_t *component,
                                          size_t size,
                                          hsa_queue_type_t queue_type,
                                          hsa_service_queue_type_t service_queue_type,
+                                         hsa_runtime_context_t* context,
                                          hsa_queue_t **queue);
 
 /**
@@ -1960,6 +1963,72 @@ typedef struct hsa_symbol_map_s{
 /** @} **/
 
 
+/** \defgroup RuntimeCommon Runtime Common
+ *  @{
+ */
+
+/**
+ * @brief Value expressed as a power of two.
+ */
+typedef uint8_t hsa_powertwo8_t;
+
+/**
+ * @brief Power of two between 1 and 256.
+ */
+typedef enum {
+  HSA_POWERTWO_1 = 0,
+  HSA_POWERTWO_2 = 1,
+  HSA_POWERTWO_4 = 2,
+  HSA_POWERTWO_8 = 3,
+  HSA_POWERTWO_16 = 4,
+  HSA_POWERTWO_32 = 5,
+  HSA_POWERTWO_64 = 6,
+  HSA_POWERTWO_128 = 7,
+  HSA_POWERTWO_256 = 8
+} hsa_powertwo_t;
+
+/**
+ * @brief Three-dimensional coordinate.
+ */
+typedef struct hsa_dim3_s {
+  /**
+   * X dimension.
+   */
+   uint32_t x;
+
+  /**
+   * Y dimension.
+   */
+   uint32_t y;
+
+   /**
+    * Z dimension
+    */
+   uint32_t z;
+} hsa_dim3_t;
+
+/**
+* @brief Opaque pointer which is passed to all runtime functions that use
+* callbacks. It is passed as the first argument to all callbacks made by the
+* function.
+*/
+typedef struct hsa_runtime_caller_s {
+  /**
+   * Opaque pointer which is passed as the first argument to callback
+   * functions invoked by a runtime function.
+   */
+  uint64_t caller;
+} hsa_runtime_caller_t;
+
+/**
+ * @brief Call back function for allocating data.
+ */
+typedef hsa_status_t (*hsa_runtime_alloc_data_t)(
+  hsa_runtime_caller_t caller,
+  size_t byte_size,
+  void **address);
+/** @} **/
+
 /** \defgroup FinalizerCoreApi Finalizer Core API
  *  @{
  */
@@ -1994,7 +2063,7 @@ typedef enum {
 typedef uint8_t hsa_brig_machine_model8_t;
 
 /**
- * @brief Machine model.
+ * @brief BRIG machine model.
  */
 typedef enum {
   /**
@@ -2009,23 +2078,13 @@ typedef enum {
 } hsa_brig_machine_model_t;
 
 /**
- * @brief Currently no target options. If added they will be of the form:
- * HSA_TARGET_xxx = 1.
- */
-typedef uint16_t hsa_brig_target_options16_t;
-
-
-// TODO(mmario): enums cannot be empty, so commented for now
-//enum {
-//} hsa_brig_target_options_t;
-
-/**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief BRIG section id. The index into the array of sections in a BRIG
+ * module.
  */
 typedef uint32_t hsa_brig_section_id32_t;
 
 /**
-* @brief Brig sections.
+* @brief The fixed BRIG sections ID of the predefined BRIG sections.
 */
 typedef enum {
   /**
@@ -2048,79 +2107,60 @@ typedef enum {
 } hsa_brig_section_id_t;
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief BRIG section header. The first entry in every section must be this
+ * ::hsa_brig_section_header_t structure.
  */
 typedef struct hsa_brig_section_header_s {
   /**
-   * TODO kzhuravl 4/21/2014 write description.
+   * Size in bytes of the section.
    */
   uint32_t byte_count;
 
   /**
-   * TODO kzhuravl 4/21/2014 write description.
+   * Size of the header in bytes.
    */
   uint32_t header_byte_count;
 
   /**
-   * TODO kzhuravl 4/21/2014 write description.
+   * The length of the name
    */
   uint32_t name_length;
 
   /**
-   * TODO kzhuravl 4/21/2014 write description.
+   * Dynamically sized section name.
    */
   uint8_t name[1];
 } hsa_brig_section_header_t;
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Top level BRIG module.
  */
 typedef struct hsa_brig_module_s {
   /**
-   * TODO kzhuravl 4/21/2014 write description.
+   * Number of sections in this BRIG module.
    */
   uint32_t section_count;
 
   /**
-   * TODO kzhuravl 4/21/2014 write description.
+   * Sections in this BRIG module.
    */
   hsa_brig_section_header_t *section[1];
 } hsa_brig_module_t;
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief An opaque handle to the BRIG module.
  */
 typedef struct hsa_brig_module_handle_s {
   /**
-   * TODO
+   * HSA component specific handle to the brig module.
    */
   uint64_t handle;
 } hsa_brig_module_handle_t;
 
 /**
- * @brief TODO kzhuravl 4/9/2014 write description.
+ * @brief BRIG code section offset.
  */
 typedef uint32_t hsa_brig_code_section_offset32_t;
-
-/**
- * @brief Value expressed as a power of two.
- */
-typedef uint8_t hsa_powertwo8_t;
-
-/**
- * @brief Power of two between 1 and 256.
- */
-typedef enum {
-  HSA_POWERTWO_1 = 0,
-  HSA_POWERTWO_2 = 1,
-  HSA_POWERTWO_4 = 2,
-  HSA_POWERTWO_8 = 3,
-  HSA_POWERTWO_16 = 4,
-  HSA_POWERTWO_32 = 5,
-  HSA_POWERTWO_64 = 6,
-  HSA_POWERTWO_128 = 7,
-  HSA_POWERTWO_256 = 8
-} hsa_powertwo_t;
 
 /**
  * @brief The set of exceptions supported by HSAIL. This is represented as a
@@ -2204,35 +2244,6 @@ typedef enum {
   HSA_DIM_Z = 2,
 } hsa_dim_t;
 
-/**
- * @brief In HSA a dispatch grid can have up to three dimensions referred to as
- * x, y and z.
- */
-typedef struct hsa_dim3_s {
-  union {
-    struct {
-      /**
-       * X dimension.
-       */
-      uint32_t x;
-
-      /**
-       * Y dimension.
-       */
-      uint32_t y;
-
-      /**
-       * Z dimension.
-       */
-      uint32_t z;
-    };
-
-    /**
-     * The dimensions may also be accessed as an array using the HsaDim.
-     */
-    uint32_t dim[3];
-  };
-} hsa_dim3_t;
 
 /**
  * @brief Bit set of control directives supported in HSAIL. See HSA Programmer's
@@ -2572,39 +2583,41 @@ typedef enum {
 } hsa_code_kind_t;
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Program call convention.
  */
 typedef uint32_t hsa_program_call_convention_id32_t;
 
 /**
- * @brief TODO.
+ * @brief Types of program call conventions.
  */
 typedef enum {
   HSA_PROGRAM_CALL_CONVENTION_FINALIZER_DETERMINED = -1
 } hsa_program_call_convention_id_t;
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief An opaque handle to the code object.
  */
 typedef struct hsa_code_handle_s {
- /**
-  * TODO.
-  */
+  /**
+   * HSA component specific handle to the code.
+   */
   uint64_t handle;
 } hsa_code_handle_t;
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief An opaque handle to the debug information.
  */
 typedef struct hsa_debug_information_handle_s {
- /**
-  * TODO.
-  */
+  /**
+   * HSA component specific handle to the debug information.
+   */
   uint64_t handle;
 } hsa_debug_information_handle_t;
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief ::hsa_code_descriptor_t is the descriptor for the code object
+ * produced by the Finalizer and contains information that applies to all code
+ * entities in the program.
  */
 typedef struct hsa_code_descriptor_s {
   /**
@@ -2646,21 +2659,21 @@ typedef struct hsa_code_descriptor_s {
   /**
    * The maximum byte alignment of variables used by the kernel in the kernarg
    * memory segment. Expressed as a power of two. Must be at least
-   * ::HSA_POWERTWO_16
+   * HSA_POWERTWO_16
    */
   hsa_powertwo8_t kernarg_segment_alignment;
 
   /**
    * The maximum byte alignment of variables used by the kernel in the group
    * memory segment. Expressed as a power of two. Must be at least
-   * ::HSA_POWERTWO_16
+   * HSA_POWERTWO_16
    */
   hsa_powertwo8_t group_segment_alignment;
 
   /**
    * The maximum byte alignment of variables used by the kernel in the private
    * memory segment. Expressed as a power of two. Must be at least
-   * ::HSA_POWERTWO_16
+   * HSA_POWERTWO_16
    */
   hsa_powertwo8_t private_segment_alignment;
 
@@ -2678,7 +2691,7 @@ typedef struct hsa_code_descriptor_s {
   hsa_program_call_convention_id32_t program_call_convention;
 
   /**
-   * Domain module handle this code descriptor associated with.
+   * BRIG module handle this code descriptor associated with.
    */
   hsa_brig_module_handle_t module;
 
@@ -2689,28 +2702,25 @@ typedef struct hsa_code_descriptor_s {
 
   /**
    * The HSAIL profile defines which features are used. This information is from
-   * the HSAIL version directive. If this hsa_compilationunit_code_t is not
-   * generated from an HSAIL compilation unit then must still indicate what
+   * the HSAIL version directive. If this ::hsa_code_descriptor_t is not
+   * generated from an ::hsa_finalize then must still indicate what
    * profile is being used.
    */
   hsa_brig_profile8_t hsail_profile;
 
   /**
    * The HSAIL machine model gives the address sizes used by the
-   * code. This information is from the HSAIL version directive. If
-   * not generated from an HSAIL compilation unit then must still
-   * indicate for what machine mode the code is generated.
+   * code. This information is from the HSAIL version directive. If this
+   * ::hsa_code_descriptor_t is not generated from an ::hsa_finalize then must
+   * still indicate for what machine mode the code is generated.
    */
   hsa_brig_machine_model8_t hsail_machine_model;
 
   /**
-   * The HSAIL target features. There are currently no target options
-   * so this field must be 0. If target options are added they will
-   * be specified by the HSAIL version directive. If this
-   * hsa_compilationunit_code_t is not generated from an HSAIL
-   * compilation unit then must be 0.
+   * Reserved for BRIG target options if any are defined in the future. Must
+   * be 0.
    */
-  hsa_brig_target_options16_t hsail_target_options;
+  uint16_t reserved1;
 
   /**
    * Opaque handle to debug information.
@@ -2734,22 +2744,22 @@ typedef struct hsa_code_descriptor_s {
 
   /**
    * The HSAIL major version. This information is from the HSAIL version
-   * directive. If this hsa_compilationunit_code_t is not generated from an
-   * HSAIL compilation unit then must be 0.
+   * directive. If this ::hsa_code_descriptor_t is not generated from an
+   * ::hsa_finalize then must be 0.
    */
   uint32_t hsail_version_major;
 
   /**
    * The HSAIL minor version. This information is from the HSAIL version
-   * directive. If this hsa_compilationunit_code_t is not generated from an
-   * HSAIL compilation unit then must be 0.
+   * directive. If this ::hsa_code_descriptor_t is not generated from an
+   * ::hsa_finalize then must be 0.
    */
   uint32_t hsail_version_minor;
 
   /**
    * Reserved. Must be 0.
    */
-  uint64_t reserved1;
+  uint64_t reserved2;
 
   /**
    * The values should be the actually values used by the finalizer in
@@ -2765,53 +2775,48 @@ typedef struct hsa_code_descriptor_s {
 } hsa_code_descriptor_t;
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
- */
-typedef struct hsa_runtime_caller_s {
-  /**
-   * TODO
-   */
-  uint64_t caller;
-} hsa_runtime_caller_t;
-
-/**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Finalization request. Contains ::hsa_brig_module_handle_t which
+ * points to the ::hsa_brig_module_t to be finalized, as well as the desired
+ * call convention to use when finalizing given BRIG module.
  */
 typedef struct hsa_finalization_request_s {
   /**
-   * TODO
+   * Handle to the ::hsa_brig_module_t, which needs to be finalized.
    */
   hsa_brig_module_handle_t module;
   /**
-   * TODO
+   * BRIG code section offset.
    */
   hsa_brig_code_section_offset32_t symbol;
   /**
-   * TODO
+   * Desired program call convention.
    */
   hsa_program_call_convention_id32_t program_call_convention;
 } hsa_finalization_request_t;
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Finalization descriptor is the descriptor for the code object
+ * produced by the Finalizer and contains information that applies to all code
+ * entities in the program.
  */
 typedef struct hsa_finalization_descriptor_s {
   /**
-   * TODO
+   * Number of code descriptors produced.
    */
   uint32_t code_descriptor_count;
   /**
-   * TODO
+   * Reserved. Must be 0.
    */
   uint32_t reserved1;
   /**
-   * TODO
+   * Dynamically sized array of code descriptors.
    */
   hsa_code_descriptor_t code_descriptors[1];
 } hsa_finalization_descriptor_t;
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Call back function to get the definition of a module scope
+ * variable/fbarrier or kernel/function.
  */
 typedef hsa_status_t (*hsa_symbol_definition_t)(
   hsa_runtime_caller_t caller,
@@ -2822,7 +2827,8 @@ typedef hsa_status_t (*hsa_symbol_definition_t)(
   hsa_brig_code_section_offset32_t *definition_symbol);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Call back function to get the address of global segment variables,
+ * kernel table variable, indirect function table variable.
  */
 typedef hsa_status_t (*hsa_symbol_address_t)(
   hsa_runtime_caller_t caller,
@@ -2831,7 +2837,8 @@ typedef hsa_status_t (*hsa_symbol_address_t)(
   uint64_t *symbol_address);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Call back function to get the string representation of the error
+ * message.
  */
 typedef hsa_status_t (*hsa_error_message_t)(
   hsa_runtime_caller_t caller,
@@ -2841,19 +2848,19 @@ typedef hsa_status_t (*hsa_error_message_t)(
   const char *message);
 
 /**
- * @brief Invoke the finalizer on the provided list of kernels and indirect
- *        functions that are in HSAIL modules in HSAIL program.
+ * @brief Finalizes provided BRIG modules.
  *
- * @details TODO.
+ * @details Invokes the finalizer on the provided list of kernels and indirect
+ * functions that are in HSAIL modules in HSAIL program.
  *
  * @param[in] caller Opaque pointer which is passed to all call back functions
  * made by this call of the finalizer.
  *
  * @param[in] agent The HSA agent for which code must be produced.
  *
- * @param[in] program_agent_id TODO.
+ * @param[in] program_agent_id Program agent id.
  *
- * @param[in] program_agent_count TODO.
+ * @param[in] program_agent_count Number of program agents.
  *
  * @param[in] finalization_request_count The number of kernels and indirect
  * functions that are in HSAIL modules in HSAIL program.
@@ -2886,11 +2893,29 @@ typedef hsa_status_t (*hsa_error_message_t)(
  * @param[in] options Implementation defined options that can be specified to
  * the finalizer.
  *
- * @param[in] debug_information TODO.
+ * @param[in] debug_information The flag for including/excluding the debug
+ * information for @a finalization_descriptor. 0 - exclude debug information,
+ * 1 - include debug information.
  *
- * @param[out] finalization_descriptor TODO.
+ * @param[out] finalization_descriptor the descriptor for the code object
+ * produced by the Finalizer and contains information that applies to all code
+ * entities in the program.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_DIRECTIVE_MISMATCH If the directive in the control
+ * directive structure and in the HSAIL kernel mismatch or if the same directive
+ * is used with a different value in one of the functions used by this kernel.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a finalization_request_list
+ * is NULL or invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If the finalize API cannot
+ * allocate memory for @a finalization_descriptor.
+ *
+ * @retval ::HSA_STATUS_INFO_UNRECOGNIZED_OPTIONS If the options are not
+ * recognized, no error is returned, just an info status is used to indicate
+ * invalid options.
  */
 hsa_status_t hsa_finalize(
   hsa_runtime_caller_t caller,
@@ -2909,68 +2934,129 @@ hsa_status_t hsa_finalize(
   hsa_finalization_descriptor_t **finalization_descriptor);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Destroys the finalization descriptor.
  *
- * @details TODO.
+ * @details Destroys finalization descriptor. Returns ::HSA_STATUS_SUCCESS if
+ * the finalization descriptor was destroyed successfully. Returns
+ * ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a finalization_descriptor is
+ * NULL or does not point to a valid finalization descriptor object. Returns
+ * ::HSA_STATUS_ERROR_RESOURCE_FREE If some of the resources consumed
+ * during initialization by the runtime could not be freed.
  *
- * @param[in] finalization_descriptor TODO.
+ * @param[in] finalization_descriptor A pointer to the finalization descriptor
+ * that needs to be destroyed.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully, and
+ * @a finalization_descriptor is destroyed.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a finalization_descriptor is
+ * NULL or does not point to a valid finalization descriptor object.
+ *
+ * @retval ::HSA_STATUS_ERROR_RESOURCE_FREE If some of the resources consumed
+ * during initialization by the runtime could not be freed.
  */
 hsa_status_t hsa_destroy_finalization_descriptor(
   hsa_finalization_descriptor_t *finalization_descriptor);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Serializes the finalization descriptor.
  *
- * @details TODO.
+ * @details Serializes finalization descriptor for specified @a agent. The
+ * caller can set @a debug_information to 1 in order to include debug
+ * information of this finalization descriptor in the serialized object.
+ * Returns ::HSA_STATUS_SUCCESS If the function is
+ * executed successfully, and @a finalization_descriptor is serialized. Returns
+ * ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a finalization_descriptor
+ * is either NULL or does not point to a valid finalization descriptor object.
+ * Returns ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If no memory can be allocated
+ * for @a serialized_object.
  *
- * @param[in] caller TODO.
+ * @param[in] caller Opaque pointer and will be passed to all call back
+ * functions made by this call.
  *
- * @param[in] agent TODO.
+ * @param[in] agent The HSA agent for which @a finalization_descriptor must be
+ * serialized.
  *
- * @param[in] finalization_descriptor TODO.
+ * @param[in] finalization_descriptor Finalization descriptor to serialize.
  *
- * @param[in] error_message TODO.
+ * @param[in] alloc_serialize_data Call back function for allocation.
  *
- * @param[in] debug_information TODO.
+ * @param[in] error_message Call back function to get the string representation
+ * of the error message. Refer to the description of this call back function
+ * for more information.
  *
- * @param[in] serialized_object TODO.
+ * @param[in] debug_information The flag for including/excluding the debug
+ * information for @a finalization_descriptor. 0 - exclude debug information,
+ * 1 - include debug information.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @param[out] serialized_object Pointer to the serialized object.
+ *
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully, and
+ * @a finalization_descriptor is serialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a finalization_descriptor
+ * is either NULL or does not point to a valid finalization descriptor object.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If no memory can be allocated
+ * for @a serialized_object.
  */
 hsa_status_t hsa_serialize_finalization_descriptor(
   hsa_runtime_caller_t caller,
   hsa_agent_t *agent,
   hsa_finalization_descriptor_t *finalization_descriptor,
+  hsa_runtime_alloc_data_t alloc_serialize_data,
   hsa_error_message_t error_message,
   int debug_information,
   void *serialized_object);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Deserializes the finalization descriptor.
  *
- * @details TODO.
+ * @details Deserializes finalization descriptor for specified @a agent. The
+ * caller can set @a debug_information to 1 in order to include debug
+ * information of this finalization descriptor from the serialized object.
+ * Returns ::HSA_STATUS_SUCCESS If the function is
+ * executed successfully, and @a finalization_descriptor is serialized. Returns
+ * ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a serialized_object is either
+ * NULL, or is not valid, or the size is 0.
+ * Returns ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If no memory can be allocated
+ * for @a finalization_descriptor.
  *
- * @param[in] caller TODO.
+ * @param[in] caller Opaque pointer and will be passed to all call back
+ * functions made by this call.
  *
- * @param[in] serialized_object TODO.
+ * @param[in] serialized_object Serialized object to be deserialized.
  *
- * @param[in] agent TODO.
+ * @param[in] agent The HSA agent for which @a finalization_descriptor must be
+ * serialized.
  *
  * @param[in] program_agent_id TODO.
  *
  * @param[in] program_agent_count TODO.
  *
- * @param[in] symbol_address TODO.
+ * @param[in] symbol_address Call back function to get the address of global
+ * segment variables, kernel table variables, indirect function table
+ * variable. Refer to the description of this call back function for more
+ * information.
  *
- * @param[in] error_message TODO.
+ * @param[in] error_message Call back function to get the string representation
+ * of the error message. Refer to the description of this call back function
+ * for more information.
  *
- * @param[in] debug_information TODO.
+ * @param[in] debug_information The flag for including/excluding the debug
+ * information for @a finalization_descriptor. 0 - exclude debug information,
+ * 1 - include debug information.
  *
- * @param[out] finalization_descriptor TODO.
+ * @param[out] finalization_descriptor Deserialized finalization descriptor.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully, and
+ * @a finalization_descriptor is deserialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a serialized_object is
+ * either NULL, or is not valid, or the size is 0.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If no memory can be allocated
+ * for @a finalization_descriptor.
  */
 hsa_status_t hsa_deserialize_finalization_descriptor(
   hsa_runtime_caller_t caller,
@@ -2990,31 +3076,52 @@ hsa_status_t hsa_deserialize_finalization_descriptor(
  */
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief An opaque handle to the HSAIL program. Created by
+ * ::hsa_create_program, and destroyed by ::hsa_destroy_program.
  */
 typedef struct hsa_program_handle_s {
   /**
-   * TODO
+   * HSA component specific handle to the program.
    */
   uint64_t handle;
 } hsa_program_handle_t;
 
 /**
- * @brief Create a program.
+ * @brief Creates an HSAIL program.
  *
- * @details TODO.
+ * @details Creates an HSAIL program for specified @a agent_count of @a agents,
+ * with specified BRIG machine model @a machine_model and BRIG profile
+ * @a profile. Returns a handle to the created HSAIL program, and
+ * ::hsa_status_t, which describes the status of execution of this function.
+ * There should be at least one agent specified, and @a machine_model and
+ * @a profile have to be valid ::hsa_brig_profile_t and
+ * ::hsa_brig_machine_model_t, otherwise returns
+ * ::HSA_STATUS_ERROR_INVALID_ARGUMENT. If the program handle @a program
+ * is already a valid program, ::HSA_STATUS_ALREADY_INITIALIZED is returned.
  *
- * @param[in] agents TODO.
+ * @param[in] agents One or more HSA agent for which this HSAIL program is
+ * created.
  *
- * @param[in] agent_count TODO.
+ * @param[in] agent_count Number of HSA agents for which this HSAIL program is
+ * created.
  *
- * @param[in] machine_model TODO.
+ * @param[in] machine_model The kind of machine model this HSAIL program is
+ * created for.
  *
- * @param[in] profile TODO.
+ * @param[in] profile The kind of profile this HSAIL program is created for.
  *
- * @param[out] program A valid pointer to a program handle.
+ * @param[out] program A valid pointer to a program handle for the HSAIL
+ * program created.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully, and
+ * HSAIL program is created.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a agent is NULL, or not
+ * valid. If @a agent_count is 0. If @a machine_model is not valid. If
+ * @a profile is not valid.
+ *
+ * @retval ::HSA_STATUS_ALREADY_INITIALIZED If @a program is already a valid
+ * program.
  */
 hsa_status_t hsa_create_program(
   hsa_agent_t *agents,
@@ -3024,28 +3131,40 @@ hsa_status_t hsa_create_program(
   hsa_program_handle_t *program);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Destroys an HSAIL program.
  *
- * @details TODO.
+ * @details Destroys an HSAIL program pointed to by program handle @a program.
+ * Returns ::hsa_status_t, which describes the status of execution of this
+ * function. HSAIL program handle @a program has to be a valid
+ * ::hsa_program_handle_t object, otherwise ::HSA_STATUS_ERROR_INVALID_ARGUMENT
+ * is returned. If the program handle @a program is already destroyed or has
+ * never been created ::HSA_STATUS_ERROR_RESOURCE_FREE is returned.
  *
- * @param[in] program Program handle.
+ * @param[in] program Program handle for the HSAIL program to be destroyed.
  *
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully, and
+ * HSAIL program with specified program handle is destroyed.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a program is not a valid
+ * ::hsa_program_handle_t object.
+ *
+ * @retval ::HSA_STATUS_ERROR_RESOURCE_FREE If @a program is already destroyed
+ * or has never been created.
  */
 hsa_status_t hsa_destroy_program(
   hsa_program_handle_t program);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Adds an existing BRIG module to an existing HSAIL program.
  *
- * @details TODO.
+ * @param[in] program Program handle for the HSAIL program.
  *
- * @param[in] program Program handle.
+ * @param[in] brig_module BRIG module to add to the HSAIL program.
  *
- * @param[in] brig_module TODO.
+ * @param[out] module The handle for the @a brig_module.
  *
- * @param[in] module TODO.
- *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully, and
+ * @a brig_module was successfully added to the HSAIL program.
  */
 hsa_status_t hsa_add_module(
   hsa_program_handle_t program,
@@ -3053,29 +3172,58 @@ hsa_status_t hsa_add_module(
   hsa_brig_module_handle_t *module);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Finalizes provided BRIG modules.
  *
- * @details TODO.
+ * @details Provides and services call backs to core Finalizer to manage looking
+ * up global segment variable allocation and variable/function/fbarrier
+ * definitions. Takes the result of core Finalizer and updates kernel and
+ * indirect function table variables. Done as atomic store release to system
+ * scope so ldi_acq and ldk_acq can synchronize with the update. Other query
+ * operations must be used to get code address of kernels/indirect functions
+ * finalized.
  *
- * @param[in] program TODO.
+ * @param[in] program Handle to the program.
  *
- * @param[in] agent TODO.
+ * @param[in] agent The HSA agent for which code must be produced.
  *
- * @param[in] finalization_request_count TODO.
+ * @param[in] finalization_request_count The number of kernels and indirect
+ * functions that are in HSAIL modules in HSAIL program.
  *
- * @param[in] finalization_request_list TODO.
+ * @param[in] finalization_request_list List of kernels and indirect functions
+ * that are in HSAIL modules in HSAIL program.
  *
- * @param[in] control_directives TODO.
+ * @param[in] control_directives The control directives that can be specified to
+ * influence how the finalizer generates code. If NULL then no control
+ * directives are used. If this call is successful and control_directives is not
+ * NULL, then the resulting hsa_code_descriptor_t object will have control
+ * directives which were used by the finalizer.
  *
- * @param[in] error_message TODO.
+ * @param[in] error_message Call back function to get the string representation
+ * of the error message.  Refer to the description of this call back function
+ * for more information.
  *
- * @param[in] optimization_level TODO.
+ * @param[in] optimization_level An implementation defined value that control
+ * the level of optimization performed by the finalizer.
  *
- * @param[in] options TODO.
+ * @param[in] options Implementation defined options that can be specified to
+ * the finalizer.
  *
- * @param[in] debug_information TODO.
+ * @param[in] debug_information The flag for including/excluding the debug
+ * information for @a finalization_descriptor. 0 - exclude debug information,
+ * 1 - include debug information.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_DIRECTIVE_MISMATCH If the directive in the control
+ * directive structure and in the HSAIL kernel mismatch or if the same directive
+ * is used with a different value in one of the functions used by this kernel.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a finalization_request_list
+ * is NULL or invalid.
+ *
+ * @retval ::HSA_STATUS_INFO_UNRECOGNIZED_OPTIONS If the options are not
+ * recognized, no error is returned, just an info status is used to indicate
+ * invalid options.
  */
 hsa_status_t finalize(
   hsa_program_handle_t program,
@@ -3089,17 +3237,18 @@ hsa_status_t finalize(
   int debug_information);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries program agent's id.
  *
- * @details TODO.
+ * @param[in] program Program to query agent's id from.
  *
- * @param[in] program TODO.
+ * @param[in] agent Agent to query agent's id from.
  *
- * @param[in] agent TODO.
+ * @param[out] program_agent_id Program agent's id.
  *
- * @param[in] program_agent_id TODO.
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program or
+ * @a agent is invalid.
  */
 hsa_status_t hsa_query_program_agent_id(
   hsa_program_handle_t program,
@@ -3107,32 +3256,36 @@ hsa_status_t hsa_query_program_agent_id(
   uint32_t *program_agent_id);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries program agent count.
  *
- * @details TODO.
+ * @param[in] program Program to query agent count from.
  *
- * @param[in] program TODO.
+ * @param[out] program_agent_count Number of agents in the program.
  *
- * @param[out] program_agent_count TODO.
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program is
+ * invalid.
  */
 hsa_status_t hsa_query_program_agent_count(
   hsa_program_handle_t program,
   uint32_t *program_agent_count);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries program agents.
  *
- * @details TODO.
+ * @details Queries @a program_agent_count number of agents.
  *
- * @param[in] program TODO.
+ * @param[in] program Program to query agents from.
  *
- * @param[in] program_agent_count TODO.
+ * @param[in] program_agent_count Number of agents to query.
  *
- * @param[in] agents TODO.
+ * @param[out] agents HSA program agents.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program is
+ * invalid.
  */
 hsa_status_t hsa_query_program_agents(
   hsa_program_handle_t program,
@@ -3140,32 +3293,36 @@ hsa_status_t hsa_query_program_agents(
   hsa_agent_t *agents);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries program module count.
  *
- * @details TODO.
+ * @param[in] program Program to query module count from.
  *
- * @param[in] program TODO.
+ * @param[out] program_module_count Number of modules in the program.
  *
- * @param[out] program_module_count TODO.
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program is
+ * invalid.
  */
 hsa_status_t hsa_query_program_module_count(
   hsa_program_handle_t program,
   uint32_t *program_module_count);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries program modules.
  *
- * @details TODO.
+ * @details Queries @a program_module_count number of modules.
  *
- * @param[in] program TODO.
+ * @param[in] program Program to query modules from.
  *
- * @param[in] program_module_count TODO.
+ * @param[in] program_module_count Number of module to query.
  *
- * @param[out] modules TODO.
+ * @param[out] modules Queried modules.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program is
+ * invalid.
  */
 hsa_status_t hsa_query_program_modules(
   hsa_program_handle_t program,
@@ -3173,17 +3330,20 @@ hsa_status_t hsa_query_program_modules(
   hsa_brig_module_handle_t *modules);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries program brig modules.
  *
- * @details TODO.
+ * @details Query a program brig module with specified module handle.
  *
- * @param[in] program TODO.
+ * @param[in] program Program to query module from.
  *
- * @param[in] module TODO.
+ * @param[in] module Module handle.
  *
- * @param[out] brig_module TODO.
+ * @param[out] brig_module Queried module.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program is
+ * invalid, or @a module is invalid.
  */
 hsa_status_t hsa_query_program_brig_module(
   hsa_program_handle_t program,
@@ -3191,19 +3351,22 @@ hsa_status_t hsa_query_program_brig_module(
   hsa_brig_module_t *brig_module);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries call convention.
  *
  * @details TODO.
  *
- * @param[in] program TODO.
+ * @param[in] program program Program to query module for.
  *
- * @param[in] agent TODO.
+ * @param[in] agent HSA Agent to query call convention for.
  *
- * @param[out] first_call_convention_id TODO.
+ * @param[out] first_call_convention_id First call convention.
  *
- * @param[out] call_convention_count TODO.
+ * @param[out] call_convention_count Number of call conventions in the program.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program is
+ * invalid, or @a agent is invalid.
  */
 hsa_status_t hsa_query_call_convention(
   hsa_program_handle_t program,
@@ -3212,21 +3375,24 @@ hsa_status_t hsa_query_call_convention(
   uint32_t *call_convention_count);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Defines program's global variable address.
  *
- * @details TODO.
+ * @param[in] program Program to define global variable address for.
  *
- * @param[in] program TODO.
+ * @param[in] module Module to define global variable address for.
  *
- * @param[in] module TODO.
+ * @param[in] symbol Offset.
  *
- * @param[in] symbol TODO.
+ * @param[in] error_message Call back function to get the string representation
+ * of the error message.  Refer to the description of this call back function
+ * for more information.
  *
- * @param[in] error_message TODO.
+ * @param[in] address Specified address.
  *
- * @param[in] address TODO.
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program is
+ * invalid, or @a module is invalid.
  */
 hsa_status_t hsa_define_program_allocation_global_variable_address(
   hsa_program_handle_t program,
@@ -3236,19 +3402,22 @@ hsa_status_t hsa_define_program_allocation_global_variable_address(
   void *address);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries program's global variable address.
  *
  * @details TODO.
  *
- * @param[in] program TODO.
+ * @param[in] program Program to query global variable address for.
  *
- * @param[in] module TODO.
+ * @param[in] module Module to query global variable address for.
  *
- * @param[in] symbol TODO.
+ * @param[in] symbol Offset.
  *
- * @param[out] address TODO.
+ * @param[out] address Queried address.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program is
+ * invalid, or @a module is invalid.
  */
 hsa_status_t hsa_query_program_global_variable_address(
   hsa_program_handle_t program,
@@ -3257,23 +3426,26 @@ hsa_status_t hsa_query_program_global_variable_address(
   uint64_t *address);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Defines agent's global variable address.
  *
- * @details TODO.
+ * @param[in] program Program to define global variable address for.
  *
- * @param[in] program TODO.
+ * @param[in] module Module to define global variable address for.
  *
- * @param[in] module TODO.
+ * @param[in] symbol Offset.
  *
- * @param[in] symbol TODO.
+ * @param[in] agent HSA Agent to define global variable address for.
  *
- * @param[in] agent TODO.
+ * @param[in] error_message Call back function to get the string representation
+ * of the error message.  Refer to the description of this call back function
+ * for more information.
  *
- * @param[in] error_message TODO.
+ * @param[in] address Specified address.
  *
- * @param[in] address TODO.
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program is
+ * invalid, or @a module is invalid, or @a agent is invalid.
  */
 hsa_status_t hsa_define_agent_allocation_global_variable_address(
   hsa_program_handle_t program,
@@ -3284,21 +3456,22 @@ hsa_status_t hsa_define_agent_allocation_global_variable_address(
   void *address);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries agent's global variable address.
  *
- * @details TODO.
+ * @param[in] program Program to query global variable address for.
  *
- * @param[in] program TODO.
+ * @param[in] module Module to query global variable address for.
  *
- * @param[in] module TODO.
+ * @param[in] symbol Offset.
  *
- * @param[in] symbol TODO.
+ * @param[in] agent HSA Agent to query global variable address for.
  *
- * @param[in] agent TODO.
+ * @param[out] address Queried address.
  *
- * @param[out] address TODO.
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a program is
+ * invalid, or @a module is invalid, or @a agent is invalid.
  */
 hsa_status_t hsa_query_agent_global_variable_address(
   hsa_program_handle_t program,
@@ -3308,19 +3481,23 @@ hsa_status_t hsa_query_agent_global_variable_address(
   uint64_t *address);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries kernel descriptor address.
  *
- * @details TODO.
+ * @details Queries kernel descriptor address. Needed to create the dispatch
+ * packet.
  *
- * @param[in] program TODO.
+ * @param[in] program Program to query kernel descriptor address from.
  *
- * @param[in] module TODO.
+ * @param[in] module BRIG module handle.
  *
- * @param[in] symbol TODO.
+ * @param[in] symbol Offset.
  *
- * @param[out] address TODO.
+ * @param[out] address The address of kernel descriptor.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a program or @a module are
+ * not valid HSAIL program or BRIG module respectively.
  */
 hsa_status_t hsa_query_kernel_descriptor_address(
   hsa_program_handle_t program,
@@ -3329,19 +3506,24 @@ hsa_status_t hsa_query_kernel_descriptor_address(
   uint64_t *address);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Queries indirect function descriptor address.
  *
- * @details TODO.
+ * @details Queries indirect function descriptor address, which allows host
+ * program to perform indirect function table variable initialization.
  *
- * @param[in] program TODO.
+ * @param[in] program Program to query indirect function descriptor address
+ * from.
  *
- * @param[in] module TODO.
+ * @param[in] module BRIG module handle.
  *
- * @param[in] symbol TODO.
+ * @param[in] symbol Offset.
  *
- * @param[out] address TODO.
+ * @param[out] address The address of indirect function descriptor.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a program or @a module are
+ * not valid HSAIL program or BRIG module respectively.
  */
 hsa_status_t hsa_query_indirect_function_descriptor_address(
   hsa_program_handle_t program,
@@ -3350,32 +3532,48 @@ hsa_status_t hsa_query_indirect_function_descriptor_address(
   uint64_t *address);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Validates HSAIL program.
  *
- * @details TODO.
+ * @details Validates HSAIL program with specified program handle. Returns
+ * either ::HSA_STATUS_SUCCESS or ::HSA_STATUS_FAILURE if the validation is
+ * successful or not. Refer to the @a error_message call back to get the string
+ * representation of the failure.
  *
- * @param[in] program TODO.
+ * @param[in] program Handle to the HSAIL program to validate.
  *
- * @param[in] error_message TODO.
+ * @param[in] error_message Call back function to get the string representation
+ * of the error message. Refer to the description of this call back function
+ * for more information.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the program is validated successfully.
+ *
+ * @retval ::HSA_STATUS_FAILURE If the program is not valid, refer to the error
+ * call back function to get string representation of the failure.
  */
 hsa_status_t hsa_validate_program(
   hsa_program_handle_t program,
   hsa_error_message_t error_message);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Validates program module.
  *
- * @details TODO.
+ * @details Validates program module with specified module handle. Returns
+ * either ::HSA_STATUS_SUCCESS or ::HSA_STATUS_FAILURE if the validation is
+ * successful or not. Refer to the @a error_message call back to get the string
+ * representation of the failure.
  *
- * @param[in] program TODO.
+ * @param[in] program Handle to the HSAIL program.
  *
- * @param[in] module TODO.
+ * @param[in] module Handle to the module to validate.
  *
- * @param[in] error_message TODO.
+ * @param[in] error_message Call back function to get the string representation
+ * of the error message. Refer to the description of this call back function
+ * for more information.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the module is validated successfully.
+ *
+ * @retval ::HSA_STATUS_FAILURE If the module is not valid, refer to the error
+ * call back function to get string representation of the failure.
  */
 hsa_status_t hsa_validate_program_module(
   hsa_program_handle_t program,
@@ -3383,43 +3581,49 @@ hsa_status_t hsa_validate_program_module(
   hsa_error_message_t error_message);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
- *        TODO kzhuravl 4/22/2014 do we need to include alignment?
- */
-typedef hsa_status_t (*hsa_alloc_serialize_data_t)(
-  hsa_runtime_caller_t caller,
-  size_t byte_size,
-  void **address);
-
-/**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Serializes the HSAIL program.
  *
- * @details TODO.
+ * @details Serializes the @a program to @a serialized_object. Used for
+ * offline compilation.
  *
- * @param[in] caller TODO.
+ * @param[in] caller Opaque pointer and will be passed to all call back
+ * functions made by this call.
  *
- * @param[in] program TODO.
+ * @param[in] program HSAIL program to be serialized.
  *
- * @param[in] alloc_serialize_data TODO.
+ * @param[in] alloc_serialize_data Call back function for allocation.
  *
- * @param[in] error_message TODO.
+ * @param[in] error_message Call back function to get the string representation
+ * of the error message. Refer to the description of this call back function
+ * for more information.
  *
- * @param[in] debug_information TODO.
+ * @param[in] debug_information The flag for including/excluding the debug
+ * information for @a finalization_descriptor. 0 - exclude debug information,
+ * 1 - include debug information.
  *
- * @param[in] serialized_object TODO.
+ * @param[in] serialized_object Pointer to the serialized object.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully, and
+ * @a program is serialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a program is not a valid
+ * program.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If no memory can be allocated
+ * for @a serialized_object.
  */
 hsa_status_t hsa_serialize_program(
   hsa_runtime_caller_t caller,
   hsa_program_handle_t program,
-  hsa_alloc_serialize_data_t alloc_serialize_data,
+  hsa_runtime_alloc_data_t alloc_serialize_data,
   hsa_error_message_t error_message,
   int debug_information,
   void *serialized_object);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Call back function to get program's address of global segment
+ * variables, kernel table variable, indirect function table variable based
+ * on the symbolic name.
  */
 typedef hsa_status_t (*hsa_program_allocation_symbol_address_t)(
   hsa_runtime_caller_t caller,
@@ -3427,7 +3631,9 @@ typedef hsa_status_t (*hsa_program_allocation_symbol_address_t)(
   uint64_t *symbol_adress);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Call back function to get agents's address of global segment
+ * variables, kernel table variable, indirect function table variable based
+ * on the symbolic name.
  */
 typedef hsa_status_t (*hsa_agent_allocation_symbol_address_t)(
   hsa_runtime_caller_t caller,
@@ -3436,27 +3642,47 @@ typedef hsa_status_t (*hsa_agent_allocation_symbol_address_t)(
   uint64_t *symbol_adress);
 
 /**
- * @brief TODO kzhuravl 4/21/2014 write description.
+ * @brief Deserializes the HSAIL program.
  *
- * @details TODO.
+ * @details Deserializes the program from @a serialized_object. Used for
+ * offline compilation. Includes call back functions
+ * hsa_{program, agent}_allocation_symbol_address_t, where call back functions
+ * take symbolic name, this allows symbols defined by application to be
+ * relocated.
  *
- * @param[in] caller TODO.
+ * @param[in] caller Opaque pointer and will be passed to all call back
+ * functions made by this call.
  *
- * @param[in] serialized_object TODO.
+ * @param[in] serialized_object Serialized object to be deserialized.
  *
- * @param[in] program TODO.
+ * @param[in] program_allocation_symbol_address Call back function to get
+ * program's address of global segment variables, kernel table variable,
+ * indirect function table variable based on the symbolic name. Allows symbols
+ * defined by application to be relocated.
  *
- * @param[in] program_allocation_symbol_address TODO.
+ * @param[in] agent_allocation_symbol_address Call back function to get agent's
+ * address of global segment variables, kernel table variable, indirect
+ * function table variable based on the symbolic name. Allows symbols defined
+ * by application to be relocated.
  *
- * @param[in] agent_allocation_symbol_address TODO.
+ * @param[in] error_message Call back function to get the string representation
+ * of the error message. Refer to the description of this call back function
+ * for more information.
  *
- * @param[in] error_message TODO.
+ * @param[in] debug_information The flag for including/excluding the debug
+ * information for @a finalization_descriptor. 0 - exclude debug information,
+ * 1 - include debug information.
  *
- * @param[in] request_debug_information TODO.
+ * @param[out] program Deserialized program.
  *
- * @param[out] program TODO.
+ * @retval ::HSA_STATUS_SUCCESS If the function is executed successfully, and
+ * @a program is deserialized.
  *
- * @retval ::HSA_STATUS_SUCCESS
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a serialized_object is
+ * either NULL, or is not valid, or the size is 0.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If no memory can be allocated
+ * for @a finalization_descriptor.
  */
 hsa_status_t hsa_deserialize_program(
   hsa_runtime_caller_t caller,
@@ -3464,10 +3690,10 @@ hsa_status_t hsa_deserialize_program(
   hsa_program_allocation_symbol_address_t program_allocation_symbol_address,
   hsa_agent_allocation_symbol_address_t agent_allocation_symbol_address,
   hsa_error_message_t error_message,
-  int request_debug_information,
+  int debug_information,
   hsa_program_handle_t **program);
-
 /** @} */
+
 
 /** \defgroup register TODO
  *  @{
@@ -3883,23 +4109,7 @@ typedef struct hsa_image_descriptor_s {
 /**
  * @brief 3D image coordinate offset for image manipulation.
  */
-typedef struct hsa_image_offset_s {
-   /**
-    * X coordinate for the offset.
-    */
-    uint32_t x;
-
-   /**
-    * Y coordinate for the offset.
-    */
-    uint32_t y;
-
-   /**
-    * Z coordinate for the offset
-    */
-    uint32_t z;
-
-} hsa_image_offset_t;
+typedef hsa_dim3_t hsa_image_offset_t;
 
 /**
  * @brief Three-dimensional image range description.

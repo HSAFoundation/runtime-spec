@@ -1,4 +1,4 @@
-\documentclass[draft]{book}
+\documentclass[final]{book}
 \newcommand{\docversion}{0.180}
 
 % Needed so characters such as underscore are recognized in PDF
@@ -7,9 +7,10 @@
 \usepackage[T1]{fontenc}
 
 % If draft, use narrow margins (better for printing)
-\usepackage{ifdraft}
-\ifdraft{\usepackage[top=.5cm,bottom=.5cm,left=.5cm,right=.5cm]{geometry}}
-        {\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}}
+% \usepackage{ifdraft}
+% \ifdraft{\usepackage[top=.5cm,bottom=.5cm,left=.5cm,right=.5cm]{geometry}}
+%         {\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}}
+\usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
 
 \usepackage[toc,page]{appendix}
 \usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
@@ -791,40 +792,17 @@ CPU).
 Agents write AQL packets to the user mode queue of a particular component. The
 queue memory is processed by a packet processor as though it is a ring
 buffer. The details on how commands can be written to the queue via AQL packets
-and the structure of the AQL packet are discussed in Section~\ref{AQL}.
+are discussed in detail in~\cite{sar}.
 
 The HSA runtime allows the user to create a user mode queue by invoking
 \reffun{hsa_queue_create}, which is responsible for allocating memory to hold
 AQL packets. The pointer to the beginning of the allocated memory is stored in
 the \reffld{base_address} field. No memory shall be allocated by an
 implementation if the queue creation fails. An implementation might not
-initialize the \reftyp{hsa_queue_t} structure if queue creation fails, so the
-user should only rely on the error code returned to determine if the queue is
-valid.
+initialize the queue structure if queue creation fails, so the user should only
+rely on the error code returned to determine if the queue is valid.
 
-\mariotodo{I do not understand this paragraph}The \reftyp{hsa_queue_mailbox_t}
-structure returned by the queue create call contains \reffld{mailbox_ptr} and
-\reffld{mailbox_signal}. Their purpose is getting execution information when a
-\refhsl{debugtrap_u32} HSAIL instruction is used in the user kernel. The user
-can wait on the \reffld{mailbox_signal} and process the information in the
-\reffld{mailbox_ptr} as discussed in Section~\ref{coredebug}.
-
-\mariotodo{clarify service queues}This service queue is configured when a user
-mode queue is created. The service queue is visible to HSA agents through the
-queue structure \reffld{service_queue} field and is serviced by an appropriate
-HSA agent. The application may chose to not use a service queue, select the
-runtime managed service queue, or a queue managed by the application via
-\refarg{service_queue_type}. Address of the service queue associated with the
-user mode queue is returned in the queue structure. If there is no associated
-service queue then the NULL address will be returned. The API allows different
-user mode queues to have a different associated service queue. It also allows
-for the service queue to be user managed. The API allows the user to specify
-that runtime return a default shared service queue which is created when the
-runtime is initialized.
-
-Internally, the queue structure contains a read index and a write index. The
-write index is a unique identifier for AQL packets in the queue. The read index
-indicates the next packet that will be consumed by the packet processor. Both
+Internally, the queue structure contains a read index and a write index. Both
 indexes are not directly exposed to the user, who can only access them by using
 dedicated APIs.  The available index functions differ on the index of interest
 (read or write), action to be performed (addition, compare and swap, etc.), and
@@ -848,22 +826,25 @@ other packet and observes that there is new work available, so it processes the
 new packets. In any case, the agent must ring the doorbell for every batch of
 packets it writes.
 
-\hypertarget{queue-errors}{}\subsection{Queue States} \label{queue-errors}
+\mariotodo{clarify service queues}This service queue is configured when a user
+mode queue is created. The service queue is visible to HSA agents through the
+queue structure \reffld{service_queue} field and is serviced by an appropriate
+HSA agent. The application may chose to not use a service queue, select the
+runtime managed service queue, or a queue managed by the application via
+\refarg{service_queue_type}. The address of the service queue associated with
+the user mode queue is returned in the queue structure. If there is no
+associated service queue then the NULL address will be returned. The API allows
+different user mode queues to have a different associated service queue. It also
+allows for the service queue to be user managed. The API allows the user to
+specify that runtime return a default shared service queue which is created when
+the runtime is initialized.
 
-There are two primary kinds of errors that impact queue processing and render a
-queue inactive:
-\begin{itemize}
-\item Errors due to packet processing, such as invalid format, field-value,
-  invalid signal, etc.
-\item Errors occurring during subsequent resource/dispatch setup or system
-  errors during dispatch.
-\end{itemize}
+\hypertarget{queue-errors}{}\subsection{Queue States} \label{queue-errors}
 
 A queue in HSA, once created, can be in one of the following states:
 \emph{active}, \emph{error pending inactive}, \emph{error inactive} or
 \emph{destroyed}. A state diagram showing the various states and transitions is
 shown in Figure~\ref{fig:queuestate}.
-
 
 \begin{description}
 \item[Active] Once a queue is successfully created using the
@@ -874,11 +855,11 @@ shown in Figure~\ref{fig:queuestate}.
   the doorbell have effect only when the queue is in the active state. The queue
   is not monitored by a packet processor in any other state.
 
-\item[Error pending inactive] When packet processing or dispatch setup
-  encounters one of the errors described above, the queue packet processor stops
-  packet processing. At this point, there might be in-flight kernels and
-  resources (such as segment allocation) that have been setup for a dispatch but
-  have not yet been freed. So the queue is not entirely inactive, but once the
+\item[Error pending inactive] If an error is encountered during packet
+  processing (invalid packet format, wrong signal, etc.) or dispatch, the packet
+  processor stops. At this point, there might be in-flight kernels and resources
+  (such as segment allocation) that have been setup for a dispatch but have not
+  yet been freed. So the queue is not entirely inactive, but once the
   asynchronous activity concludes, it will become inactive. A queue in
   \emph{error pending inactive} state is not to be considered as destroyed, it
   still needs to be destroyed so the runtime can reclaim the memory allocated
@@ -896,6 +877,7 @@ shown in Figure~\ref{fig:queuestate}.
   packet processor (see Section~\ref{dispatch-packet}) will be signaled with
   either the completion information or an error. Inactivating a queue that is
   already is in the inactive state has no effect.
+
 \item[Destroyed] The queue has been destroyed by the user. The resources
   allocated to the queue and the memory for the queue are no longer valid. The
   queue structure is no longer valid.
@@ -939,10 +921,10 @@ The queue error reporting infrastructure supports and reports a single error per
 queue and attempts to inactivate the queue on the first error it encounters.
 
 \subsection{Example}
-The following sample code below shows how multiple threads can safely add
-packets to a queue.
+TODO
 
-\lstinputlisting{example/queue.c}
+% TODO(mmario): this example is completely wrong
+%\lstinputlisting{example/queue.c}
 
 
 \section{Architected Queuing Language Support}
@@ -985,16 +967,15 @@ different states of a packet and transitions leading to those states.
 \end{figure}
 
 \begin{description}
-\item[On queue] A packet is considered to be in the on queue state once
-  the format of the packet is changed from invalid (a value of 0) to a value of
-  1, 2 or 3. Any other value for format puts the packet and the queue in error
-  state.
+\item[On queue] A packet is considered to be in the on queue state once the
+  format of the packet is different from
+  \refenu{HSA_AQL_PACKET_FORMAT_ALWAYS_RESERVED} and
+  \refenu{HSA_AQL_PACKET_FORMAT_INVALID}.
 
-\item[Launch] If this dispatch packet has the barrier bit set, then
-  the processing of this packet occurs only after all prior kernels have
-  completed execution. Otherwise, once the packets prior to this packet are
-  processed, the packet processor begins to process this packet and the packet
-  enters the active state.
+\item[Launch] If this dispatch packet has the barrier bit set, then the
+  processing of this packet occurs only after all prior kernels have completed
+  execution. Otherwise, the processing starts once the preceding packets have
+  completed their launch phase.
 
 \item[Error] the packet processor encountered an error processing this
   packet. This results in a queue error (see Figure~\ref{fig:queuestate}) and
@@ -1042,10 +1023,10 @@ arguments required to execute the kernel being dispatched and must be setup by
 the user (the layout of this segment is language/finalization specific and
 associated with the code object generated by finalization) prior to writing the
 AQL packet to the queue (unlike the group and private segments, whose lifespan
-spans only the active state of the dispatch packet). Please refer to the HSAIL
-service layer \mariotodo{missing} for an example on how to setup the kernarg
-segment for the HSAIL language, which is based on the 32/64 bit modes the kernel
-is compiled in.
+spans only the active state of the dispatch packet). % Please refer to the HSAIL
+% service layer \mariotodo{missing} for an example on how to setup the kernarg
+% segment for the HSAIL language, which is based on the 32/64 bit modes the kernel
+% is compiled in.
 
 \hypertarget{agent-packet}{}\subsection{Agent Dispatch packet}
 \label{agent-packet}
@@ -1134,8 +1115,7 @@ TODO
 One of the key features of HSA is its ability to share global pointers between
 the host application and code executing on the component. This ability means
 that an application can directly pass a pointer to memory allocated on the host
-to a kernel function dispatched to a component without an intermediate copy, as
-illustrated by the example shown in \hyperlink{coreapi}{Core API Documentation}.
+to a kernel function dispatched to a component without an intermediate copy.
 
 \hypertarget{memory-registration}{}\subsection{Registration}\label{memory-registration}
 
@@ -1560,306 +1540,314 @@ interacts with the \reffun{hsa_vendor_query_extension} API call.
 
 \chapter{HSA Extensions Programming Guide}
 
-\section{Compilation Unit, Finalizer and ISA Linking}
+\section{HSAIL Finalization and Linking}
 \label{finalizerchapter} \hypertarget{finalizerchapter}{}
-\hypertarget{finalizer}{}\subsection{Finalization, Compilation Unit,
-Code, Debug and Symbol Objects}\label{finalizer}
 
-Compilation support in the HSA core runtime comprises of a finalization
-step. The primary functionality of this step is to translate the HSAIL to a
-component specific instruction set and produce a compilation unit. It resolves
-user defined symbols that are not already bound via callbacks provided by the
-user.
+The following subsections have to be updated according to the API definitions
+introduced in version 0.180 of the specification.
 
-HSA components may support HSAIL natively or may have a native ISA that the
-HSAIL needs to be translated into. However, compilation is a necessary step and
-is required despite a HSA components' native support of HSAIL. This is because
-of two primary reasons:
 
-\begin{enumerate}
-\item The HSA kernel code objects (accessible via the
-  \reftyp{hsa_compilationunit_code_t} structure, discussed in
-  Section~\ref{finalize:codeobject} ) are an output of the finalization process
-  and required as an input for the AQL dispatch packet; to obtain values from
-  the finalizer for segment sizes etc.\ and also to act as a container for
-  component specific execution information.
+\hypertarget{finalizer}{}\subsection{HSAIL Finalization}\label{finalizer}
 
-\item In order to support kernel dispatches from the HSA component, the kernel
-  code object must reside in a memory layout specification since dispatches
-  initiated from components are able to use memory operations to get the
-  information necessary for a dispatch.
-\end{enumerate}
+\hypertarget{linking}{}\subsection{HSAIL Linking}\label{linking}
 
-\subsubsection{BRIG and .directive Section}
-The core runtime accepts HSAIL programs coded in the BRIG binary format, as
-defined in the HSA PRM~\cite{prm}, for its finalization process. BRIG is a
-binary format defined by the HSA PRM and includes 5 different sections,
-\emph{.string}, \emph{.directive}, \emph{.code}, \emph{.operand}, and
-\emph{.debug}. More information on these sections is described in Section 19.1
-of the HSA PRM. The core runtime structure that represents a BRIG is named
-\reftyp{hsa_brig_t}. This structure is an in-memory representation of the
-BRIG. It is defined as follows:
+% Compilation support in the HSA core runtime comprises of a finalization
+% step. The primary functionality of this step is to translate the HSAIL to a
+% component specific instruction set and produce a compilation unit. It resolves
+% user defined symbols that are not already bound via callbacks provided by the
+% user.
 
-[DELETED CODE]
+% HSA components may support HSAIL natively or may have a native ISA that the
+% HSAIL needs to be translated into. However, compilation is a necessary step and
+% is required despite a HSA components' native support of HSAIL. This is because
+% of two primary reasons:
 
-Of the different sections in BRIG, the .directive section provides information
-to the finalizer on functions, kernels, and global declarations, etc. The
-symbols in the .directive section have defined placement rules (see PRM for more
-information). For example, immediately after a function or kernel directive,
-BRIG requires the directives that describe the arguments to be in a certain
-order. Return arguments are first, followed by input arguments, followed by the
-directives that apply only to the function or kernel.
+% \begin{enumerate}
+% \item The HSA kernel code objects (accessible via the
+%   \reftyp{hsa_compilationunit_code_t} structure, discussed in
+%   Section~\ref{finalize:codeobject} ) are an output of the finalization process
+%   and required as an input for the AQL dispatch packet; to obtain values from
+%   the finalizer for segment sizes etc.\ and also to act as a container for
+%   component specific execution information.
 
-The \reftyp{hsa_brig_t} structure has the base address of the directive
-section. A directive for any symbol is represented using an offset into the
-directive section. HSA core runtime defines a type
-\reftyp{hsa_brig_directive_offset_t} to represent the .directive section
-offset. It is typedef to an unsigned 32 bit integer and is defined by all
-implementations as follows:
+% \item In order to support kernel dispatches from the HSA component, the kernel
+%   code object must reside in a memory layout specification since dispatches
+%   initiated from components are able to use memory operations to get the
+%   information necessary for a dispatch.
+% \end{enumerate}
 
-[DELETED CODE]
+% \subsubsection{BRIG and .directive Section}
+% The core runtime accepts HSAIL programs coded in the BRIG binary format, as
+% defined in the HSA PRM~\cite{prm}, for its finalization process. BRIG is a
+% binary format defined by the HSA PRM and includes 5 different sections,
+% \emph{.string}, \emph{.directive}, \emph{.code}, \emph{.operand}, and
+% \emph{.debug}. More information on these sections is described in Section 19.1
+% of the HSA PRM. The core runtime structure that represents a BRIG is named
+% \reftyp{hsa_brig_t}. This structure is an in-memory representation of the
+% BRIG. It is defined as follows:
 
-There are different types of directives specified in the PRM. Of these, the
-control directives are a means to allow implementations to pass information to
-the finalizer via HSAIL. HSA runtime defines a structure
-\reftyp{hsa_control_directives_t} to represent the values of control
-directives both at finalization time and to record information in the kernel
-code object. Control directives may also be specified within the HSAIL
-code. When conflicting values are specified for a particular directive specified
-in HSAIL and at finalization time, the runtime will do one of the following: (a)
-perform a union (OR operation) when possible (e.g. when the value represents a
-bit field).
+% [DELETED CODE]
 
-(b) when a union is not meaningful, the runtime will require that the value
-provided at finalization time via the \reftyp{hsa_control_directives_t}
-structure match the value for this directive in the HSAIL kernel.
+% Of the different sections in BRIG, the .directive section provides information
+% to the finalizer on functions, kernels, and global declarations, etc. The
+% symbols in the .directive section have defined placement rules (see PRM for more
+% information). For example, immediately after a function or kernel directive,
+% BRIG requires the directives that describe the arguments to be in a certain
+% order. Return arguments are first, followed by input arguments, followed by the
+% directives that apply only to the function or kernel.
 
-The \reftyp{hsa_control_directives_t} structure is defined as
-follows:
+% The \reftyp{hsa_brig_t} structure has the base address of the directive
+% section. A directive for any symbol is represented using an offset into the
+% directive section. HSA core runtime defines a type
+% \reftyp{hsa_brig_directive_offset_t} to represent the .directive section
+% offset. It is typedef to an unsigned 32 bit integer and is defined by all
+% implementations as follows:
 
-[DELETED CODE]
+% [DELETED CODE]
 
-Where, the \reftyp{hsa_control_directive_present64_t} is defined as a 64bit
-unsigned integer.
-[DELETED CODE]
+% There are different types of directives specified in the PRM. Of these, the
+% control directives are a means to allow implementations to pass information to
+% the finalizer via HSAIL. HSA runtime defines a structure
+% \reftyp{hsa_control_directives_t} to represent the values of control
+% directives both at finalization time and to record information in the kernel
+% code object. Control directives may also be specified within the HSAIL
+% code. When conflicting values are specified for a particular directive specified
+% in HSAIL and at finalization time, the runtime will do one of the following: (a)
+% perform a union (OR operation) when possible (e.g. when the value represents a
+% bit field).
 
-The enumeration \reftyp{hsa_control_directive_present64_t} is a bit set
-indicating which control directives have been specified. It is accessible via a
-mask, \reftyp{hsa_control_directives_present_mask_t}, which is defined as
-follows:
+% (b) when a union is not meaningful, the runtime will require that the value
+% provided at finalization time via the \reftyp{hsa_control_directives_t}
+% structure match the value for this directive in the HSAIL kernel.
 
-[DELETED CODE]
+% The \reftyp{hsa_control_directives_t} structure is defined as
+% follows:
 
-User can choose to either break on exceptions or just detect them. The PRM
-defines the policy to be exception-type specific, i.e.\ different IEEE
-exceptions supported by HSA (see the definition of the enumeration
-\reftyp{hsa_exception_kind_mask_t} below) can be handled with different
-policies (BREAK vs.\ DETECT). The \reffld{enable_break_exceptions} field
-specifies the set of HSAIL exceptions that must have the BREAK policy
-enabled. It is possible that on some systems, enabling exceptions may result in
-lower code performance. If the kernel being finalized has any
-\texttt{enablebreakexceptions} control directives in HSAIL, then the runtime
-performs a union (OR operation) of values specified by this argument with the
-values in HSAIL control directives. If any of the functions the kernel calls
-have an enablebreakexceptions control directive, then they must be equal to or a
-subset of this union.
+% [DELETED CODE]
 
-[DELETED CODE]
+% Where, the \reftyp{hsa_control_directive_present64_t} is defined as a 64bit
+% unsigned integer.
+% [DELETED CODE]
 
-\subsubsection{Code Objects}\label{finalize:codeobject}
+% The enumeration \reftyp{hsa_control_directive_present64_t} is a bit set
+% indicating which control directives have been specified. It is accessible via a
+% mask, \reftyp{hsa_control_directives_present_mask_t}, which is defined as
+% follows:
 
-There are different code objects defined by the runtime specification in support
-of HSAIL: \reftyp{hsa_kernel_code_t}, \reftyp{hsa_compilationunit_code_t}
-and \reftyp{hsa_function_code_t}. All of them are in memory and can be
-relocatable and/or position independent (which indicates that the object can be
-deep-copied to other memory locations for execution). The HSA runtime provides a
-query API to verify if a particular component supports position independent code
-objects (see Section~\ref{topology}).
+% [DELETED CODE]
 
-The \reftyp{hsa_compilationunit_code_t} is the header for the code object
-produced by the Finalizer and contains information that applies to all code
-entities in the compilation unit.
+% User can choose to either break on exceptions or just detect them. The PRM
+% defines the policy to be exception-type specific, i.e.\ different IEEE
+% exceptions supported by HSA (see the definition of the enumeration
+% \reftyp{hsa_exception_kind_mask_t} below) can be handled with different
+% policies (BREAK vs.\ DETECT). The \reffld{enable_break_exceptions} field
+% specifies the set of HSAIL exceptions that must have the BREAK policy
+% enabled. It is possible that on some systems, enabling exceptions may result in
+% lower code performance. If the kernel being finalized has any
+% \texttt{enablebreakexceptions} control directives in HSAIL, then the runtime
+% performs a union (OR operation) of values specified by this argument with the
+% values in HSAIL control directives. If any of the functions the kernel calls
+% have an enablebreakexceptions control directive, then they must be equal to or a
+% subset of this union.
 
-Since core runtime does not define a file format container, the core runtime
-provides API to work with HSAIL programs encoded in the BRIG binary format and
-supports generation of code objects that include kernels to be executed in the
-HSA component and binding of unresolved symbols associated with the code object
-generated.
+% [DELETED CODE]
 
-Finalizer allocates a single contiguous area of memory to hold the generated
-code for all the code objects.
+% \subsubsection{Code Objects}\label{finalize:codeobject}
 
-The structure of this contiguous area is as follows: Starting at offset 0, the
-``header'' of this contiguous area is defined by the
-\reftyp{hsa_compilationunit_code_t} structure. The
-\reftyp{hsa_compilationunit_code_t} structure in turn contains an offset to
-an array of \reftyp{hsa_code_entry_t}, one entry per code entity that the
-finalizer has produced code for. Each \reftyp{hsa_code_entry_t} variable
-contains an offset to a \reftyp{hsa_*code_t} object that describes that code
-entity (function/kernel/etc).
+% There are different code objects defined by the runtime specification in support
+% of HSAIL: \reftyp{hsa_kernel_code_t}, \reftyp{hsa_compilationunit_code_t}
+% and \reftyp{hsa_function_code_t}. All of them are in memory and can be
+% relocatable and/or position independent (which indicates that the object can be
+% deep-copied to other memory locations for execution). The HSA runtime provides a
+% query API to verify if a particular component supports position independent code
+% objects (see Section~\ref{topology}).
 
-[DELETED CODE]
+% The \reftyp{hsa_compilationunit_code_t} is the header for the code object
+% produced by the Finalizer and contains information that applies to all code
+% entities in the compilation unit.
 
-Every \reftyp{hsa_*_code_t} code objects start with a common header that also
-contains what kind of code object it is. The common header,
-\reftyp{hsa_code_t}, is defined as follows:
-[DELETED CODE]
+% Since core runtime does not define a file format container, the core runtime
+% provides API to work with HSAIL programs encoded in the BRIG binary format and
+% supports generation of code objects that include kernels to be executed in the
+% HSA component and binding of unresolved symbols associated with the code object
+% generated.
 
-A bit set of flags providing information about the code in a compilation
-unit. Unused flags must be 0. The \reftyp{hsa_code_properties32_t} must be
-used as a type for this flag. The values/mask currently supported is defined as
-follows:
-[DELETED CODE]
+% Finalizer allocates a single contiguous area of memory to hold the generated
+% code for all the code objects.
 
-The \reftyp{hsa_compilationunit_code_t} structure is defined as
-follows:
-[DELETED CODE]
+% The structure of this contiguous area is as follows: Starting at offset 0, the
+% ``header'' of this contiguous area is defined by the
+% \reftyp{hsa_compilationunit_code_t} structure. The
+% \reftyp{hsa_compilationunit_code_t} structure in turn contains an offset to
+% an array of \reftyp{hsa_code_entry_t}, one entry per code entity that the
+% finalizer has produced code for. Each \reftyp{hsa_code_entry_t} variable
+% contains an offset to a \reftyp{hsa_*code_t} object that describes that code
+% entity (function/kernel/etc).
 
-Both the \reftyp{hsa_compilationunit_t} and \reftyp{hsa_*_code_t} objects
-can have implementation define data towards the end of the structure. All
-elements in the contiguous location being accessed by offsets enables such
-definition. This also allows the exact position of the various objects in the
-contiguous memory area to be implementation defined as long as memory alignment
-requirements are met.
+% [DELETED CODE]
 
-Many of the \reftyp{hsa_*_code_t} objects include a size field which is
-required to be set to the size of the structure. This allows forward
-compatibility and allows for structure definitions to change or include
-implementation specific information.
+% Every \reftyp{hsa_*_code_t} code objects start with a common header that also
+% contains what kind of code object it is. The common header,
+% \reftyp{hsa_code_t}, is defined as follows:
+% [DELETED CODE]
 
-The \reftyp{hsa_kernel_code_t} is required for all component dispatches and
-is referred to by the dispatch AQL packets placed in the HSA queue. This allows
-an implementation to rely on all such objects being the same size for more
-efficient navigation to the implementation specific data without need to first
-read the object's size field.
+% A bit set of flags providing information about the code in a compilation
+% unit. Unused flags must be 0. The \reftyp{hsa_code_properties32_t} must be
+% used as a type for this flag. The values/mask currently supported is defined as
+% follows:
+% [DELETED CODE]
 
-The \reftyp{hsa_kernel_code_t} is the output of
-\reffun{hsa_finalize_brig} API and is defined as follows.
-[DELETED CODE]
+% The \reftyp{hsa_compilationunit_code_t} structure is defined as
+% follows:
+% [DELETED CODE]
 
-\subsubsection{Finalize BRIG API}
-The \reffun{hsa_finalize_brig} API accepts \reftyp{hsa_brig_t} as an input
-and produces relocatable code object in which global and group symbols are bound
-to actual, component recognizable, addresses. A symbol in the finalization step
-can be a variable, a function, image or a sampler. When finalization occurs, a
-\reftyp{hsa_kernel_code_t}, representing the kernel that needs to be executed
-on the component is generated. However, all the symbols referenced in the
-kernel being finalized may not be resolved with the information provided at its
-finalization. User is allowed to define callbacks that can resolve the symbols
-declared in the global segment, with the following signature:
-[DELETED CODE]
+% Both the \reftyp{hsa_compilationunit_t} and \reftyp{hsa_*_code_t} objects
+% can have implementation define data towards the end of the structure. All
+% elements in the contiguous location being accessed by offsets enables such
+% definition. This also allows the exact position of the various objects in the
+% contiguous memory area to be implementation defined as long as memory alignment
+% requirements are met.
 
-The finalization step, when successfully executed, can have two distinct
-outputs. The first is the compilation unit code object,
-\reftyp{hsa_compilationunit_code_t} which is discussed in
-Section~\ref{finalize:codeobject}. The second output is of type
-\reftyp{hsa_compilationunit_debug_t} which is only generated when the code is
-compiled with a debug option. This debug information is currently implementation
-defined.
+% Many of the \reftyp{hsa_*_code_t} objects include a size field which is
+% required to be set to the size of the structure. This allows forward
+% compatibility and allows for structure definitions to change or include
+% implementation specific information.
 
-Since the contiguous memory that {\itshape compilationunit_code} represents and
-the memory for {\itshape compilationunit_debug} need to be allocated, the user
-is expected to provide callbacks for memory allocation.
+% The \reftyp{hsa_kernel_code_t} is required for all component dispatches and
+% is referred to by the dispatch AQL packets placed in the HSA queue. This allows
+% an implementation to rely on all such objects being the same size for more
+% efficient navigation to the implementation specific data without need to first
+% read the object's size field.
 
-The callback is required to have the following signature:
-[DELETED CODE]
+% The \reftyp{hsa_kernel_code_t} is the output of
+% \reffun{hsa_finalize_brig} API and is defined as follows.
+% [DELETED CODE]
 
-Where caller is the opaque pointer passed to the \reffun{hsa_finalize_brig}
-that is calling back this function. {\itshape byte_size} is the size in bytes
-of the memory to be allocated. {\itshape byte_alignment} is the required byte
-alignment of the memory allocated. Must be a power of 2. {\itshape address} is
-pointer to location that will be updated with address of allocated memory if
-successful, or NULL if not successful. {\itshape return value} is the HSA
-status of the allocation.
-[DELETED CODE]
+% \subsubsection{Finalize BRIG API}
+% The \reffun{hsa_finalize_brig} API accepts \reftyp{hsa_brig_t} as an input
+% and produces relocatable code object in which global and group symbols are bound
+% to actual, component recognizable, addresses. A symbol in the finalization step
+% can be a variable, a function, image or a sampler. When finalization occurs, a
+% \reftyp{hsa_kernel_code_t}, representing the kernel that needs to be executed
+% on the component is generated. However, all the symbols referenced in the
+% kernel being finalized may not be resolved with the information provided at its
+% finalization. User is allowed to define callbacks that can resolve the symbols
+% declared in the global segment, with the following signature:
+% [DELETED CODE]
 
-HSAIL does not define a set of options that a finalizer needs to specify. To
-ensure portability, \reffun{hsa_finalize_brig} must not return an error status
-if a given compilation option is not recognized.
+% The finalization step, when successfully executed, can have two distinct
+% outputs. The first is the compilation unit code object,
+% \reftyp{hsa_compilationunit_code_t} which is discussed in
+% Section~\ref{finalize:codeobject}. The second output is of type
+% \reftyp{hsa_compilationunit_debug_t} which is only generated when the code is
+% compiled with a debug option. This debug information is currently implementation
+% defined.
 
-The callback for the allocation of \hsaarg{compilationunit_debug} is optional
-and is required when the user passes in a flag at finalization to generate debug
-information. This callback, when defined, must have the same signature as
-\reftyp{hsa_alloc_t} above.
+% Since the contiguous memory that {\itshape compilationunit_code} represents and
+% the memory for {\itshape compilationunit_debug} need to be allocated, the user
+% is expected to provide callbacks for memory allocation.
 
-\subsubsection{Freeing The Compilation Unit Code/Debug Object}
-The core runtime also provides a corresponding destruction API that destroys the
-compilation unit code and debug objects. This will reclaim all memory used by
-the \reftyp{hsa_compilationunit_code_t} (including the ISA it contains) and
-associated \reftyp{hsa_compilationunit_debug_t}. It will also unregister the
-ISA memory if appropriate.
+% The callback is required to have the following signature:
+% [DELETED CODE]
 
-[DELETED CODE]
+% Where caller is the opaque pointer passed to the \reffun{hsa_finalize_brig}
+% that is calling back this function. {\itshape byte_size} is the size in bytes
+% of the memory to be allocated. {\itshape byte_alignment} is the required byte
+% alignment of the memory allocated. Must be a power of 2. {\itshape address} is
+% pointer to location that will be updated with address of allocated memory if
+% successful, or NULL if not successful. {\itshape return value} is the HSA
+% status of the allocation.
+% [DELETED CODE]
 
-Note that destroying does not impact any memory segments that may have been
-allocated/reserved for use in a kernel from this object. It merely releases
-resources used to build the object.
+% HSAIL does not define a set of options that a finalizer needs to specify. To
+% ensure portability, \reffun{hsa_finalize_brig} must not return an error status
+% if a given compilation option is not recognized.
 
-\subsubsection{Serializing and Deserializing a Compilation Unit}
+% The callback for the allocation of \hsaarg{compilationunit_debug} is optional
+% and is required when the user passes in a flag at finalization to generate debug
+% information. This callback, when defined, must have the same signature as
+% \reftyp{hsa_alloc_t} above.
 
-Because of the opaque nature of what the compilation unit actually represents,
-and in order for the users of the core runtime to build file containers,
-serialization and deserialization API are defined by the core runtime. The
-definition is as follows:
+% \subsubsection{Freeing The Compilation Unit Code/Debug Object}
+% The core runtime also provides a corresponding destruction API that destroys the
+% compilation unit code and debug objects. This will reclaim all memory used by
+% the \reftyp{hsa_compilationunit_code_t} (including the ISA it contains) and
+% associated \reftyp{hsa_compilationunit_debug_t}. It will also unregister the
+% ISA memory if appropriate.
 
-[DELETED CODE]
+% [DELETED CODE]
+
+% Note that destroying does not impact any memory segments that may have been
+% allocated/reserved for use in a kernel from this object. It merely releases
+% resources used to build the object.
+
+% \subsubsection{Serializing and Deserializing a Compilation Unit}
+
+% Because of the opaque nature of what the compilation unit actually represents,
+% and in order for the users of the core runtime to build file containers,
+% serialization and deserialization API are defined by the core runtime. The
+% definition is as follows:
+
+% [DELETED CODE]
 
 \hypertarget{groupmem}{}\subsection{Group Memory
-  Usage}\label{groupmem} Group memory can be allocated either
-statically when the finalizer is called or dynamically by the user at launch
-time.
+  Usage}\label{groupmem}
 
-Static allocation is supported as follows:
-\begin{itemize}
-\item The \reffun{hsa_finalize_brig} routine writes the amount of group memory
-  needed by the finalized ISA to the
-  \reftyp{hsa_code_object_t}.\reffld{workgroup_group_segment_size_byte}
-  field. The group memory usage includes group memory which is statically
-  allocated in the HSAIL kernel, as well as private group memory used by the
-  finalizer. Different HSA implementations might allocate different amounts of
-  group memory.
+% Group memory can be allocated either
+% statically when the finalizer is called or dynamically by the user at launch
+% time.
 
-\item The user copies the requested group segment usage to the dispatch packet
-  field \reffld{group_segment_size_bytes}.
+% Static allocation is supported as follows:
+% \begin{itemize}
+% \item The \reffun{hsa_finalize_brig} routine writes the amount of group memory
+%   needed by the finalized ISA to the
+%   \reftyp{hsa_code_object_t}.\reffld{workgroup_group_segment_size_byte}
+%   field. The group memory usage includes group memory which is statically
+%   allocated in the HSAIL kernel, as well as private group memory used by the
+%   finalizer. Different HSA implementations might allocate different amounts of
+%   group memory.
 
-\item The packet processor reads the group memory usage field and reserves the
-  required resources at dispatch time.
+% \item The user copies the requested group segment usage to the dispatch packet
+%   field \reffld{group_segment_size_bytes}.
 
-\item Statically allocated group memory starts at a segment offset of 0.
+% \item The packet processor reads the group memory usage field and reserves the
+%   required resources at dispatch time.
 
-\end{itemize}
+% \item Statically allocated group memory starts at a segment offset of 0.
 
-Dynamically allocated group memory allows the user to specify the group memory
-size when the kernel is launched. This is useful to support dynamic group memory
-allocation features supported by languages such as OpenCL. Essentially, the user
-manually calculates the offset for each kernel argument (including the static
-allocation in the calculation) and passes these as arguments to the HSAIL
-kernel. Specifically:
+% \end{itemize}
 
-\begin{itemize}
+% Dynamically allocated group memory allows the user to specify the group memory
+% size when the kernel is launched. This is useful to support dynamic group memory
+% allocation features supported by languages such as OpenCL. Essentially, the user
+% manually calculates the offset for each kernel argument (including the static
+% allocation in the calculation) and passes these as arguments to the HSAIL
+% kernel. Specifically:
 
-\item As above, the \reffun{hsa_finalize_brig} routine returns the requested
-  static group allocation.
+% \begin{itemize}
 
-\item HSAIL will use standard 32-bit arguments (that is, \ttbf{kernarg_u32})
-  to specify group segment offsets. The user is responsible for computing the
-  offset for each group memory argument location. The first argument must start
-  just above the static allocation, so it always has the offset of
-  \reffld{workgroup_group_segment_size_byte} (see
-  \reftyp{hsa_code_object_t}).
+% \item As above, the \reffun{hsa_finalize_brig} routine returns the requested
+%   static group allocation.
 
-\item After setting the offset for each group memory argument, the user must set
-  the AQL dispatch packet's \reftyp{hsa_aql_dispatch_packet_t}.\reffld{
-    group_segment_size_bytes} field to the total amount of group memory used
-  (static and dynamic allocations).
+% \item HSAIL will use standard 32-bit arguments (that is, \ttbf{kernarg_u32})
+%   to specify group segment offsets. The user is responsible for computing the
+%   offset for each group memory argument location. The first argument must start
+%   just above the static allocation, so it always has the offset of
+%   \reffld{workgroup_group_segment_size_byte} (see
+%   \reftyp{hsa_code_object_t}).
 
-\end{itemize}
+% \item After setting the offset for each group memory argument, the user must set
+%   the AQL dispatch packet's \reftyp{hsa_aql_dispatch_packet_t}.\reffld{
+%     group_segment_size_bytes} field to the total amount of group memory used
+%   (static and dynamic allocations).
 
-See below for an example of setting up dynamic group memory arguments for a
-kernel.  \lstinputlisting{example/group-sample.c}
+% \end{itemize}
 
-Here is the corresponding kernel and usage model:
-\lstinputlisting{example/group-sample-hsail.c}
+% See below for an example of setting up dynamic group memory arguments for a
+% kernel.  \lstinputlisting{example/group-sample.c}
+
+% Here is the corresponding kernel and usage model:
+% \lstinputlisting{example/group-sample-hsail.c}
 
 
 \section{Images and Samplers}
@@ -2026,6 +2014,9 @@ following actions will allow a component to initiate a dispatch:
 \chapter{HSA API Reference}
 % names of the sections here should match those of the programming guide
 
+\section{Common data structures}
+\input{api/altlatex/group-RuntimeCommon}
+
 \section{Initialization and Shutdown}
 \input{api/altlatex/group-context}
 
@@ -2044,10 +2035,10 @@ following actions will allow a component to initiate a dispatch:
 \section{Architected Queuing Language Support}
 \input{api/altlatex/group-aql}
 
-\section{HSAIL Finalizer}
+\section{HSAIL Finalization}
 \input{api/altlatex/group-FinalizerCoreApi}
 
-\section{HSAIL Linker (Service Layer)}
+\section{HSAIL Linking (Service Layer)}
 \input{api/altlatex/group-HsailLinkerServiceLayer}
 
 \section{Images and Samplers}
