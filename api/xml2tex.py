@@ -4,15 +4,15 @@ import xml.etree.ElementTree as ET
 import sys
 import os
 
-# replace underscores with dashes in label and their references
-# this replacement is required by the 'underscore' package
-def under2dash(text):
-  return text.replace("_","-")
-
-# escape characters to make them Latex-friendly
-def text2tex(text):
-  # no need to escape underscores if 'underscore' package is used
-  return text
+# map from a type name to its unique ID. This is necessary because Doxygen does
+# not generate enough information for 'typedefs' such that we can build internal
+# links. For instance, if there is a pointer to a function defined as
+# void (*some_name)(hsa_status_t status), then there is no metainformation
+# stating that the argument 'status' is indeed of type hsa_status: it is up to
+# us to infer it. Since we are only interested in detecting HSA types, and all
+# of them follow the hsa_XXX_t naming convention, we store a pair (name, ID)
+# when they are declared, and use it when processing 'typedefs'.
+typename_id = {}
 
 # custom text (Latex) iterator that consumes XML
 def myitertext(self):
@@ -21,14 +21,14 @@ def myitertext(self):
     return
   selftext = ''
   if self.text:
-    mytex = text2tex(self.text)
+    mytex = self.text
     if tag == 'emphasis':
       yield '\\textit{' + mytex + '}'
     elif tag == 'ref':
       # brutal hardcoding in order to find out if it is a function name
       if mytex[:4] == "hsa_" and mytex[-2:] != "_t":
         mytex = "\\reffun{" + mytex + "}"
-      yield '\\hyperlink{' + under2dash(self.get('refid')) + '}{' + mytex + '}'
+      yield '\\hyperlink{' + self.get('refid') + '}{' + mytex + '}'
     else:
       yield mytex
 
@@ -81,14 +81,31 @@ def node2tex(node):
     return ''
   return ''.join(myitertext(node)).encode("utf-8").strip()
 
-def process_typedef(typedef, tex):
+def linkify(definition):
+  ret = definition
+  done = [] # types already processed
+  start = definition.find('hsa_', 0)
+  while start != -1:
+    end = definition.find('_t', start) + 2
+    candidate = definition[start:end]
+    refid = typename_id.get(candidate)
+    if (candidate not in done) and (refid is not None):
+      ret = ret.replace(candidate, '\\hyperlink{' + refid + '}{' + candidate + '}')
+      done += candidate
+    start = definition.find('hsa_', end)
+  return ret
+
+def process_typedef(typedef, tex, defs):
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # typedef definition. We use the 'definition' string because in the presence
   # of pointers to functions using the type itself is tricky.
   definition = node2tex(typedef.find('definition'))
+  definition = linkify(definition)
   name = node2tex(typedef.find('name'))
-  newname = " \\hypertarget{" + under2dash(typedef.get('id')) + "}{\\textbf{" + name + "}}"
+  defs.append(('reftyp', name))
+  typename_id[name] = typedef.get('id')
+  newname = " \\hypertarget{" + typedef.get('id') + "}{\\textbf{" + name + "}}"
   definition = definition.replace(name, newname, 1)
   tex.write(definition + "\n")
   # end box
@@ -96,7 +113,7 @@ def process_typedef(typedef, tex):
   # brief
   tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\\\\")
 
-def process_struct_or_union(typedef, tex):
+def process_struct_or_union(typedef, tex, defs):
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # name
@@ -128,8 +145,11 @@ def process_struct_or_union(typedef, tex):
     txt += node2tex(member.find('detaileddescription/para'))
     fields.append(txt)
   tex.write(''.join(vals) + "\} ")
-  tex.write(" \\hypertarget{" + under2dash(typedef.get('id')) + "}")
-  tex.write("{\\textbf{" + node2tex(typedef.find('name')) + "}}")
+  tex.write(" \\hypertarget{" + typedef.get('id') + "}")
+  typename = node2tex(typedef.find('name'))
+  tex.write("{\\textbf{" + typename + "}}")
+  defs.append(('reftyp', typename))
+  typename_id[typename] = typedef.get('id')
   tex.write("\n\\end{longtable}" + "\n\n")
 
   # end box
@@ -142,12 +162,16 @@ def process_struct_or_union(typedef, tex):
   tex.write("\\\\[2mm]\n".join(fields))
   tex.write("\n\\end{longtable}" + "\n\n")
 
-def process_enum(enum, tex):
+def process_enum(enum, tex, defs):
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # enum name
-  tex.write('enum ' + "\\hypertarget{" + under2dash(enum.get('id')) + "}")
-  tex.write("{\\textbf{" + node2tex(enum.find('name')) + "}}" + "\n")
+  tex.write('enum ' + "\\hypertarget{" + enum.get('id') + "}")
+  typename = node2tex(enum.find('name'))
+  tex.write("{\\textbf{" + typename + "}}" + "\n")
+  defs.append(('reftyp', typename))
+  typename_id[typename] = enum.get('id')
+
   # end box
   tex.write('\\end{tcolorbox}\n')
   # brief
@@ -157,8 +181,10 @@ def process_enum(enum, tex):
   tex.write('\\begin{longtable}{@{\\hspace{2em}}p{\\linewidth-2em}}' + "\n")
   vals = []
   for val in enum.findall("enumvalue"):
-    valtxt = "\\hspace{-2em}\\hypertarget{" + under2dash(val.get('id')) + "}{"
-    valtxt += "\\refenu{" + node2tex(val.find('name')) + "}}"
+    valtxt = "\\hspace{-2em}\\hypertarget{" + val.get('id') + "}{"
+    valname = node2tex(val.find('name'))
+    defs.append(('refenu', valname))
+    valtxt += "\\refenu{" + valname + "}}"
     valtxt += ' ' + node2tex(val.find('initializer'))
     valdesc = node2tex(val.find('detaileddescription'))
     if valdesc != '':
@@ -167,16 +193,17 @@ def process_enum(enum, tex):
   tex.write("\\\\[2mm]\n".join(vals))
   tex.write("\n\\end{longtable}")
 
-def process_function(func, tex, listings):
+def process_function(func, tex, listings, commands):
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,colframe=white,colback=lightgray,left=0mm]\n')
   # signature - return value
   tex.write(node2tex(func.find('type')) + " ")
   # signature - func name
-  tex.write("\\hypertarget{" + under2dash(func.get('id')) + "}")
+  tex.write("\\hypertarget{" + func.get('id') + "}")
   funcname = node2tex(func.find('name'))
   tex.write("{\\textbf{" + funcname + "}}(")
-  listings.write(funcname + ",")
+  listings.write(funcname + ",") # add function name to listings keyword list
+  commands.append(('reffun', funcname))
   # signature - parameters
   sigargs = func.findall("param")
   if sigargs:
@@ -258,7 +285,7 @@ def process_function(func, tex, listings):
     tex.write("\\\\[2mm]\n".join(paraslst))
   tex.write(" \n")
 
-def process_file(file, listings):
+def process_file(file, listings, defs):
   tree = ET.parse(os.path.join('xml',file))
   root = tree.getroot()
   texfilename = (os.path.splitext(file)[0] + ".tex").replace("__", "-")
@@ -267,7 +294,7 @@ def process_file(file, listings):
 
   # Doxygen sorts members by type (e.g. enums appear first and all together)
   # Instead, we sort them according to location (source line number)
-  memberdefs.sort(key=lambda memberdef: memberdef.find('location').get('line'))
+  memberdefs.sort(key=lambda memberdef: int(memberdef.find('location').get('line')))
 
   # main processing loop
   for memberdef in memberdefs:
@@ -276,31 +303,60 @@ def process_file(file, listings):
     if k == 'typedef':
       typetext = node2tex(memberdef.find('type'));
       if typetext[:5] not in ['struc','union']:
-        process_typedef(memberdef, tex)
+        process_typedef(memberdef, tex, defs)
       else:
-        process_struct_or_union(memberdef, tex)
+        process_struct_or_union(memberdef, tex, defs)
     elif k == 'enum':
-      process_enum(memberdef, tex)
+      process_enum(memberdef, tex, defs)
     elif k == 'function':
-      process_function(memberdef, tex, listings)
+      process_function(memberdef, tex, listings, defs)
 
   tex.close()
+
+def generate_hsaref(defs):
+  hsaref = '\\makeatletter\n\\newcommand{\\hsaref}[1]{\n'
+  # create random 'if' so we can treat all the actual definitions in the same way
+  hsaref += '\\ifnum\\pdf@strcmp{#1}{blablablablabla}=0 blablablablabla\n'
+  # definitions
+  defs = map(lambda x: '\\else\ifnum\\pdf@strcmp{#1}{' + x[1] + '}=0 \\' + x[0] + '{' + x[1] + '}\n', defs)
+  hsaref += ''.join(defs)
+  # reference not found
+  hsaref += '\\else\\errmessage{Unknown reference: #1. Declaration not found in hsa.h}\n'
+  hsaref += '\\fi' * (1 + len(defs))
+  hsaref += '}\n\makeatother\n'
+  return hsaref
+
+# Files (groups) are processed according to the header line number where they
+# start. This simplifies the processing since in the common case every
+# referenced entity has already been defined.
+#
+# If groups definitions are scattered across the header (i.e. \addgroup is used)
+# then this logic is broken
+def group_location(file):
+  tree = ET.parse(os.path.join('xml',file))
+  root = tree.getroot()
+  return int(root.find(".//location").get('line'))
 
 def main():
   outdir = 'altlatex'
   if not os.path.exists(outdir):
     os.makedirs(outdir)
+  commands = open(os.path.join("altlatex", "commands.tex"), "w+")
+  defs = []
   listings = open(os.path.join("altlatex", "listings.tex"), "w+")
   listings.write("\\lstset{emph={")
-  for file in os.listdir('xml'):
-    if file.find("group__") != 0:
-      # other files(ex: structs) are recursively processed through their group
-      continue
+   # other files(ex: structs) are recursively processed through their group
+  files = filter(lambda file: file.find("group__") == 0, os.listdir('xml'))
+  # process groups according to their line number location
+  files.sort(key=lambda file: group_location(file))
+  for file in files:
     sys.stdout.write('Processing ' + file + "...")
-    process_file(file, listings)
+    process_file(file, listings, defs)
     print('OK')
   listings.write("}}")
   listings.close()
+  commands.write(generate_hsaref(defs))
+  commands.close()
   return
 
 
