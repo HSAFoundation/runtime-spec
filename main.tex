@@ -108,7 +108,10 @@
 \newcommand{\refenu}[1]{\reftyp{#1}}
 \newcommand{\refhsl}[1]{\reffun{#1}}
 
+% allows string comparison, which is used to match \hsaref arguments
 \usepackage{pdftexcmds}
+% Automatically generated file containing all the definitions in the header that
+% can be referenced via \hsaref commands
 \input{api/altlatex/commands}
 
 % every section in a new page
@@ -602,18 +605,18 @@ runtime provides the \hsaref{hsa_status_query_description} API.
 Notifications}\label{asyncerror}
 
 The HSA core runtime supports user-defined callbacks to handle asynchronous
-errors. There are two different \mariotodo{why separating them?} categories of
-callbacks that can be registered by the user:\begin{inparaenum}[(i)]\item for
-  asynchronous information or warnings generated when the runtime is executing,
-  or, \item for asynchronous errors that get generated in packet processor, or
-  while executing a kernel \end{inparaenum}. The core runtime supports a
-callback each for asynchronous errors and notifications. The user must use
-caution when using blocking functions within their callback implementation -- a
-callback that does not return can render the runtime state to be undefined. The
-user cannot depend on thread local storage within the callbacks implementation
-and may safely kill the thread that registers the callback. It is the user's
-responsibility to ensure that the callback function is thread-safe. The runtime
-does not implement any default callbacks.
+errors. There are two different categories of callbacks that can be registered
+by the user:\begin{inparaenum}[(i)]\item for asynchronous information or
+  warnings generated when the runtime is executing, or, \item for asynchronous
+  errors that get generated in packet processor, or while executing a
+  kernel \end{inparaenum}. The core runtime supports a callback each for
+asynchronous errors and notifications. The user must use caution when using
+blocking functions within their callback implementation -- a callback that does
+not return can render the runtime state to be undefined. The user cannot depend
+on thread local storage within the callbacks implementation and may safely kill
+the thread that registers the callback. It is the user's responsibility to
+ensure that the callback function is thread-safe. The runtime does not implement
+any default callbacks.
 
 The information/warning status is represented by a value greater than 0 within
 the \hsaref{hsa_status_t} enumeration. The status is up to user interpretation
@@ -623,8 +626,7 @@ the core runtime and the return status is
 \hsaref{HSA_STATUS_ALREADY_INITIALIZED} (to indicate that the core
 runtime has already been initialized). This result may be interpreted
 differently in different usage scenarios. A callback for such notifications may
-be registered via \hsaref{hsa_open} API discussed in Section~\ref{init} or via
-\hsaref{hsa_notification_callback_register} API.
+be registered via \hsaref{hsa_notification_callback_register}.
 
 The HSA system can have several queues in operation and several kernels
 executing from these queues asynchronously. When any asynchronous activity

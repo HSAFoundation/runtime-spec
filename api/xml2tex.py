@@ -345,9 +345,10 @@ def main():
   defs = []
   listings = open(os.path.join("altlatex", "listings.tex"), "w+")
   listings.write("\\lstset{emph={")
-   # other files(ex: structs) are recursively processed through their group
+  # other files(ex: structs) are recursively processed through their group
   files = filter(lambda file: file.find("group__") == 0, os.listdir('xml'))
   # process groups according to their line number location
+  print(files)
   files.sort(key=lambda file: group_location(file))
   for file in files:
     sys.stdout.write('Processing ' + file + "...")

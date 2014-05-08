@@ -56,7 +56,7 @@ typedef enum {
      */
     HSA_STATUS_ERROR_TOPOLOGY_CHANGE,
     /**
-     * TODO.
+\     * TODO.
      */
     HSA_STATUS_INFO_UNRECOGNIZED_OPTIONS,
     /**
@@ -86,7 +86,7 @@ typedef enum {
     /**
      * TODO.
      */
-    HSA_STATUS_ERROR_SIGNAL_NOT_BOUND ,
+    HSA_STATUS_ERROR_SIGNAL_NOT_BOUND,
     /**
      * TODO.
      */
@@ -106,7 +106,7 @@ typedef enum {
 } hsa_status_t;
 
 /**
- * @brief Queries additional information on synchronous errors.
+ * @brief Queries additional information about an error.
  *
  * @details Returns success if one or both of the @a status_info and @a
  * status_info_string have been successfully updated with information regarding
@@ -781,28 +781,6 @@ typedef uint64_t hsa_signal_handle_t;
 typedef intptr_t hsa_signal_value_t;
 
 /**
- * @brief Wait condition operator.
- */
-typedef enum {
-    /**
-     * The two operands are equal.
-     */
-    HSA_EQ,
-    /**
-     * The two operands are not equal.
-     */
-    HSA_NE,
-    /**
-     * The first operand is less than the second operand.
-     */
-    HSA_LT,
-    /**
-     * The first operand is greater than or equal to the second operand.
-     */
-    HSA_GTE
-} hsa_signal_condition_t;
-
-/**
  * @brief Create a signal.
  *
  * @param[in] initial_signal_value Initial value of the signal.
@@ -1061,81 +1039,26 @@ hsa_status_t hsa_signal_xor_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t value);
 
 /**
- * @brief Set (increment) the signal value to a given input if it is
- * greater than the current value.
- *
- * @param[in] signal_handle Signal handle.
- *
- * @param[in] value User defined value.
- *
- * @param[out] max_value Maximum of @a value and the signal's current value.
- *
- * @retval ::HSA_STATUS_SUCCESS
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a signal_handle is invalid.
+ * @brief Wait condition operator.
  */
-hsa_status_t hsa_signal_max(hsa_signal_handle_t signal_handle,
-                hsa_signal_value_t value,
-                hsa_signal_value_t *max_value);
-
-/**
- * @brief Set (decrement) the signal value to a given input if it is
- * smaller than the current value.
- *
- * @param[in] signal_handle Signal handle.
- *
- * @param[in] value User defined value.
- *
- * @param[out] min_value Minimum of @a value and the signal's current value.
- *
- * @retval ::HSA_STATUS_SUCCESS
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a signal_handle is
- * invalid.
- */
-hsa_status_t hsa_signal_min(hsa_signal_handle_t signal_handle,
-                hsa_signal_value_t value,
-                hsa_signal_value_t *min_value);
-
-/**
- * @brief Increment the value of a signal.
- *
- * @param[in] signal_handle Signal handle.
- *
- * @param[in] value Value the signal is to be incremented with.
- *
- * @retval ::HSA_STATUS_SUCCESS
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a signal_handle is invalid.
- */
-hsa_status_t hsa_signal_increment_release(hsa_signal_handle_t signal_handle,
-                hsa_signal_value_t value);
-
-/**
- * @copydoc hsa_signal_increment_release
- */
-hsa_status_t hsa_signal_increment_relaxed(hsa_signal_handle_t signal_handle,
-                hsa_signal_value_t value);
-
-/**
- * @brief Decrement the value of a signal.
- *
- * @param[in] signal_handle Signal handle.
- *
- * @param[in] value Value the signal is to be decremented with.
- *
- * @retval ::HSA_STATUS_SUCCESS
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a signal_handle is invalid.
- */
-hsa_status_t hsa_signal_decrement_release(hsa_signal_handle_t signal_handle,
-                hsa_signal_value_t value);
-
-/**
- * @copydoc hsa_signal_decrement_release
- */
-hsa_status_t hsa_signal_decrement_relaxed(hsa_signal_handle_t signal_handle,
-                hsa_signal_value_t value);
+typedef enum {
+    /**
+     * The two operands are equal.
+     */
+    HSA_EQ,
+    /**
+     * The two operands are not equal.
+     */
+    HSA_NE,
+    /**
+     * The first operand is less than the second operand.
+     */
+    HSA_LT,
+    /**
+     * The first operand is greater than or equal to the second operand.
+     */
+    HSA_GTE
+} hsa_signal_condition_t;
 
 /**
  * @brief Wait until the value of a signal satisfies a given condition, or a
@@ -1467,13 +1390,13 @@ typedef struct hsa_queue_s {
   /**
    * Queue type.
    */
-  hsa_queue_type_t queue_type;
+  hsa_queue_type_t type;
 
   /**
    * Queue features mask. See ::hsa_queue_feature_t. HSA applications should
    * ignore any unknown set bits.
    */
-  uint32_t queue_features;
+  uint32_t features;
 
   /**
    * Pointer to the base of the virtual memory which holds the AQL packets for
@@ -1496,7 +1419,7 @@ typedef struct hsa_queue_s {
   /**
    * Queue identifier which is unique per process.
    */
-  uint32_t queue_id;
+  uint32_t id;
 
   /**
    * A pointer to another user mode queue that can be used by the HSAIL kernel
