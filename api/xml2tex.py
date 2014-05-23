@@ -141,8 +141,10 @@ def process_struct_or_union(typedef, tex, defs):
     vals.append(txt + ";\\\\\n")
     # field name + description
     txt = "\\reffld{" + name + "}" + "\\\\"
-    txt += "\\hspace{2em}"
-    txt += node2tex(member.find('detaileddescription/para'))
+    paras = member.findall('detaileddescription/para')
+    paraslst = map(lambda para: "\\hspace{2em}" + node2tex(para), paras)
+    if paraslst:
+      txt += "\\\\[2mm]\n".join(paraslst)
     fields.append(txt)
   tex.write(''.join(vals) + "\} ")
   tex.write(" \\hypertarget{" + typedef.get('id') + "}")
@@ -162,9 +164,18 @@ def process_struct_or_union(typedef, tex, defs):
   tex.write("\\\\[2mm]\n".join(fields))
   tex.write("\n\\end{longtable}" + "\n\n")
 
+  # detailed description
+  paras = typedef.findall('detaileddescription/para')
+  paraslst = map(lambda para: node2tex(para), paras)
+  if paraslst:
+    tex.write('\\vspace{-4mm}')
+    tex.write("\\noindent\\textbf{Description}\\\\[1mm]"+ "\n")
+    tex.write("\\\\[2mm]\n".join(paraslst))
+    tex.write(" \n")
+
 def process_enum(enum, tex, defs):
   # begin box
-  tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
+  tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # enum name
   tex.write('enum ' + "\\hypertarget{" + enum.get('id') + "}")
   typename = node2tex(enum.find('name'))
@@ -183,6 +194,7 @@ def process_enum(enum, tex, defs):
   for val in enum.findall("enumvalue"):
     valtxt = "\\hspace{-2em}\\hypertarget{" + val.get('id') + "}{"
     valname = node2tex(val.find('name'))
+    typename_id[valname] = val.get('id')
     defs.append(('refenu', valname))
     valtxt += "\\refenu{" + valname + "}}"
     valtxt += ' ' + node2tex(val.find('initializer'))
@@ -197,10 +209,13 @@ def process_function(func, tex, listings, commands):
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,colframe=white,colback=lightgray,left=0mm]\n')
   # signature - return value
-  tex.write(node2tex(func.find('type')) + " ")
+  rettype = node2tex(func.find('type'))
+  rettype = rettype.replace(' HSA_API','') # macros are passed as part of the type, so we have to delete them manually
+  tex.write(rettype + " ")
   # signature - func name
   tex.write("\\hypertarget{" + func.get('id') + "}")
   funcname = node2tex(func.find('name'))
+  typename_id[funcname] = func.get('id')
   tex.write("{\\textbf{" + funcname + "}}(")
   listings.write(funcname + ",") # add function name to listings keyword list
   commands.append(('reffun', funcname))
@@ -241,10 +256,6 @@ def process_function(func, tex, listings, commands):
       arglst.append(argtxt)
     tex.write("\\\\[2mm]\n".join(arglst))
     tex.write("\n\\end{longtable}" + "\n")
-  else:
-    # add the longtable anyway so margin are kept constant
-    tex.write("\\noindent\\begin{longtable}{@{}>{\\hangindent=2em}p{\\textwidth}}" + "\n")
-    tex.write("\n\\end{longtable}" + "\n")
   # return values
   rets = func.findall(".//parameterlist[@kind='retval']/parameteritem")
   if rets:
@@ -272,7 +283,7 @@ def process_function(func, tex, listings, commands):
     tex.write('\\noindent\\begin{longtable}{@{}>{\\hangindent=2em}p{\\linewidth}}' + "\n")
     tex.write("\n\\end{longtable}" + "\n")
 
-  # description
+  # detailed description
   paras = func.findall('detaileddescription/para')
   paraslst = []
   for para in paras:
@@ -313,12 +324,21 @@ def process_file(file, listings, defs):
 
   tex.close()
 
+# Convert an identifier to a link its declaration in the document (where the
+# displayed name
+def id2link(id, type):
+  refid = typename_id[id]
+  # add hyphenation break hints at underscores, avoids overfull boxes
+  id = id.replace('_','_\-')
+  text = '\\' + type + '{' + id + '}'
+  return '\\hyperlink{' + refid + '}{' + text + '}'
+
 def generate_hsaref(defs):
-  hsaref = '\\makeatletter\n\\newcommand{\\hsaref}[1]{\n'
+  hsaref = '\\makeatletter\n\\newcommand{\\hsaref}[1]{'
   # create random 'if' so we can treat all the actual definitions in the same way
   hsaref += '\\ifnum\\pdf@strcmp{#1}{blablablablabla}=0 blablablablabla\n'
   # definitions
-  defs = map(lambda x: '\\else\ifnum\\pdf@strcmp{#1}{' + x[1] + '}=0 \\' + x[0] + '{' + x[1] + '}\n', defs)
+  defs = map(lambda x: '\\else\ifnum\\pdf@strcmp{#1}{' + x[1] + '}=0' + id2link(x[1], x[0]), defs)
   hsaref += ''.join(defs)
   # reference not found
   hsaref += '\\else\\errmessage{Unknown reference: #1. Declaration not found in hsa.h}\n'
@@ -348,7 +368,6 @@ def main():
   # other files(ex: structs) are recursively processed through their group
   files = filter(lambda file: file.find("group__") == 0, os.listdir('xml'))
   # process groups according to their line number location
-  print(files)
   files.sort(key=lambda file: group_location(file))
   for file in files:
     sys.stdout.write('Processing ' + file + "...")
