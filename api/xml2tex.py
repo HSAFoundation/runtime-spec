@@ -14,19 +14,23 @@ import os
 # when they are declared, and use it when processing 'typedefs'.
 typename_id = {}
 
+
+def text2tex(text):
+  # add hyphenation break hints at underscores, avoids overfull boxes
+  return text.replace('_','_\-')
+
 # custom text (Latex) iterator that consumes XML
 def myitertext(self):
   tag = self.tag
   if not isinstance(tag, str) and tag is not None:
     return
-  selftext = ''
   if self.text:
-    mytex = self.text
+    mytex = text2tex(self.text)
     if tag == 'emphasis':
       yield '\\textit{' + mytex + '}'
     elif tag == 'ref':
       # brutal hardcoding in order to find out if it is a function name
-      if mytex[:4] == "hsa_" and mytex[-2:] != "_t":
+      if mytex.startswith("hsa_\-") and not mytex.endswith("_\-t"):
         mytex = "\\reffun{" + mytex + "}"
       yield '\\hyperlink{' + self.get('refid') + '}{' + mytex + '}'
     else:
@@ -86,7 +90,7 @@ def linkify(definition):
   done = [] # types already processed
   start = definition.find('hsa_', 0)
   while start != -1:
-    end = definition.find('_t', start) + 2
+    end = definition.find('_\-t', start) + 2
     candidate = definition[start:end]
     refid = typename_id.get(candidate)
     if (candidate not in done) and (refid is not None):
@@ -96,13 +100,14 @@ def linkify(definition):
   return ret
 
 def process_typedef(typedef, tex, defs):
+  name = node2tex(typedef.find('name'))
+  tex.write('\\subsubsection{' + name + '}\n')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # typedef definition. We use the 'definition' string because in the presence
   # of pointers to functions using the type itself is tricky.
   definition = node2tex(typedef.find('definition'))
   definition = linkify(definition)
-  name = node2tex(typedef.find('name'))
   defs.append(('reftyp', name))
   typename_id[name] = typedef.get('id')
   newname = " \\hypertarget{" + typedef.get('id') + "}{\\textbf{" + name + "}}"
@@ -114,10 +119,11 @@ def process_typedef(typedef, tex, defs):
   tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\\\\")
 
 def process_struct_or_union(typedef, tex, defs):
+  actname = typedef.find('type/ref').text
+  tex.write('\\subsubsection{' + actname + '}\n')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # name
-  actname = typedef.find('type/ref').text
   typ = typedef.find('type').text;
   tex.write("typedef " + typ + " " + actname + " \{\n")
   # members. Doxygen stores their info in a separate file.
@@ -174,11 +180,12 @@ def process_struct_or_union(typedef, tex, defs):
     tex.write(" \n")
 
 def process_enum(enum, tex, defs):
+  typename = node2tex(enum.find('name'))
+  tex.write('\\subsubsection{' + typename + '}\n')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # enum name
   tex.write('enum ' + "\\hypertarget{" + enum.get('id') + "}")
-  typename = node2tex(enum.find('name'))
   tex.write("{\\textbf{" + typename + "}}" + "\n")
   defs.append(('reftyp', typename))
   typename_id[typename] = enum.get('id')
@@ -206,6 +213,9 @@ def process_enum(enum, tex, defs):
   tex.write("\n\\end{longtable}")
 
 def process_function(func, tex, listings, commands):
+  funid = func.get('id')
+  funname = node2tex(func.find('name'))
+  tex.write('\\subsubsection{' + funname + '}\n')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,colframe=white,colback=lightgray,left=0mm]\n')
   # signature - return value
@@ -213,12 +223,13 @@ def process_function(func, tex, listings, commands):
   rettype = rettype.replace(' HSA_API','') # macros are passed as part of the type, so we have to delete them manually
   tex.write(rettype + " ")
   # signature - func name
-  tex.write("\\hypertarget{" + func.get('id') + "}")
-  funcname = node2tex(func.find('name'))
-  typename_id[funcname] = func.get('id')
-  tex.write("{\\textbf{" + funcname + "}}(")
-  listings.write(funcname + ",") # add function name to listings keyword list
-  commands.append(('reffun', funcname))
+  index = 'ext' if funname.startswith('hsa_\-ext_\-') else 'api';
+  tex.write("\\index[" + index + "]{" + funname + "}") # add function name to function API index
+  tex.write("\\hypertarget{" + funid + "}")
+  typename_id[funname] = funid
+  tex.write("{\\textbf{" + funname + "}}(")
+  listings.write(funname + ",") # add function name to listings keyword list
+  commands.append(('reffun', funname))
   # signature - parameters
   sigargs = func.findall("param")
   if sigargs:
@@ -328,8 +339,6 @@ def process_file(file, listings, defs):
 # displayed name
 def id2link(id, type):
   refid = typename_id[id]
-  # add hyphenation break hints at underscores, avoids overfull boxes
-  id = id.replace('_','_\-')
   text = '\\' + type + '{' + id + '}'
   return '\\hyperlink{' + refid + '}{' + text + '}'
 
@@ -338,7 +347,7 @@ def generate_hsaref(defs):
   # create random 'if' so we can treat all the actual definitions in the same way
   hsaref += '\\ifnum\\pdf@strcmp{#1}{blablablablabla}=0 blablablablabla\n'
   # definitions
-  defs = map(lambda x: '\\else\ifnum\\pdf@strcmp{#1}{' + x[1] + '}=0' + id2link(x[1], x[0]), defs)
+  defs = map(lambda x: '\\else\ifnum\\pdf@strcmp{#1}{' + x[1].replace('_\-', '_') + '}=0' + id2link(x[1], x[0]), defs)
   hsaref += ''.join(defs)
   # reference not found
   hsaref += '\\else\\errmessage{Unknown reference: #1. Declaration not found in hsa.h}\n'

@@ -1,6 +1,6 @@
 \documentclass[final]{book}
 \newcommand{\doctitle}{HSA Runtime Programmer's Reference Manual}
-\newcommand{\docversion}{0.181}
+\newcommand{\docversion}{0.182}
 
 % Needed so characters such as underscore are recognized in PDF
 % viewers. Otherwise searching for say `hsa_open` produces no
@@ -47,10 +47,17 @@
 % inline enumerations and itemizes in the paragraph instead of breaking
 \usepackage{paralist}
 
-\usepackage{framed}
-\usepackage{times}
-\usepackage[titles]{tocloft}
+% Customizable headers/footers
 \usepackage{fancyhdr}
+
+% add API index. Note that 'imakeidx' works within Latex (unlike 'makeidx', which
+% requires running 'makeindex' from command line)
+\usepackage{imakeidx}
+\makeindex[name=api,title=Index - Core APIs,columns=1,intoc]
+\makeindex[name=ext,title=Index - Extension APIs,columns=1,intoc]
+
+% Times font definitions
+\usepackage{times}
 
 % allows customization of description environment (margin, indentation, etc.)
 \usepackage{enumitem}
@@ -174,18 +181,24 @@
 \newenvironment{DIFnomarkup}{}{}
 
 % header and footer layout
-\pagestyle{fancy}
-\renewcommand{\chaptermark}[1]{ \markboth{#1}{} }
-\renewcommand{\sectionmark}[1]{ \markright{#1}{} }
-\renewcommand{\headrulewidth}{0pt}
-\renewcommand{\footrulewidth}{0pt}
-\fancyhead{} % clear all header fields
-\fancyfoot{} % clear all footer fields
+\newcommand{\hfstyle}{
+\fancyhf{} % clear all header and footer fields
 \fancyfoot[LE,RO]{\scriptsize{\thepage}}
 \fancyfoot[LO,RE]{\scriptsize{\doctitle$\:$v\docversion $\:$-$\:$\today}}
-\fancyhead[RE]{\scriptsize{\leftmark}}
-\fancyhead[LO]{\scriptsize{\rightmark}}
+\fancyhead[RE]{\scriptsize{\nouppercase{\leftmark}}}
+\fancyhead[LO]{\scriptsize{\nouppercase{\rightmark}}}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+}
 
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{#1}{}}
+\hfstyle{}
+
+% plain style is identical to fancy style. This avoids different formatting in
+% the first page of every chapter, for example.
+\fancypagestyle{plain}{\hfstyle{}}
 
 \begin{document}
 
@@ -257,7 +270,7 @@ lost profits, or otherwise, arising from or in connection with these materials.
 Recent heterogeneous system designs have integrated CPU, GPU, and other
 accelerator devices into a single platform with a shared high-bandwidth memory
 system.  Specialized accelerators now complement general purpose CPU chips and
-are used to provide both power and performance benefits.  These
+are used to provide both power and performance benefits.  In fact, these
 heterogeneous designs are now widely used in many computing markets including
 cellphones, tablets, personal computers, and game consoles. The Heterogeneous
 System Architecture (HSA) builds on the close physical integration of
@@ -1339,13 +1352,8 @@ introduced in version 0.180 of the specification.
 
 % [DELETED CODE]
 
-\subsubsection{API}
+\subsection{API}
 \input{api/altlatex/group-FinalizerCoreApi}
-
-\hypertarget{linking}{}\subsection{HSAIL Linking}\label{linking}
-\subsubsection{API}
-\input{api/altlatex/group-HsailLinkerServiceLayer}
-
 
 %\subsection{Group Memory Usage}\label{groupmem}
 
@@ -1404,6 +1412,11 @@ introduced in version 0.180 of the specification.
 
 % Here is the corresponding kernel and usage model:
 % \lstinputlisting{example/group-sample-hsail.c}
+
+\section{HSAIL Linking}\label{linking}
+\subsubsection{API}
+\input{api/altlatex/group-HsailLinkerServiceLayer}
+
 
 \section{Images and Samplers}
 \label{images} \hypertarget{images}{}
@@ -1568,6 +1581,9 @@ following actions will allow a component to initiate a dispatch:
   code will be returned.
 \end{itemize}
 
+% API index
+\printindex[api]
+\printindex[ext]
 
 % inline bibliography for simplicity.
 \bibliographystyle{plain}
@@ -1584,5 +1600,7 @@ HSA Foundation.
 \newblock{Technical report, HSA Foundation, 2014.}
 
 \end{thebibliography}
+% add bibliography to Table of Contents
+\addcontentsline{toc}{chapter}{Bibliography}
 
 \end{document}
