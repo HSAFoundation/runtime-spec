@@ -208,7 +208,7 @@ typedef struct hsa_dim3_s {
    uint32_t y;
 
    /**
-    * Z dimension
+    * Z dimension.
     */
    uint32_t z;
 } hsa_dim3_t;
@@ -234,13 +234,13 @@ typedef enum {
 } hsa_dim_t;
 
 /**
-* @brief Opaque pointer which is passed to all runtime functions that use
-* callbacks. It is passed as the first argument to all callbacks made by the
-* function.
+* @brief Opaque pointer that is passed to all runtime functions that use
+* callbacks. The runtime passes this pointer as the first argument to all 
+* callbacks made by the function.
 */
 typedef struct hsa_runtime_caller_s {
   /**
-   * Opaque pointer which is passed as the first argument to callback
+   * Opaque pointer that is passed as the first argument to callback
    * functions invoked by a runtime function.
    */
   uint64_t caller;
@@ -1369,8 +1369,8 @@ typedef struct hsa_aql_packet_header_s {
   hsa_aql_packet_format_t format:8;
 
   /**
-   * If set then processing of packets will only begin when all preceding
-   * packets are complete.
+   * If set, the processing of the current packet only launches when all 
+   * preceding packets (within the same queue) are complete.
    */
   uint16_t barrier:1;
 
@@ -1387,7 +1387,7 @@ typedef struct hsa_aql_packet_header_s {
   hsa_fence_scope_t release_fence_scope:2;
 
   /**
-   * Must be zero.
+   * Must be a value of 0.
    */
   uint16_t reserved:3;
 
@@ -1403,13 +1403,13 @@ typedef struct hsa_aql_dispatch_packet_s {
   hsa_aql_packet_header_t header;
 
   /**
-   * Number of dimensions specified in the grid size. Valid values are 1,2, or
+   * Number of dimensions specified in the grid size. Valid values are 1, 2, or
    * 3.
    */
   uint16_t dimensions:2;
 
   /**
-   * Reserved, must be zero.
+   * Reserved, must be a value of 0.
    */
   uint16_t reserved:14;
 
@@ -1429,7 +1429,7 @@ typedef struct hsa_aql_dispatch_packet_s {
   uint16_t workgroup_size_z;
 
   /**
-   * Reserved. Must be zero.
+   * Reserved. Must be a value of 0.
    */
   uint16_t reserved2;
 
@@ -1470,7 +1470,7 @@ typedef struct hsa_aql_dispatch_packet_s {
   uint64_t kernarg_address;
 
   /**
-   * Reserved. Must be zero.
+   * Reserved. Must be a value of 0.
    */
   uint64_t reserved3;
 
@@ -1498,7 +1498,7 @@ typedef struct hsa_aql_agent_dispatch_packet_s {
   uint16_t type;
 
   /**
-   * Reserved. Must be 0.
+   * Reserved. Must be a value of 0.
    */
   uint32_t reserved2;
 
@@ -1513,7 +1513,7 @@ typedef struct hsa_aql_agent_dispatch_packet_s {
   uint64_t arg[4];
 
   /**
-   * Reserved. Must be 0.
+   * Reserved. Must be a value of 0.
    */
   uint64_t reserved3;
 
@@ -1534,12 +1534,12 @@ typedef struct hsa_aql_barrier_packet_s {
   hsa_aql_packet_header_t header;
 
   /**
-   * Reserved. Must be zero.
+   * Reserved. Must be a value of 0.
    */
   uint16_t reserved2;
 
   /**
-   * Reserved. Must be zero.
+   * Reserved. Must be a value of 0.
    */
   uint32_t reserved3;
 
@@ -1549,7 +1549,7 @@ typedef struct hsa_aql_barrier_packet_s {
   hsa_signal_handle_t dep_signal[5];
 
   /**
-   * Reserved. Must be zero.
+   * Reserved. Must be a value of 0.
    */
   uint64_t reserved4;
 

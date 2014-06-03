@@ -32,7 +32,7 @@ int main() {
   hsa_queue_t *queue;
   hsa_queue_create(&component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
 
-  // Setup the packet enconding the task to execute
+  // Setup the packet encoding the task to execute
   hsa_aql_dispatch_packet_t dispatch_packet;
   const size_t packet_size = sizeof(dispatch_packet);
   memset(&dispatch_packet, 0, packet_size); // reserved fields are zeroed
