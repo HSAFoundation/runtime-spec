@@ -101,7 +101,7 @@ def linkify(definition):
 
 def process_typedef(typedef, tex, defs):
   name = node2tex(typedef.find('name'))
-  tex.write('\\subsubsection{' + name + '}\n')
+  tex.write('\\subsubsection{' + name + '}\n\\vspace{-2mm}')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # typedef definition. We use the 'definition' string because in the presence
@@ -120,7 +120,7 @@ def process_typedef(typedef, tex, defs):
 
 def process_struct_or_union(typedef, tex, defs):
   actname = typedef.find('type/ref').text
-  tex.write('\\subsubsection{' + actname + '}\n')
+  tex.write('\\subsubsection{' + actname + '}\n\\vspace{-2mm}')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # name
@@ -181,7 +181,7 @@ def process_struct_or_union(typedef, tex, defs):
 
 def process_enum(enum, tex, defs):
   typename = node2tex(enum.find('name'))
-  tex.write('\\subsubsection{' + typename + '}\n')
+  tex.write('\\subsubsection{' + typename + '}\n\\vspace{-2mm}')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # enum name
@@ -215,7 +215,7 @@ def process_enum(enum, tex, defs):
 def process_function(func, tex, listings, commands):
   funid = func.get('id')
   funname = node2tex(func.find('name'))
-  tex.write('\\subsubsection{' + funname + '}\n')
+  tex.write('\\subsubsection{' + funname + '}\n\\vspace{-2mm}')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,colframe=white,colback=lightgray,left=0mm]\n')
   # signature - return value

@@ -169,7 +169,7 @@ typedef struct hsa_event_s {
 typedef void (*hsa_event_callback_t)(const hsa_event_t *event);
 /** @} */
 
-/** \defgroup RuntimeCommon Runtime Common
+/** \defgroup common Runtime Common
  *  @{
  */
 
@@ -235,7 +235,7 @@ typedef enum {
 
 /**
 * @brief Opaque pointer that is passed to all runtime functions that use
-* callbacks. The runtime passes this pointer as the first argument to all 
+* callbacks. The runtime passes this pointer as the first argument to all
 * callbacks made by the function.
 */
 typedef struct hsa_runtime_caller_s {
@@ -285,7 +285,7 @@ hsa_status_t HSA_API hsa_init();
  *
  * @details Decreases the reference count of the runtime instance. When the
  * reference count reaches zero, the runtime is no longer considered valid but
- * the user might call ::hsa_init to initialize the HSA runtime again.
+ * the application might call ::hsa_init to initialize the HSA runtime again.
  *
  * Once the reference count of the runtime reaches zero, all the resources
  * associated with it (queues, signals, topology information, etc.) are
@@ -657,7 +657,7 @@ hsa_status_t HSA_API hsa_signal_create(hsa_signal_value_t initial_value,
 hsa_status_t HSA_API hsa_signal_destroy(hsa_signal_handle_t signal_handle);
 
 /**
- * @brief Read the current signal value.
+ * @brief Atomically read the current signal value.
  *
  * @param[in] signal_handle Signal handle.
  *
@@ -682,7 +682,7 @@ hsa_status_t HSA_API hsa_signal_load_acquire(hsa_signal_handle_t signal_handle,
 hsa_status_t HSA_API hsa_signal_load_relaxed(hsa_signal_handle_t signal_handle,
                           hsa_signal_value_t *value);
 /**
- * @brief Set the value of a signal.
+ * @brief Atomically set the value of a signal.
  *
  * @param[in] signal_handle Signal handle.
  *
@@ -705,7 +705,7 @@ hsa_status_t HSA_API hsa_signal_store_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t value);
 
 /**
- * @brief Set the value of a signal and return its previous value.
+ * @brief Atomically set the value of a signal and return its previous value.
  *
  * @param[in] signal_handle Signal handle.
  *
@@ -758,8 +758,7 @@ hsa_status_t HSA_API hsa_signal_cas_release(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t *observed);
 
 /**
- * @brief Increment the value of a signal by a given amount. The
- * addition is atomic.
+ * @brief Atomically increment the value of a signal by a given amount.
  *
  * @param[in] signal_handle Signal handle.
  *
@@ -782,7 +781,7 @@ hsa_status_t HSA_API hsa_signal_add_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t value);
 
 /**
- * @brief Decrement the value of a signal by a given amount.
+ * @brief Atomically decrement the value of a signal by a given amount.
  *
  * @param[in] signal_handle Signal handle.
  *
@@ -806,7 +805,8 @@ hsa_status_t HSA_API hsa_signal_subtract_relaxed(hsa_signal_handle_t signal_hand
                 hsa_signal_value_t value);
 
 /**
- * @brief Perform a logical AND of the value of a signal and a given value.
+ * @brief Atomically perform a logical AND of the value of a signal and a given
+ * value.
  *
  * @param[in] signal_handle Signal handle.
  *
@@ -829,7 +829,8 @@ hsa_status_t HSA_API hsa_signal_and_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t value);
 
 /**
- * @brief Perform a logical OR of the value of a signal and a given value.
+ * @brief Atomically perform a logical OR of the value of a signal and a given
+ * value.
  *
  * @param[in] signal_handle Signal handle.
  *
@@ -852,7 +853,8 @@ hsa_status_t HSA_API hsa_signal_or_relaxed(hsa_signal_handle_t signal_handle,
                 hsa_signal_value_t value);
 
 /**
- * @brief Perform a logical XOR of the value of a signal and a given value.
+ * @brief Atomically perform a logical XOR of the value of a signal and a given
+ * value.
  *
  * @param[in] signal_handle Signal handle.
  *
@@ -903,6 +905,9 @@ typedef enum {
  * multiple reasons. It is the user's burden to check the returned status before
  * consuming @a return_value.
  *
+ * When the wait operation atomically loads the value of the passed signal, it
+ * uses the memory order indicated in the function name.
+ *
  * @param[in] signal_handle Signal handle.
  *
  * @param[in] condition Condition used to compare the signal value with @a
@@ -951,7 +956,10 @@ hsa_status_t HSA_API hsa_signal_wait_relaxed(hsa_signal_handle_t signal_handle,
  *
  * The application might indicate a preference about the maximum wait duration,
  * which implementations can ignore.
-
+ *
+ * When the wait operation atomically loads the value of the passed signal, it
+ * uses the memory order indicated in the function name.
+ *
  * @param[in] signal_handle Signal handle.
  *
  * @param[in] timeout Maximum wait duration hint. The operation might block for
@@ -1179,7 +1187,7 @@ hsa_status_t HSA_API hsa_queue_destroy(hsa_queue_t *queue);
 hsa_status_t HSA_API hsa_queue_inactivate(hsa_queue_t *queue);
 
 /**
- * @brief Retrieve the read index of a queue.
+ * @brief Atomically load the read index of a queue.
  *
  * @param[in] queue Pointer to a queue.
  *
@@ -1193,7 +1201,7 @@ uint64_t hsa_queue_load_read_index_relaxed(hsa_queue_t *queue);
 uint64_t hsa_queue_load_read_index_acquire(hsa_queue_t *queue);
 
 /**
- * @brief Retrieve the write index of a queue.
+ * @brief Atomically load the write index of a queue.
  *
  * @param[in] queue Pointer to a queue.
  *
@@ -1207,7 +1215,7 @@ uint64_t hsa_queue_load_write_index_relaxed(hsa_queue_t *queue);
 uint64_t hsa_queue_load_write_index_acquire(hsa_queue_t *queue);
 
 /**
- * @brief Set the write index of a queue.
+ * @brief Atomically set the write index of a queue.
  *
  * @param[in] queue Pointer to a queue.
  *
@@ -1259,7 +1267,7 @@ uint64_t hsa_queue_cas_write_index_acquire_release(hsa_queue_t *queue,
     uint64_t value);
 
 /**
- * @brief Increment the write index of a queue by an offset.
+ * @brief Atomically increment the write index of a queue by an offset.
  *
  * @param[in] queue Pointer to a queue.
  *
@@ -1286,7 +1294,7 @@ uint64_t hsa_queue_add_write_index_acquire_release(hsa_queue_t *queue,
   uint64_t value);
 
 /**
- * @brief Set the read index of a queue.
+ * @brief Atomically set the read index of a queue.
  *
  * @param[in] queue Pointer to a queue.
  *
@@ -1369,7 +1377,7 @@ typedef struct hsa_aql_packet_header_s {
   hsa_aql_packet_format_t format:8;
 
   /**
-   * If set, the processing of the current packet only launches when all 
+   * If set, the processing of the current packet only launches when all
    * preceding packets (within the same queue) are complete.
    */
   uint16_t barrier:1;
@@ -1784,7 +1792,8 @@ hsa_status_t HSA_API hsa_memory_free_component_local(void *address);
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been initialized.
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
+ * initialized.
  *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure in
  * allocation of an internal structure required by the core runtime
@@ -1799,7 +1808,7 @@ hsa_status_t HSA_API hsa_memory_copy_component_local_to_system(void *dst,
     hsa_signal_handle_t signal);
 /** @} */
 
-/** \defgroup FinalizerCoreApi Finalizer Core API
+/** \defgroup finalizer Finalizer Core API
  *  @{
  */
 
@@ -2792,7 +2801,7 @@ hsa_status_t HSA_API hsa_ext_deserialize_finalization_descriptor(
 /** @} */
 
 
-/** \defgroup HsailLinkerServiceLayer HSAIL Linker Service Layer
+/** \defgroup linker HSAIL Linker Service Layer
  *  @{
  */
 
