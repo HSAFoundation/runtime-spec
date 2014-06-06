@@ -1,6 +1,6 @@
 \documentclass[final]{book}
 \newcommand{\doctitle}{HSA Runtime Programmer's Reference Manual}
-\newcommand{\docversion}{0.182}
+\newcommand{\docversion}{0.183}
 
 % Needed so characters such as underscore are recognized in PDF
 % viewers. Otherwise searching for say `hsa_open` produces no
@@ -264,8 +264,8 @@ lost profits, or otherwise, arising from or in connection with these materials.
 \pagenumbering{arabic}
 \setcounter{page}{1}
 
-\chapter{Introduction} \label{index}\hypertarget{index}{}
-\hypertarget{overview}{}\section{Overview}\label{overview}
+\chapter{Introduction} \label{index}
+\section{Overview}\label{overview}
 
 Recent heterogeneous system designs have integrated CPU, GPU, and other
 accelerator devices into a single platform with a shared high-bandwidth memory
@@ -305,7 +305,7 @@ include:
 \begin{itemize}
 \item Error Handling
 \item Runtime initialization and shutdown
-\item Topology discovery
+\item Agent information
 \item Signals and synchronization
 \item Architected dispatch
 \item Memory management
@@ -433,9 +433,10 @@ dispatch a kernel.
 
 \subsection{Initial Setup}
 One of the first steps an application must perform is agent (device) discovery.
-Agent discovery is performed after initialization of the runtime and information is
-made available to the user as data structures. Section~\ref{sec:topology}
-describes these \textit{topology descriptors}.
+Agent discovery is performed after initialization of the runtime and information
+is made available to the user as opaque data
+structures. Section~\ref{sec:agentinfo} describes how to find the available
+agents and query the runtime to obtain information about their attributes.
 
 The next step in the setup is the creation of the component queues. Queues are an
 HSA architected mechanism that submits work to the HSA component hardware. For
@@ -568,13 +569,13 @@ statuses are assigned positive integers and their identifiers start with the
 \hsaref{hsa_status_string} to obtain a string describing a status code.
 
 The runtime passes \textit{asynchronous} notifications in a different
-fashion. When the runtime detects an asynchronous event, the runtime invokes a
+fashion. When the runtime detects an asynchronous event, it invokes a
 user-defined callback. For example, queues (see Section~\ref{sec:queues}) are a
-common source of asynchronous events because the
-tasks queued by an application are asynchronously consumed by the packet
-processor. Callbacks are associated with queues when they are created, and when
-invoked they are passed an event object (\hsaref{hsa_event_t}) which contains
-valuable information about the event source and other event-specific details.
+common source of asynchronous events because the tasks queued by an application
+are asynchronously consumed by the packet processor. Callbacks are associated
+with queues when they are created. When the runtime detects an error in a queue,
+it invokes the callback associated with that queue and passes it an error flag
+(indicating what happened) and a pointer to the erroneous queue.
 
 The application must use caution when using blocking functions within their
 callback implementation -- a callback that does not return can render the
@@ -587,19 +588,16 @@ callbacks.
 \subsection{API}
 \input{api/altlatex/group-status}
 
-\hypertarget{component}{}\section{Topology Discovery}
-\label{sec:topology}
+\section{Agent Information}
+\label{sec:agentinfo}
+The runtime exposes the list of agents that are available in the system. In the
+HSA API, agents are opaque handles of type \hsaref{hsa_agent_t}. The application
+can traverse the list of available agents, and query attributes of a particular
+agent.
 
-Topology discovery is provided by the runtime so users can programmatically
-query information about the available agents, memories, caches, etc. This
-information could be utilized by the user in different ways, including decisions
-on where to execute a particular task. The runtime specification defines three
-types of \textit{topology objects}: agents, memories and caches. Every instance
-of each object is described in a so-called topology descriptor. For example,
-agent attributes are listed in the \hsaref{hsa_agent_t} descriptor.
 
 \subsection{API}
-\input{api/altlatex/group-topology}
+\input{api/altlatex/group-agentinfo}
 
 \section{Signals}\label{sec:signals}
 
@@ -740,14 +738,14 @@ visible to HSA agents through the queue structure \reffld{service_queue} field
 and is serviced by an appropriate HSA agent. The application may chose not to
 use a service queue.
 
-\hypertarget{queue-errors}{}\subsection{Queue States} \label{queue-errors}
+\subsection{Queue States} \label{queue-errors}
 
 A queue in HSA, once created, can be in one of the following states:
 \emph{active}, \emph{error pending inactive}, \emph{error inactive} or
 \emph{destroyed}. A state diagram showing the various states and transitions is
 shown in Figure~\ref{fig:queuestate}.
 
-\begin{description}[leftmargin=0cm, labelindent=0cm]
+\begin{description}[itemsep=1pt,leftmargin=0cm, labelindent=0cm]
 \item[Active] When a queue is successfully created using the
   \hsaref{hsa_queue_create} API, it enters the active state. Packets can be
   added to the queue and are consumed by the packet processor. The actual
@@ -755,9 +753,8 @@ shown in Figure~\ref{fig:queuestate}.
   dispatch. Writing packets to the queue, updating the write index or ringing
   the doorbell have an effect only when the queue is in the active state. The
   queue is not monitored by a packet processor in any other state.
-
 \item[Error pending inactive] If an error is encountered during packet
-  processing (invalid packet format, wrong signal, etc.) or dispatch, the packet
+  processing (for example, the packet format is invalid) or dispatch, the packet
   processor stops. At this point, there might be in-flight kernels and resources
   (such as segment allocation) that have been setup for a dispatch but have not
   yet been freed. So the queue is not entirely inactive, but when the
@@ -766,21 +763,18 @@ shown in Figure~\ref{fig:queuestate}.
   needs to be destroyed so that the runtime can reclaim the memory allocated for
   this queue. If an application provides a callback at the time the application
   creates the queue, the callback is invoked after the queue is marked inactive.
-
 \item[Inactive] If all the asynchronous activity concludes, the queue enters the
   inactive state. A queue can also enter this state when the user explicitly
-  invokes the \hsaref{hsa_queue_inactivate} API (note that the callback
-  implementation for the queue error callback can invoke this API). In an
-  inactive state, the queue structure and its packets may be inspected. Only the
-  packets that are between the read index and the write index in the queue
-  structure are considered to be valid for inspection by the user. The packet
-  processor guarantees that all the packets that have been consumed by the
-  packet processor (see Section~\ref{dispatch-packet}) will be notified.
-  Inactivating a queue that is already in the inactive state has no effect.
-
-\item[Destroyed] The queue has been destroyed by the user. The resources
-  allocated to the queue and the memory for the queue are no longer valid. The
-  queue structure is no longer valid.
+  invokes the \hsaref{hsa_queue_inactivate} API (note that the queue error
+  callback can invoke this API). In an inactive state, the queue structure and
+  its packets may be inspected. Only the packets that are between the read index
+  and the write index in the queue structure are considered to be valid for
+  inspection by the user. The packet processor guarantees that all the packets
+  that have been consumed by the packet processor (see
+  Section~\ref{dispatch-packet}) will be notified.  Inactivating a queue that is
+  already in the inactive state has no effect.
+\item[Destroyed] The queue has been destroyed by the user. The queue structure
+  and the associated resources (ring buffer, indexes, etc.) are no longer valid.
 \end{description}
 
 \subsection{API}
@@ -827,7 +821,7 @@ diagram.
   \label{fig:packetstate}
 \end{figure}
 
-\begin{description}[leftmargin=0cm, labelindent=0cm]
+\begin{description}[itemsep=1pt,leftmargin=0cm, labelindent=0cm]
 \item[Queued] The queued state means that the format of the packet is not
   \hsaref{HSA_AQL_PACKET_FORMAT_ALWAYS_RESERVED} nor
   \hsaref{HSA_AQL_PACKET_FORMAT_INVALID}.  If the \reffld{barrier} bit is set,
@@ -840,10 +834,9 @@ diagram.
   execution of a task. This phase finalizes by applying an acquire memory fence.
   If an error is detected during launch, the queue is set into an error state
   and the event callback associated with the queue (if present) is invoked. The
-  following error might be communicated during the launch
-  phase:\begin{inparaenum}[a\upshape)]\item
-    \hsaref{HSA_STATUS_ERROR_INVALID_PACKET_FORMAT}, if the AQL packet is
-    malformed\end{inparaenum}.
+  runtime passes an error status to the callback that indicates the source of
+  the problem.  The flag \hsaref{HSA_STATUS_ERROR_INVALID_PACKET_FORMAT}
+  indicates that an AQL packet is malformed.
 
 \item[Active] The active state means that the kernel encoded by the packet
   has started execution. If an error is detected during this phase, a release
@@ -857,7 +850,7 @@ diagram.
   applied and the completion signal (if present) decremented.
 \end{description}
 
-\subsubsection{Segment sizes}\label{segment-sizes}
+\subsubsection{Memory information}
 
 If the kernel being dispatched uses private or group segments, the HSA runtime
 requires the application to specify the sizes of the segments in the Dispatch
@@ -870,7 +863,7 @@ sizes, refer to Section~\ref{finalizerchapter}.
 Another kind of HSA segment is the kernarg segment, used to pass arguments into
 a kernel. The application populates the \reffld{kernarg_address} field of the
 Dispatch packet with the address of a buffer of kernarg memory previously
-allocated using \hsaref{hsa_memory_allocate_kernarg}. The buffer contains the
+allocated. The buffer contains the
 actual parameters passed to the kernel being dispatched.
  % Please refer to the HSAIL
  % service layer \mariotodo{missing} for an example on how to setup the kernarg
@@ -917,10 +910,7 @@ packets. However, each state might cause a different set of actions:
 \begin{itemize}
 \item No memory fence is applied in the launch phase.
 \item In the active phase, instead of executing a kernel, the packet waits for
-  all the conditions to be met. The following errors might be communicated
-  during the active phase: \begin{inparaenum}[a\upshape)]\item
-    \hsaref{HSA_STATUS_ERROR_SIGNAL_DEPENDENCY}, if an error is detected in one
-    of the dependent signals (a negative value is observed).\end{inparaenum}
+  all the conditions to be met.
 \item No action is performed in the completion phase.
 \end{itemize}
 
@@ -932,31 +922,16 @@ packets. However, each state might cause a different set of actions:
 One of the key features of HSA is its ability to share global pointers between
 the host application and code executing on the component. This ability means
 that an application can directly pass a pointer to memory allocated on the host
-to a kernel function dispatched to a component without an intermediate copy.
+to a kernel function dispatched to a component.
 
-\subsection{Registration}\label{memory-registration}
-
-When a buffer will be accessed by a kernel running on a HSA device, programmers
-are encouraged to register the corresponding address range beforehand by using
-the appropriate HSA core API invocation. While kernels running on HSA devices
-can access any valid system memory pointer allocated by means of standard
-libraries (for example, malloc in the C language) without resorting to
-registration, there might be a performance benefit from registering the buffer
-with the HSA core component. When an HSA program no longer needs to access a
-registered buffer in a device, the user should deregister that virtual address
-range by using the appropriate HSA core API invocation.
-
-
-\subsection{Global  Memory Allocation}\label{globalmemory}
-
-While a HSA component is capable of accessing pageable system memory by
-definition, for scenarios where wants memory allocated that has already been
-registered (combine the allocation with memory registration), the HSA runtime
-provides an interface, \hsaref{hsa_memory_allocate} to allocate memory that is
-internally registered by the runtime:
-
-
-\subsection{Kernarg Memory}\label{kernargmem}
+When a buffer created in the host is also accessed by a component, programmers
+are encouraged to \emph{register} the corresponding address range beforehand by
+using the \hsaref{hsa_memory_register} API. While kernels running on HSA devices
+can access any memory pointer allocated by means of standard libraries (for
+example, malloc in the C language), registering the buffer might result on
+improved access performance.  When an HSA program no longer needs to access a
+registered buffer in a device, the application should deregister that virtual
+address range by using the appropriate HSA core API invocation.
 
 The kernarg memory that AQL packet points to (see Section~\ref{sec:aql}) holds
 information about any arguments required to execute AQL dispatch on a HSA
@@ -965,109 +940,9 @@ implementation/platform specific optimizations are possible if HSA core runtime
 provided API are utilized for allocating and copying to the allocated kernarg
 memory.
 
-\subsection{Component Local Memory}
-\label{device-memory}
-
-Component local memory is a memory type that is dedicated specifically for a
-particular HSA component. This memory could provide higher bandwidth for
-component access (than system memory) with the limitation that the host might
-not be able to access it directly. HSA runtime provides a host interface to
-allocate/deallocate and access component local memory. The user should not
-register or deregister component local memory.
 
 \subsection{API}
 \input{api/altlatex/group-memory}
-
-\subsection{Example - memory registration}
-
-A buffer is registered by indicating its starting address and a size. The size
-does not need to match that of the original allocation. For example:
-
-\begin{lstlisting}
-void* ptr = malloc(16);
-status = hsa_memory_register(ptr, 8);
-if(status == HSA_STATUS_ERROR_INVALID_ARGUMENT)
-  handle_error(status);
-\end{lstlisting}
-
-is a valid program. On the other hand:
-
-\begin{lstlisting}
-void* ptr = malloc(16);
-status = hsa_memory_register(ptr, 20);
-if(status == HSA_STATUS_ERROR_INVALID_ARGUMENT)
-  handle_error(status);
-\end{lstlisting}
-
-is not a valid program, because we are registering a range that spans several
-allocations, or might not be entirely allocated.
-
-Registrations can overlap previously registered intervals. A special case of
-overlapped registrations is multiple registration. If the same interval is
-registered several times with different sizes, the HSA core component will
-select the maximum as the size of all the registrations. Therefore, the
-following program:
-
-\begin{lstlisting}
-status = hsa_memory_register(ptr, 8);
-if(status == HSA_STATUS_ERROR_INVALID_ARGUMENT)
-  handle_error(status);
-status = hsa_memory_register(ptr, 16);
-if(status == HSA_STATUS_ERROR_INVALID_ARGUMENT)
-  handle_error(status);
-\end{lstlisting}
-
-behaves identically to this program:
-
-\begin{lstlisting}
-hsa_memory_register(ptr, 16);
-if(status == HSA_STATUS_ERROR_INVALID_ARGUMENT)
-  handle_error(status);
-hsa_memory_register(ptr, 16);
-if(status == HSA_STATUS_ERROR_INVALID_ARGUMENT)
-  handle_error(status);
-\end{lstlisting}
-
-While the described behavior might seem counter-intuitive, consider the
-following scenario: A pointer is registered twice with different sizes s1 and
-s2. When the pointer is deregistered, which interval should be deregistered: (p,
-s1) or (p, s2)? If all the registrations of the same pointer are considered
-identical by the core runtime, that problem is eliminated.
-
-Deregistering a pointer that has not been previously registered results in an
-\emph{info} status indicating the same.
-
-The following code snippet revisits the introductory example. The code is almost
-identical to the original, except that we register the buffers that will be
-accessed from the device after allocating them, and we deregister all that
-memory before releasing it. In some platforms, we expect this version to perform
-better than the original one.
-
-\subsection{Example - device memory}
-Component memory is allocated by indicating the size and the HSA device it
-corresponds to. For example, the following code allocates 1024 bytes of device
-local memory:
-
-\begin{lstlisting}
-void* component_ptr = NULL;
-hsa_memory_allocate_component_local(1024, component, &component_ptr);
-\end{lstlisting}
-
-To access component memory from the host, the user can call
-\hsaref{hsa_memory_copy_component_local_to_system} in similar fashion as in
-memcpy. This interface allows the user to perform component-to-host memory
-copy. For example:
-
-\begin{lstlisting}
- const size_t DATA_SIZE = 1024;
- void* src_ptr = malloc(DATA_SIZE);
- void* dest_ptr = NULL;
- hsa_memory_allocate_component_local(DATA_SIZE, device, &dest_ptr);
- hsa_memory_copy_component_local_to_system(dest_ptr, src_ptr, DATA_SIZE);
-\end{lstlisting}
-
-copies 1024 bytes from system to component local memory.
-
 
 % \hypertarget{agent}{}\section{Agent Dispatch}\label{agent}
 % The core runtime supports agent dispatches from an HSA agent. The
@@ -1128,8 +1003,7 @@ interacts with the \hsaref{hsa_vendor_extension_query} API call.
 
 \chapter{HSA Extensions Programming Guide}
 
-\section{HSAIL Finalization}
-\label{finalizerchapter} \hypertarget{finalizerchapter}{}
+\section{HSAIL Finalization}\label{finalizerchapter}
 
 \emph{Note: The text in this section will be updated according to the API
   changes introduced in version 0.180 of the specification.}
@@ -1442,8 +1316,7 @@ interacts with the \hsaref{hsa_vendor_extension_query} API call.
 \input{api/altlatex/group-linker}
 
 
-\section{Images and Samplers}
-\label{images} \hypertarget{images}{}
+\section{Images and Samplers}\label{images}
 
 An HSA runtime uses an image handle \hsaref{hsa_ext_image_handle_t} to access
 images. The image handle references the image data in memory and records
@@ -1515,8 +1388,6 @@ a sampler handle from an agent independent sampler descriptor
 \input{api/altlatex/group-images}
 
 \section{Component Initiated Dispatches} \label{architected}
-\hypertarget{architectedchptr}{}
-%% \input{compdispatch}
 
 Due to architected support for a queue and design of AQL, HSA supports
 component-initiated dispatch, which is the ability for a kernel to dispatch a

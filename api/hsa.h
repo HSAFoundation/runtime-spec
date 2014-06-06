@@ -1,8 +1,10 @@
 #ifndef HSACOREBASE_H
 #define HSACOREBASE_H
 
-#include <stdint.h> // uintXX_t
-#include <stddef.h> // size_t
+#include <stdbool.h>  // bool
+#include <stddef.h>   // size_t
+#include <stdint.h>   // uintXX_t
+
 
 // placeholder for calling convention - check macro naming convention
 #define HSA_API
@@ -29,6 +31,11 @@ typedef enum {
      */
     HSA_STATUS_SUCCESS = 0,
     /**
+     * A traversal over a list of elements has been interrupted by the
+     * application before completing.
+     */
+    HSA_STATUS_INFO_BREAK,
+    /**
      * Indicates that initialization attempt failed due to prior initialization.
      */
     HSA_EXT_STATUS_INFO_ALREADY_INITIALIZED,
@@ -49,9 +56,13 @@ typedef enum {
      */
     HSA_STATUS_ERROR_INVALID_ARGUMENT,
     /**
-     * The component is invalid.
+     * The agent is invalid.
      */
-    HSA_STATUS_ERROR_INVALID_COMPONENT,
+    HSA_STATUS_ERROR_INVALID_AGENT,
+    /**
+     * The memory region is invalid.
+     */
+    HSA_STATUS_ERROR_INVALID_REGION,
     /**
      * The signal is invalid.
      */
@@ -70,10 +81,6 @@ typedef enum {
      * Indicates that the AQL packet is malformed.
      */
     HSA_STATUS_ERROR_INVALID_PACKET_FORMAT,
-    /**
-     * Indicates that a signal we depend on has a negative value.
-     */
-    HSA_STATUS_ERROR_SIGNAL_DEPENDENCY,
     /**
      * An error has been detected while releasing a resource.
      */
@@ -127,46 +134,6 @@ typedef enum {
 hsa_status_t HSA_API hsa_status_string(hsa_status_t status,
       char * const * status_string);
 
-/**
- * @brief Event object. Used to pass information from the HSA runtime to the
- * application.
- *
- * @details The event object communicates to the application what has happened
- * (@a status field), and might contain event-specific details that can be
- * parsed by the application to further understand the event.
- *
- */
-typedef struct hsa_event_s {
-    /**
-     * Status code associated with the event.
-     */
-    hsa_status_t status;
-
-    /**
-     * Additional information about the event to be interpreted based on @a
-     * status.
-     */
-    uint64_t data[4];
-
-   /**
-    * A string containing further information. ISO/IEC 646 character encoding
-    * must be used. The string should be NUL terminated.
-    */
-    char info[64];
-
-    /**
-     * System timestamp to indicate when the event was discovered. If the
-     * implementation chooses not to return the current timestamp, then
-     * @a timestamp must be zero.
-     */
-    uint64_t timestamp;
-
-} hsa_event_t;
-
-/**
- * @brief Callback for events.
- */
-typedef void (*hsa_event_callback_t)(const hsa_event_t *event);
 /** @} */
 
 /** \defgroup common Runtime Common
@@ -288,7 +255,7 @@ hsa_status_t HSA_API hsa_init();
  * the application might call ::hsa_init to initialize the HSA runtime again.
  *
  * Once the reference count of the runtime reaches zero, all the resources
- * associated with it (queues, signals, topology information, etc.) are
+ * associated with it (queues, signals, agent information, etc.) are
  * considered invalid and any attempt to reference them in subsequent API calls
  * results in undefined behavior. When the reference count reaches zero, the HSA
  * runtime might release resources associated with it.
@@ -303,306 +270,178 @@ hsa_status_t HSA_API hsa_shut_down();
 
 /** @} */
 
-/** \defgroup topology TODO
+/** \defgroup agentinfo TODO
  *  @{
  */
 
 /**
- * @brief Agent type.
+ * @brief Opaque handle representing an agent, a device that participates in the
+ * HSA memory model.
+ */
+typedef uint64_t hsa_agent_t;
+
+/**
+ * @brief Component features.
  */
 typedef enum {
-    /**
-     * Host agent (CPU).
-     */
-    HSA_AGENT_TYPE_HOST = 1,
-
-    /**
-     * HSA component.
-     */
-    HSA_AGENT_TYPE_COMPONENT = 2,
-
-    /**
-     * The agent is capable of agent dispatches, and can serve as a target for
-     * them.
-     */
-    HSA_AGENT_TYPE_AGENT_DISPATCH = 4
-} hsa_agent_type_t;
-
-/**
- * @brief HSA agent.
- */
-typedef struct hsa_agent_s {
-    /**
-     * ID of the node this agent/component belongs to.
-     */
-    uint32_t node_id;
-
-    /**
-     * Unique identifier for an HSA agent.
-     */
-    uint32_t id;
-
-    /**
-     * Agent type, bit-field.
-     */
-    hsa_agent_type_t agent_type;
-
-    /**
-     * The vendor of the agent/component. ISO/IEC 646 character encoding must be
-     * used. If the name is less than 16 characters then remaining characters
-     * must be set to 0.
-     */
-    char vendor[16];
-
-    /**
-     * The name of this agent/component. ISO/IEC 646 character encoding must be
-     * used. If the name is less than 16 characters then remaining characters
-     * must be set to 0.
-     */
-    char name[16];
-
-    /**
-     * Array of memory descriptor offsets.  Number of elements in array equals
-     * @a number_memory_descriptors.
+   /**
+    * No component capabilities. The device is an agent, but not a component.
     */
-    uint32_t *memory_descriptors;
-
+    HSA_COMPONENT_FEATURE_NONE = 0,
     /**
-     * Number of the different types of memories available to this agent. Zero
-     * indicates that no information is available.
+     * The component supports the HSAIL instruction set and all the AQL
+     * packets types except Agent Dispatch.
      */
-    uint32_t number_memory_descriptors;
-
+    HSA_COMPONENT_FEATURE_BASIC = 1,
     /**
-     * Array of cache descriptor offsets.  Number of elements in array equals @a
-     * number_cache_descriptors.
-    */
-    uint32_t  *cache_descriptors;
-
-    /**
-     * Number of caches available to this agent/component. Zero indicates that
-     * no information is available.
+     * The component supports the HSAIL instruction set and all the AQL
+     * packets types.
      */
-    uint32_t number_cache_descriptors;
+    HSA_COMPONENT_FEATURE_ALL =  2
+} hsa_component_feature_t;
 
-    /**
-     * Subagent list of offsets, points to the offsets in the topology table.
-     */
-    uint32_t *subagent_offset_list;
-
-    /**
-     * Number of subagents.
-     */
-    uint32_t number_subagents;
-
-    /**
-     * Wave front size, i.e. number of work-items in a wavefront.
-     */
-    uint32_t wavefront_size;
-
-    /**
-     * Maximum size of the user queue in bytes allocatable via the runtime.
-    */
-    uint32_t queue_size;
-
-    /**
-     * Size (in bytes) of group memory available to a single work-group.
-    */
-    uint32_t group_memory_size_bytes;
-
-    /**
-     * Max number of fbarrier that can be used in any kernel and functions it
-     * invokes.
-     */
-    uint32_t fbarrier_max_count;
-    /**
-     * Indicates if the agent supports position-independent code (the value is
-     * not zero). Only applicable when the agent is a component.
-     */
-    uint8_t is_pic_supported;
-
-} hsa_agent_t;
+// Missing:
+//  uint32_t fbarrier_max_count; Max number of fbarrier that can be used in any kernel and functions it invokes.
+//  uint8_t is_pic_supported; Support for position-independent code (the value is not zero). Only applicable when the agent is a component. */
 
 /**
- * @brief Memory segment.
- */
-typedef struct hsa_segment_s {
-    /**
-     * Global segment.
-     */
-    uint8_t global:1;
-
-    /**
-     * Private segment.
-     */
-    uint8_t privat:1;
-
-    /**
-     * Group segment.
-     */
-    uint8_t group:1;
-
-    /**
-     * Kernarg segment.
-     */
-    uint8_t kernarg:1;
-
-    /**
-     * Readonly segment.
-     */
-    uint8_t readonly:1;
-
-    /**
-     * Reserved.
-     */
-    uint8_t reserved:1;
-} hsa_segment_t;
-
-/**
- * @brief Memory descriptor.
- *
- * @details Representation of a physical memory block or region. Implementations
- * may choose not to provide memory bandwidth or latency information, which case
- * zero is returned.
- */
-typedef struct hsa_memory_descriptor_s {
-    /**
-     * ID of the node this memory belongs to.
-     */
-    uint32_t node_id;
-
-    /**
-     * Unique ID for this memory within the system.
-     */
-    uint32_t id;
-
-    /**
-     * Information on segments that can use this memory.
-     */
-    hsa_segment_t supported_segment_type_mask;
-
-    /**
-     * Base of the virtual address for this memory, if applicable.
-     */
-    uint64_t virtual_address_base;
-
-    /**
-     * Size.
-     */
-    uint64_t size_in_bytes;
-
-    /**
-     * Theoretical peak bandwidth in mega-bits per second to access this memory
-     * from the agent/component.
-     */
-    uint64_t peak_bandwidth_mbps;
-} hsa_memory_descriptor_t;
-
-/**
- * @brief Cache descriptor.
- */
-typedef struct hsa_cache_descriptor_s {
-    /**
-     * ID of the node this memory belongs to.
-     */
-    uint32_t node_id;
-    /**
-     * Unique ID for this cache within the system.
-     */
-    uint32_t id;
-
-    /**
-     * Number of levels of cache (for a multi-level cache).
-     */
-    uint8_t levels;
-
-    /**
-     * Associativity of this cache. The array has size @a levels. Associativity
-     * is expressed as a power of two, where 1 means 'direct mapped', and 255
-     * means 'full associative'. Zero is reserved.
-     */
-    uint8_t *associativity;
-
-    /**
-     * Size at each level. The array has size @a levels.
-     */
-    uint64_t *cache_size;
-
-    /**
-     * Cache line size at each level. The array has size @a levels.
-     */
-    uint64_t *cache_line_size;
-
-    /**
-     * Cache inclusivity with respect to the level above. The array has size @a
-     * levels, where @a is_inclusive[@a levels - 1] is always zero.
-     */
-    uint8_t *is_inclusive;
-
-} hsa_cache_descriptor_t;
-
-/**
- * @brief Topology object type.
+ * @brief Agent attributes.
  */
 typedef enum {
   /**
-   * Agent object.
+   * Agent name. The type of this attribute is \c char[64].
    */
-  HSA_TOPOLOGY_OBJECT_AGENT = 1,
+  HSA_AGENT_INFO_NAME,
   /**
-   * Memory object.
+   * NUMA node associated with the agent. The type of this attribute is
+   * ::hsa_node_t.
    */
-  HSA_TOPOLOGY_OBJECT_MEMORY = 2,
+  HSA_AGENT_INFO_INFO_NODE,
   /**
-   * Cache object.
+   * Component capabilities. Might be none if the agent is not a component. The
+   * type of this attribute is ::hsa_component_feature_t.
    */
-  HSA_TOPOLOGY_OBJECT_CACHE = 4
-} hsa_topology_object_t;
+  HSA_AGENT_INFO_COMPONENT_FEATURES,
+  /**
+   * Name of vendor. The type of this attribute is \c char[64].
+   */
+  HSA_AGENT_INFO_VENDOR_NAME,
+  /**
+   * Number of work-items in a wavefront. The type of this attribute is \c
+   * uint32_t.
+   */
+  HSA_AGENT_INFO_WAVEFRONT_SIZE,
+  /**
+   * Array of cache sizes (L1..L3). Each size is expressed in bytes. A size of 0
+   * for a particular level indicates that there is no cache information for
+   * that level. The type of this attribute is \c uint32_t[4].
+   */
+  HSA_AGENT_INFO_CACHE_SIZE,
+  /**
+   * Maximum number of work-items in a grid. The type of this attribute is
+   * ::hsa_dim3_t.
+   */
+  HSA_AGENT_INFO_MAX_GRID_DIM,
+  /**
+   * Maximum number of work-items in a workgroup. The type of this attribute is
+   * ::hsa_dim3_t.
+   */
+  HSA_AGENT_INFO_MAX_WORKGROUP_DIM,
+  /**
+   * Maximum capacity (in terms of packets) that a queue can hold. The type of
+   * this attribute is \c uint32_t.
+   */
+  HSA_AGENT_INFO_QUEUE_MAX_PACKETS,
+  /**
+   * Current timestamp. The value of this attribute monotonically increases at a
+   * constant rate. The type of this attribute is \c uint64_t.
+   */
+  HSA_AGENT_INFO_CLOCK,
+  /**
+   * Timestamp value increase rate, in MHz. The timestamp (clock) frequency is
+   * in the range 1-400MHz. The type of this attribute is \c uint16_t.
+   */
+  HSA_AGENT_INFO_CLOCK_FREQUENCY,
+  /**
+   * Maximum duration of a signal wait operation. Expressed as a count based on
+   * the timestamp frequency. The type of this attribute is \c uint64_t.
+   */
+  HSA_AGENT_INFO_MAX_SIGNAL_WAIT,
+} hsa_agent_info_t;
 
 /**
- * @brief Retrieve the identifiers of all the topology objects.
+ * @brief Iterate over the available agents, and invoke an application-defined
+ * callback on every iteration.
  *
- * @param[in] type Type of object affected by the query.
+ * @details If @a callback returns a status other than ::HSA_STATUS_SUCCESS for
+ * a particular iteration, the traversal stops and the function returns that
+ * status value.
  *
- * @param[out] ids Pointer to a list containing the identifiers of all the
- * topology objects of type @a type.
+ * @param[in] callback Callback to be invoked once per agent.
  *
- * @param[out] num_ids Pointer to a memory location where the number of elements
- * in @a ids is to be stored.
+ * @param[in] data Application data that is passed to @a callback on every
+ * iteration. Can be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is failure to allocate
- * the resources required by the implementation.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a ids is NULL or @a num_ids
- * is NULL.
- */
-hsa_status_t hsa_topology_object_ids(hsa_topology_object_t type,
-                                     uint32_t** ids,
-                                     int* num_ids);
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a callback is NULL.
+*/
+hsa_status_t HSA_API hsa_iterate_agents(
+    hsa_status_t (*callback)(hsa_agent_t agent, void* data),
+    void* data);
 
 /**
- * @brief Retrieve the topology descriptor associated with a topology  object.
+ * @brief Get the current value of an attribute for a given agent.
  *
- * @param[in] id Identifier of the topology object being queried.
+ * @param[in] agent A valid agent.
  *
- * @param[in,out] object_descriptor User-allocated buffer where the descriptor
- * of the object will be copied to. The buffer pointed by @a object_descriptor
- * must be large enough to hold the descriptor for the object.
+ * @param[in] attribute Attribute to query.
+ *
+ * @param[out] value Pointer to a user-allocated buffer where to store the value
+ * of the attribute. If the buffer passed by the application is not large enough
+ * to hold the value of @a attribute, the behavior is undefined.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a object_descriptor is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT If the agent is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a attribute is not a valid
+ * agent attribute, or @a value is NULL.
  */
-hsa_status_t hsa_topology_object_descriptor(uint32_t id,
-                                     void* object_descriptor);
+hsa_status_t HSA_API hsa_agent_get_info(
+    hsa_agent_t agent,
+    hsa_agent_info_t attribute,
+    void* value);
+
+/*
+
+// If we do not know the size of an attribute, we need to query it first
+// Note: this API will not be in the spec unless needed
+hsa_status_t HSA_API hsa_agent_get_info_size(
+    hsa_agent_t agent,
+    hsa_agent_info_t attribute,
+    size_t* size);
+
+// Set the value of an agents attribute
+// Note: this API will not be in the spec unless needed
+hsa_status_t HSA_API hsa_agent_set_info(
+    hsa_agent_t agent,
+    hsa_agent_info_t attribute,
+    void* value);
+
+*/
+
+/**
+ * @brief Opaque handle representing a NUMA node, a set of agents around
+ * memory which they can directly access.
+ */
+typedef uint64_t hsa_node_t;
 
 /** @} */
 
@@ -967,6 +806,10 @@ hsa_status_t HSA_API hsa_signal_wait_relaxed(hsa_signal_handle_t signal_handle,
  * same unit as the system timestamp. A value of UINT64_MAX indicates no
  * maximum.
  *
+ * @param[in] long_wait Hint indicating that the signal value is not expected to
+ * meet the given condition in a short period of time. The HSA runtime may use
+ * this hint to optimize the wait implementation.
+ *
  * @param[in] condition Condition used to compare the signal value with @a
  * compare_value.
  *
@@ -992,20 +835,24 @@ hsa_status_t HSA_API hsa_signal_wait_relaxed(hsa_signal_handle_t signal_handle,
  * condition value, or @a return_value is NULL.
  *
 */
-hsa_status_t HSA_API hsa_signal_wait_timeout_acquire(hsa_signal_handle_t signal_handle,
-                          uint64_t timeout,
-                          hsa_signal_condition_t condition,
-                          hsa_signal_value_t compare_value,
-                          hsa_signal_value_t *return_value);
+hsa_status_t HSA_API hsa_signal_wait_timeout_acquire(
+    hsa_signal_handle_t signal_handle,
+    uint64_t timeout,
+    bool long_wait,
+    hsa_signal_condition_t condition,
+    hsa_signal_value_t compare_value,
+    hsa_signal_value_t *return_value);
 
 /**
  * @copydoc hsa_signal_wait_timeout_acquire
  */
-hsa_status_t HSA_API hsa_signal_wait_timeout_relaxed(hsa_signal_handle_t signal_handle,
-                          uint64_t timeout,
-                          hsa_signal_condition_t condition,
-                          hsa_signal_value_t compare_value,
-                          hsa_signal_value_t *return_value);
+hsa_status_t HSA_API hsa_signal_wait_timeout_relaxed(
+    hsa_signal_handle_t signal_handle,
+    uint64_t timeout,
+    bool long_wait,
+    hsa_signal_condition_t condition,
+    hsa_signal_value_t compare_value,
+    hsa_signal_value_t *return_value);
 
 /** @} */
 
@@ -1115,7 +962,7 @@ typedef struct hsa_queue_s {
  *
  * @param[in] type Type of the queue.
  *
- * @param[in] event_callback Callback to be invoked for events related with this
+ * @param[in] callback Callback to be invoked for events related with this
  * queue. Can be NULL.
  *
  * @param[in] service_queue Pointer to service queue to be associated with the
@@ -1132,19 +979,20 @@ typedef struct hsa_queue_s {
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is failure to allocate
  * the resources required by the implementation.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_COMPONENT If the component is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT If the component is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a component is NULL, @a size
  * is not a power of two, @a type is not a valid queue type, or @a queue is
  * NULL.
  *
  */
-hsa_status_t HSA_API hsa_queue_create(const hsa_agent_t *component,
-                              size_t size,
-                              hsa_queue_type_t type,
-                              hsa_event_callback_t event_callback,
-                              hsa_queue_t* service_queue,
-                              hsa_queue_t **queue);
+hsa_status_t HSA_API hsa_queue_create(
+    hsa_agent_t component,
+    size_t size,
+    hsa_queue_type_t type,
+    void (*callback)(hsa_status_t status, hsa_queue_t *queue),
+    hsa_queue_t* service_queue,
+    hsa_queue_t **queue);
 
 /**
  * @brief Destroy a user mode queue.
@@ -1573,69 +1421,141 @@ typedef struct hsa_aql_barrier_packet_s {
 /** \defgroup memory TODO
  *  @{
  */
+
 /**
+ * @brief A memory region represents a virtual memory interval that is visible
+ * to a particular agent, and contains properties about how memory is accessed
+ * or allocated from that agent.
  *
- * @brief Register memory.
+ * Two or more agents might have access to the same virtual memory interval, but
+ * the runtime uses multiple memory regions (one per agent) to represent the
+ * aperture.
+ */
+typedef uint64_t hsa_region_t;
+
+/**
+ * @brief Memory segments.
+ */
+typedef enum {
+  HSA_SEGMENT_GLOBAL = 1, /*!<  Global segment. */
+  HSA_SEGMENT_PRIVATE = 2, /*!<  Private segment. */
+  HSA_SEGMENT_GROUP = 4, /*!<  Group segment. */
+  HSA_SEGMENT_KERNARG = 8,  /*!<  Kernarg segment. */
+  HSA_SEGMENT_READONLY = 16, /*!<  Readonly segment. */
+  HSA_SEGMENT_IMAGE = 32 /*!<  Image segment. */
+} hsa_segment_t;
+
+/**
+ * @brief Attributes of a memory region.
+ */
+typedef enum {
+  /**
+   * Base (starting) address. The type of this attribute is \c void*.
+   */
+  HSA_REGION_INFO_BASE_ADDRESS,
+  /**
+   * Size, in bytes. The type of this attribute is \c size_t.
+   */
+  HSA_REGION_INFO_SIZE,
+  /**
+   * NUMA node associated with this region. The type of this attribute is \c
+   * ::hsa_node_t
+   */
+  HSA_REGION_INFO_NODE,
+  /**
+   * Maximum allocation size in this region, in bytes. A value of 0 indicates
+   * that the host cannot allocate memory in the region. The type of this
+   * attribute is \c size_t.
+   */
+  HSA_REGION_INFO_MAX_ALLOCATION_SIZE,
+  /**
+   * Segment where the memory in the region can be used. The type of this
+   * attribute is ::hsa_segment_t.
+   */
+  HSA_REGION_INFO_SEGMENT,
+  /**
+   * Peak bandwidth for component access, in Mbs per second. The type of this
+   * attribute is \c uint32_t
+   */
+  HSA_REGION_INFO_BANDWIDTH,
+  /**
+   * Cache levels that cache data in the region. The type of this attribute is
+   * \c bool[4].
+   */
+  HSA_REGION_INFO_CACHED,
+} hsa_region_info_t;
+
+/**
+ * @brief Get the current value of an attribute of a region.
  *
- * @details Registering a system memory region for use with all the available
- * devices This is an optional interface that is solely provided as a
- * performance optimization hint to the underlying implementation so it may
- * prepare for the future use of the memory by the devices. The interface is
- * only beneficial for system memory that will be directly accessed by a device.
+ * @param[in] region A valid region.
  *
- * Overlapping registrations are allowed. This is neither detrimental nor
- * beneficial.
+ * @param[in] attribute Attribute to query.
  *
- * @param[in] address A pointer to the base of the memory region to be
- * registered. If a null pointer is passed, no operation is performed.
- *
- * @param[in] size Requested registration size in bytes. If a size of zero is
- * passed, no operation is performed.
+ * @param[out] value Pointer to a user-allocated buffer where to store the value
+ * of the attribute. If the buffer passed by the application is not large enough
+ * to hold the value of @a attribute, the behavior is undefined.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure in
- * allocating the necessary resources.
+ * @retval ::HSA_STATUS_ERROR_INVALID_REGION If the region is invalid.
  *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a attribute is not a valid
+ * region attribute, or @a value is NULL.
  */
-hsa_status_t HSA_API hsa_memory_register(void *address,
-    size_t size);
+hsa_status_t HSA_API hsa_region_get_info(
+    hsa_region_t region,
+    hsa_region_info_t attribute,
+    void* value);
 
 /**
+ * @brief Iterate over the memory regions that are visible to an agent, and
+ * invoke an application-defined callback on every iteration.
  *
- * @brief Deregister memory.
+ * @details If @a callback returns a status other than ::HSA_STATUS_SUCCESS for
+ * a particular iteration, the traversal stops and the function returns that
+ * status value.
  *
- * @details Used for deregistering a memory region previously registered.
+ * @param[in] agent A valid agent.
  *
- * Deregistration must be performed using an address that was previously
- * registered.  In the event that deregistration is performed on an address that
- * has been used in multiple registrations, the smallest of the registrations is
- * deregistered.
+ * @param[in] callback Callback to be invoked once per region that is visible
+ * from the agent.
  *
- * @param[in] address A pointer to the base of the memory region to be
- * deregistered. If a NULL pointer is passed, no operation is performed.
+ * @param[in] data Application data that is passed to @a callback on every
+ * iteration. Can be NULL.
  *
- *  @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- *  @retval ::HSA_STATUS_ERROR_NOT_REGISTERED If the pointer has not been
- *  registered before.
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
+ * initialized.
  *
- */
-hsa_status_t HSA_API hsa_memory_deregister(void *address);
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT If the agent is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a callback is NULL.
+*/
+hsa_status_t HSA_API hsa_agent_iterate_regions(
+    hsa_agent_t agent,
+    hsa_status_t (*callback)(hsa_region_t region, void* data),
+    void* data);
 
 /**
- * @brief Allocate system memory.
+ * @brief Allocate a block of  memory.
  *
- * @details The returned buffer is already registered. Allocation of size 0 is
- * allowed and returns a NULL pointer.
-
- * @param[in] size_bytes Allocation size.
+ * @param[in] region Region where to allocate memory from.
  *
- * @param[in] address Address pointer allocated by the user. Dereferenced and
- * assigned to the pointer to the memory allocated for this request.
+ * @param[in] size Allocation size, in bytes. Allocation of size 0 is allowed
+ * and returns a NULL pointer.
+ *
+ * @param[in] alignment The alignment size (in bytes) for the base address of
+ * the resulting allocation. If the value is zero, no particular alignment will
+ * be applied.  If the value is not zero, it must be a power of two that is not
+ * smaller than sizeof(void*).
+ *
+ * @param[out] ptr A pointer to the location of where to return the pointer
+ * to the base of the allocated region of memory.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -1646,68 +1566,42 @@ hsa_status_t HSA_API hsa_memory_deregister(void *address);
  * allocation. This error may also occur when the core runtime library needs to
  * spawn threads or create internal OS-specific events.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If the passed address is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a alignment is not a power of
+ * two, or @a alignment is smaller than sizeof(void*) but not 0, or @a ptr is
+ * NULL.
  */
-hsa_status_t HSA_API hsa_memory_allocate(size_t size_bytes, void **address);
+hsa_status_t HSA_API hsa_memory_allocate(hsa_region_t region,
+    size_t size,
+    size_t alignment,
+    void** ptr);
 
 /**
- * @brief Free system memory.
+ * @brief Deallocate a block of memory previously allocated using
+ * ::hsa_memory_allocate.
  *
- * @param[in] ptr Pointer to be released. If NULL, no action is performed
+ * @param[in] ptr Pointer to a memory block. If @a ptr is NULL, no action is
+ * performed.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
- *
  */
 hsa_status_t HSA_API hsa_memory_free(void* ptr);
 
 /**
- * @brief Allocate kernarg memory.
+ * @brief Copy block of memory.
  *
- * @param[in] component A valid pointer to the component for which the specified
- * amount of kernarg memory is to be allocated.
- *
- * @param[in] size Requested allocation size in bytes. If size is 0, NULL is
- * returned.
- *
- * @param[out] address A valid pointer to the location of where to return the
- * pointer to the base of the allocated region of memory.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
- * initialized.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If the passed address is NULL.
- */
-hsa_status_t HSA_API hsa_memory_allocate_kernarg( const hsa_agent_t *component,
-    size_t size,
-    void **address);
-
-/**
- * @brief Free kernarg memory.
- *
- * @param[in] ptr Pointer to be released. If NULL, no action is performed
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
- * initialized.
- *
- */
-hsa_status_t HSA_API hsa_memory_free_kernarg(void* ptr);
-
-/**
- * @brief Copy between the system and kernarg segments.
+ * @details Copying a number of bytes larger than the size of the memory regions
+ * pointed by @a dst or @a src results in undefined behavior.
  *
  * @param[out] dst A valid pointer to the destination array where the content is
  *      to be copied.
  *
  * @param[in] src A valid pointer to the source of data to be copied.
  *
- * @param[in] size Number of bytes to copy.
+ * @param[in] size Number of bytes to copy. If @a size is 0, no copy is
+ * performed and the function returns success.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -1715,33 +1609,29 @@ hsa_status_t HSA_API hsa_memory_free_kernarg(void* ptr);
  * initialized.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If the source or destination
- * pointers are invalid.
+ * pointers are NULL.
  */
-hsa_status_t HSA_API hsa_memory_copy_kernarg_to_system(void *dst,
+hsa_status_t HSA_API hsa_memory_copy(void *dst,
     const void *src,
     size_t size);
 
 /**
-  * @copydoc hsa_memory_copy_kernarg_to_system
-  */
-hsa_status_t HSA_API hsa_memory_copy_system_to_kernarg(void *dst,
-    const void *src,
-    size_t size);
-
-/**
- * @brief Allocate memory on HSA Device.
  *
- * @details Allocate global device memory associated with specified
- * device.
+ * @brief Register memory.
  *
- * @param[in] component A valid pointer to the HSA device for which the
- * specified amount of global memory is to be allocated.
+ * @details Registering memory expresses an intention to access (read or write)
+ * the passed buffer from a component other than the host. This is a performance
+ * hint that allows the runtime implementation to know which buffers will be
+ * accessed by some of the components ahead of time.
  *
- * @param[in] size Requested allocation size in bytes. If size is 0, NULL is
- * returned.
+ * Overlapping registrations (including multiple registrations of the same
+ * buffer) are allowed.
  *
- * @param[out] address A valid pointer to the location of where to return the
- * pointer to the base of the allocated region of memory.
+ * @param[in] address A pointer to the base of the memory region to be
+ * registered. If a NULL pointer is passed, no operation is performed.
+ *
+ * @param[in] size Requested registration size in bytes. A size of zero is
+ * only allowed if @a address is NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -1749,63 +1639,34 @@ hsa_status_t HSA_API hsa_memory_copy_system_to_kernarg(void *dst,
  * initialized.
  *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure in
- * allocation of an internal structure required by the core runtime
- * library. This error may also occur when the core runtime library needs to
- * spawn threads or create internal OS-specific events.
+ * allocating the necessary resources.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If the passed component is NULL
- * or invalid, or if the passed pointer is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a size is 0 but @a address
+ * is not NULL.
  */
-hsa_status_t HSA_API hsa_memory_allocate_component_local( const hsa_agent_t *component,
-    size_t size,
-    void **address);
+hsa_status_t HSA_API hsa_memory_register(void *address,
+    size_t size);
 
 /**
  *
- * @brief Deallocate memory on HSA component.
+ * @brief Deregister memory previously registered using ::hsa_memory_register.
  *
- * @details Deallocate component memory that was allocated with
- * ::hsa_memory_allocate_component_local.
+ * @details Deregistration must be performed using an address that was
+ * previously registered.  In the event that deregistration is performed on an
+ * address that has been used in multiple registrations, the smallest of the
+ * registrations is deregistered.
  *
- * @param[in] address A pointer to the address to be deallocated. If the pointer
- * is NULL, no operation is performed.
+ * @param[in] address A pointer to the base of the memory region to be
+ * deregistered. If a NULL pointer is passed, no operation is performed.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been initialized.
+ * @retval ::HSA_STATUS_ERROR_NOT_REGISTERED If the pointer has not been
+ *  registered before.
  *
  */
-hsa_status_t HSA_API hsa_memory_free_component_local(void *address);
+hsa_status_t HSA_API hsa_memory_deregister(void *address);
 
-/**
- * @brief Copy between the system and local heaps.
- *
- * @param[out] dst A valid pointer to the destination array where the content is
- * to be copied.
- *
- * @param[in] src A valid pointer to the source of data to be copied.
- *
- * @param[in] size Number of bytes to copy.
- *
- * @param[in] signal The signal that will be incremented by the runtime when the
- * copy is complete.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
- * initialized.
- *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure in
- * allocation of an internal structure required by the core runtime
- * library. This error may also occur when the core runtime library needs to
- * spawn threads or create internal OS-specific events.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any argument is invalid.
- */
-hsa_status_t HSA_API hsa_memory_copy_component_local_to_system(void *dst,
-    const void *src,
-    size_t size,
-    hsa_signal_handle_t signal);
 /** @} */
 
 /** \defgroup finalizer Finalizer Core API
@@ -1958,7 +1819,7 @@ typedef struct hsa_ext_brig_module_handle_s {
  * @brief An entry offset into the code section of the BRIG module. The value
  * is the byte offset relative to the start of the section to the beginning of
  * the referenced entry. The value 0 is reserved to indicate that the offset
- * does not reference any entry. 
+ * does not reference any entry.
  */
 typedef uint32_t hsa_ext_brig_code_section_offset32_t;
 
@@ -2384,7 +2245,7 @@ typedef enum {
 /**
  * @brief The 64-bit opaque code handle to the finalized code that includes the
  * executable ISA for the HSA component. It can be used for the kernel
- * dispatch packet kernel object address field. 
+ * dispatch packet kernel object address field.
  */
 typedef struct hsa_ext_code_handle_s {
   /**
@@ -2443,7 +2304,7 @@ typedef struct hsa_ext_code_descriptor_s {
   /**
    * The 64-bit opaque code handle to the finalized code that includes the
    * executable ISA for the HSA component. It can be used for the kernel
-   * dispatch packet kernel object address field. 
+   * dispatch packet kernel object address field.
    */
   hsa_ext_code_handle_t code;
 
@@ -2713,7 +2574,7 @@ typedef hsa_status_t (*hsa_ext_error_message_callback_t)(
  */
 hsa_status_t HSA_API hsa_ext_finalize(
   hsa_runtime_caller_t caller,
-  hsa_agent_t *agent,
+  hsa_agent_t agent,
   uint32_t program_agent_id,
   uint32_t program_agent_count,
   size_t finalization_request_count,
@@ -2779,7 +2640,7 @@ hsa_status_t HSA_API hsa_ext_destroy_finalization(
  */
 hsa_status_t HSA_API hsa_ext_serialize_finalization(
   hsa_runtime_caller_t caller,
-  hsa_agent_t *agent,
+  hsa_agent_t agent,
   hsa_ext_finalization_t *finalization,
   hsa_runtime_alloc_data_callback_t alloc_serialize_data_callback,
   hsa_ext_error_message_callback_t error_message_callback,
@@ -2829,7 +2690,7 @@ hsa_status_t HSA_API hsa_ext_serialize_finalization(
 hsa_status_t HSA_API hsa_ext_deserialize_finalization(
   hsa_runtime_caller_t caller,
   void *serialized_object,
-  hsa_agent_t *agent,
+  hsa_agent_t agent,
   uint32_t program_agent_id,
   uint32_t program_agent_count,
   hsa_ext_symbol_address_callback_t symbol_address_callback,
@@ -2857,7 +2718,7 @@ hsa_status_t HSA_API hsa_ext_deserialize_finalization(
  * add particular modules to the program using ::hsa_ext_add_module, perform
  * various define, query and validation operations, finalize the program using
  * ::hsa_ext_finalize_program. A program has to be destroyed once not needed
- * any more using ::hsa_ext_destroy_program.
+ * any more using ::hsa_ext_program_destroy.
  */
 typedef struct hsa_ext_program_handle_s {
   /**
@@ -3056,7 +2917,7 @@ hsa_status_t HSA_API hsa_ext_add_module(
  */
 hsa_status_t HSA_API hsa_ext_finalize_program(
   hsa_ext_program_handle_t program,
-  hsa_agent_t *agent,
+  hsa_agent_t agent,
   size_t finalization_request_count,
   hsa_ext_finalization_request_t *finalization_request_list,
   hsa_ext_control_directives_t *control_directives,
@@ -3084,7 +2945,7 @@ hsa_status_t HSA_API hsa_ext_finalize_program(
  */
 hsa_status_t HSA_API hsa_ext_query_program_agent_id(
   hsa_ext_program_handle_t program,
-  hsa_agent_t *agent,
+  hsa_agent_t agent,
   uint32_t *program_agent_id);
 
 /**
@@ -3210,7 +3071,7 @@ hsa_status_t HSA_API hsa_ext_query_program_brig_module(
  */
 hsa_status_t HSA_API hsa_ext_query_call_convention(
   hsa_ext_program_handle_t program,
-  hsa_agent_t *agent,
+  hsa_agent_t agent,
   hsa_ext_program_call_convention_id32_t *first_call_convention_id,
   uint32_t *call_convention_count);
 
@@ -3323,7 +3184,7 @@ hsa_status_t HSA_API hsa_ext_query_program_allocation_global_variable_address(
  */
 hsa_status_t HSA_API hsa_ext_define_agent_allocation_global_variable_address(
   hsa_ext_program_handle_t program,
-  hsa_agent_t *agent,
+  hsa_agent_t agent,
   hsa_ext_brig_module_handle_t module,
   hsa_ext_brig_code_section_offset32_t symbol,
   hsa_ext_error_message_callback_t error_message_callback,
@@ -3352,7 +3213,7 @@ hsa_status_t HSA_API hsa_ext_define_agent_allocation_global_variable_address(
  */
 hsa_status_t HSA_API hsa_ext_query_agent_global_variable_address(
   hsa_ext_program_handle_t program,
-  hsa_agent_t *agent,
+  hsa_agent_t agent,
   hsa_ext_brig_module_handle_t module,
   hsa_ext_brig_code_section_offset32_t symbol,
   void** address);
@@ -3384,7 +3245,7 @@ hsa_status_t HSA_API hsa_ext_query_agent_global_variable_address(
  */
 hsa_status_t HSA_API hsa_ext_define_readonly_variable_address(
   hsa_ext_program_handle_t program,
-  hsa_agent_t * agent,
+  hsa_agent_t agent,
   hsa_ext_brig_module_handle_t module,
   hsa_ext_brig_code_section_offset32_t symbol,
   hsa_ext_error_message_callback_t error_message_callback,
@@ -3413,7 +3274,7 @@ hsa_status_t HSA_API hsa_ext_define_readonly_variable_address(
  */
 hsa_status_t HSA_API hsa_ext_query_readonly_variable_address(
   hsa_ext_program_handle_t program,
-  hsa_agent_t * agent,
+  hsa_agent_t agent,
   hsa_ext_brig_module_handle_t module,
   hsa_ext_brig_code_section_offset32_t symbol,
   void** address);
@@ -3570,7 +3431,7 @@ typedef hsa_status_t (*hsa_ext_program_allocation_symbol_address_t)(
  */
 typedef hsa_status_t (*hsa_ext_agent_allocation_symbol_address_t)(
   hsa_runtime_caller_t caller,
-  hsa_agent_t *agent,
+  hsa_agent_t agent,
   const char *name,
   uint64_t *symbol_adress);
 
@@ -4051,7 +3912,7 @@ typedef struct hsa_ext_sampler_descriptor_s {
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a agent, @a image_format, or
  *       @a capability_mask are NULL.
  */
-hsa_status_t HSA_API hsa_ext_image_get_format_capability(const hsa_agent_t *agent,
+hsa_status_t HSA_API hsa_ext_image_get_format_capability(hsa_agent_t agent,
                          const hsa_ext_image_format_t *image_format,
                          hsa_ext_image_geometry_t image_geometry,
                          uint32_t *capability_mask);
@@ -4094,7 +3955,7 @@ hsa_status_t HSA_API hsa_ext_image_get_format_capability(const hsa_agent_t *agen
  * not support the image dimensions specified by the format descriptor.
  */
 hsa_status_t HSA_API hsa_ext_image_get_info(
-                         const hsa_agent_t *agent,
+                         hsa_agent_t agent,
                          const hsa_ext_image_descriptor_t *image_descriptor,
                          hsa_ext_image_access_permission_t access_permission,
                          hsa_ext_image_info_t *image_info);
@@ -4157,7 +4018,7 @@ hsa_status_t HSA_API hsa_ext_image_get_info(
  *
  */
 hsa_status_t HSA_API hsa_ext_image_create_handle(
-                         const hsa_agent_t *agent,
+                         hsa_agent_t agent,
                          const hsa_ext_image_descriptor_t *image_descriptor,
                          const void *image_data,
                          hsa_ext_image_access_permission_t access_permission,
@@ -4211,7 +4072,7 @@ hsa_status_t HSA_API hsa_ext_image_create_handle(
  *
  */
 hsa_status_t HSA_API hsa_ext_image_import (
-                         const hsa_agent_t *agent,
+                         hsa_agent_t agent,
                          const void *src_memory,
                          size_t src_row_pitch,
                          size_t src_slice_pitch,
@@ -4268,7 +4129,7 @@ hsa_status_t HSA_API hsa_ext_image_import (
  * image_region are NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_export(
-                          const hsa_agent_t *agent,
+                          hsa_agent_t agent,
                           hsa_ext_image_handle_t src_image_handle,
                           void *dst_memory,
                           size_t dst_row_pitch,
@@ -4316,7 +4177,7 @@ hsa_status_t HSA_API hsa_ext_image_export(
  * are NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_copy(
-                       const hsa_agent_t *agent,
+                       hsa_agent_t agent,
                        hsa_ext_image_handle_t src_image_handle,
                        hsa_ext_image_handle_t dst_image_handle,
                        const hsa_ext_image_region_t *image_region,
@@ -4368,7 +4229,7 @@ hsa_status_t HSA_API hsa_ext_image_copy(
  * image_region are NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_clear(
-                        const hsa_agent_t *agent,
+                        hsa_agent_t agent,
                         hsa_ext_image_handle_t image_handle,
                         const float data[4],
                         const hsa_ext_image_region_t *image_region,
@@ -4399,7 +4260,7 @@ hsa_status_t HSA_API hsa_ext_image_clear(
  * NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_destroy_handle (
-                        const hsa_agent_t *agent,
+                        hsa_agent_t agent,
                         hsa_ext_image_handle_t *image_handle);
 
 /**
@@ -4425,7 +4286,7 @@ hsa_status_t HSA_API hsa_ext_image_destroy_handle (
  * the specified handle because it is out of resources.
  */
 hsa_status_t HSA_API hsa_ext_sampler_create_handle(
-                     const hsa_agent_t *agent,
+                     hsa_agent_t agent,
                      const hsa_ext_sampler_descriptor_t *sampler_descriptor,
                      hsa_ext_sampler_handle_t *sampler_handle);
 
@@ -4449,46 +4310,46 @@ hsa_status_t HSA_API hsa_ext_sampler_create_handle(
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments is NULL.
  */
 hsa_status_t HSA_API hsa_ext_sampler_destroy_handle(
-                     const hsa_agent_t *agent,
+                     hsa_agent_t agent,
                      hsa_ext_sampler_handle_t *sampler_handle);
 /** @} */
 
 
-/** \defgroup agent_dispatch TODO
- *  @{
- */
 
-/**
- * @brief Callback to be invoked when a user-defined service has been requested
- * by a agent dispatch packet.
- */
-typedef void (*hsa_agent_dispatch_callback_t)(
-  uint16_t type,
-  uint64_t arg0,
-  uint64_t arg1,
-  uint64_t arg2,
-  uint64_t arg3,
-  void* return_location);
+/* /\** \defgroup agent_dispatch TODO */
+/*  *  @{ */
+/*  *\/ */
+/* /\** */
+/*  * @brief Callback to be invoked when a user-defined service has been requested */
+/*  * by a agent dispatch packet. */
+/*  *\/ */
+/* typedef void (*hsa_agent_dispatch_callback_t)( */
+/*   uint16_t type, */
+/*   uint64_t arg0, */
+/*   uint64_t arg1, */
+/*   uint64_t arg2, */
+/*   uint64_t arg3, */
+/*   void* return_location); */
 
-/**
- * @brief Agent dispatch runtime function registration.
- *
- * @param agent_dispatch_queue Agent dispatch queue.
- *
- * @param[in] agent_dispatch_callback Callback that the user is registering.
- *
- * @param callback Event callback.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been initialized.
- *
- */
-hsa_status_t HSA_API hsa_register_agent_dispatch_callback(
-    hsa_queue_t *agent_dispatch_queue,
-    hsa_agent_dispatch_callback_t agent_dispatch_callback,
-    hsa_event_callback_t callback);
-/** @} */
+/* /\** */
+/*  * @brief Agent dispatch runtime function registration. */
+/*  * */
+/*  * @param agent_dispatch_queue Agent dispatch queue. */
+/*  * */
+/*  * @param[in] agent_dispatch_callback Callback that the user is registering. */
+/*  * */
+/*  * @param callback Event callback. */
+/*  * */
+/*  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully. */
+/*  * */
+/*  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been initialized. */
+/*  * */
+/*  *\/ */
+/* hsa_status_t HSA_API hsa_register_agent_dispatch_callback( */
+/*     hsa_queue_t *agent_dispatch_queue, */
+/*     hsa_agent_dispatch_callback_t agent_dispatch_callback, */
+/*     hsa_event_callback_t callback); */
+/* /\** @} *\/ */
 
 
 /** \defgroup extensions TODO

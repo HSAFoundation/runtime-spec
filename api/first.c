@@ -12,25 +12,26 @@
 
 #include "hsa.h"
 
+hsa_status_t get_first_component(hsa_agent_t agent, void* data) {
+  // Assume that the first agent is also a component
+  hsa_agent_t* ret = (hsa_agent_t*) data;
+  *ret = agent;
+  return HSA_STATUS_INFO_BREAK;
+}
+
 int main() {
 
   // Initialize the runtime
   hsa_init();
 
-  // Retrieve the first available component and run the kernel on it.
-  uint32_t* ids = NULL;
-  int* num_ids = NULL;
-  hsa_topology_object_ids(HSA_TOPOLOGY_OBJECT_AGENT, &ids, num_ids);
-  assert(*num_ids > 0);
-  hsa_agent_t component;
-  // For simplicity, assume that the first agent listed is also a component.
-  hsa_topology_object_descriptor(ids[0], &component);
-  assert(component.agent_type & HSA_AGENT_TYPE_COMPONENT);
+  // Retrieve the first available component
+  hsa_agent_t* component = NULL;
+  hsa_iterate_agents(get_first_component, component);
 
   // Create a queue in the selected component. The queue can hold up to four
   // packets, and has no callback or service queue associated with it.
   hsa_queue_t *queue;
-  hsa_queue_create(&component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
+  hsa_queue_create(*component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
 
   // Setup the packet encoding the task to execute
   hsa_aql_dispatch_packet_t dispatch_packet;

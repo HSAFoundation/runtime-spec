@@ -119,12 +119,13 @@ def process_typedef(typedef, tex, defs):
   tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\\\\")
 
 def process_struct_or_union(typedef, tex, defs):
-  actname = typedef.find('type/ref').text
-  tex.write('\\subsubsection{' + actname + '}\n\\vspace{-2mm}')
+  typename = node2tex(typedef.find('name'))
+  tex.write('\\subsubsection{' + typename + '}\n\\vspace{-2mm}')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # name
   typ = typedef.find('type').text;
+  actname = typedef.find('type/ref').text
   tex.write("typedef " + typ + " " + actname + " \{\n")
   # members. Doxygen stores their info in a separate file.
   membersfile = typedef.find('type/ref').get('refid') + ".xml"
@@ -154,7 +155,6 @@ def process_struct_or_union(typedef, tex, defs):
     fields.append(txt)
   tex.write(''.join(vals) + "\} ")
   tex.write(" \\hypertarget{" + typedef.get('id') + "}")
-  typename = node2tex(typedef.find('name'))
   tex.write("{\\textbf{" + typename + "}}")
   defs.append(('reftyp', typename))
   typename_id[typename] = typedef.get('id')
