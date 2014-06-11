@@ -2448,24 +2448,17 @@ typedef struct hsa_ext_finalization_request_s {
 } hsa_ext_finalization_request_t;
 
 /**
- * @brief Finalization descriptor is the descriptor for the code object
- * produced by the Finalizer and contains information that applies to the
- * kernels/indirect function that were finalized.
+ * @brief Finalization handle is the handle to the object produced by the
+ * Finalizer that contains the isa code and related information needed to
+ * execute that code for a specific agent for the set of  kernels/indirect
+ * functions specified in the finalization request.
  */
-typedef struct hsa_ext_finalization_s {
+typedef struct hsa_ext_finalization_handle_s {
   /**
-   * Number of code descriptors produced.
+   * HSA component specific handle to the finalization information.
    */
-  uint32_t code_descriptor_count;
-  /**
-   * Reserved. Must be 0.
-   */
-  uint32_t reserved1;
-  /**
-   * Dynamically sized array of code descriptors.
-   */
-  hsa_ext_code_descriptor_t code_descriptors[1];
-} hsa_ext_finalization_t;
+  uint64_t handle;
+} hsa_ext_finalization_handle_t;
 
 /**
  * @brief Call back function to get the definition of a module scope
@@ -2552,15 +2545,17 @@ typedef hsa_status_t (*hsa_ext_error_message_callback_t)(
  * information for @a finalization. 0 - exclude debug information,
  * 1 - include debug information.
  *
- * @param[out] finalization the descriptor for the code object
- * produced by the Finalizer and contains information that applies to all code
- * entities in the program.
+ * @param[out] finalization Handle to the object produced that contains the
+ * isa code and related information needed to execute that code for the
+ * specific @a agent for the set of kernels/indirect functions specified in the
+ * @a finalization_request.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH If the directive in the control
- * directive structure and in the HSAIL kernel mismatch or if the same directive
- * is used with a different value in one of the functions used by this kernel.
+ * @retval ::HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH If the directive in the
+ * control directive structure and in the HSAIL kernel mismatch or if the same
+ * directive is used with a different value in one of the functions used by
+ * this kernel.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a finalization_request_list
  * is NULL or invalid.
@@ -2586,12 +2581,72 @@ hsa_status_t HSA_API hsa_ext_finalize(
   uint8_t optimization_level,
   const char *options,
   int debug_information,
-  hsa_ext_finalization_t **finalization);
+  hsa_ext_finalization_handle_t *finalization);
 
 /**
- * @brief Destroys the finalization.
+ * @brief Queries the total number of kernel and indirect functions that
+ * have been finalized as part of the finalization object.
  *
- * @param[in] finalization Finalization to be destroyed.
+ * @param[in] agent Agent for which the finalization object contains code.
+ *
+ * @param[in] finalization Finalization handle that references the finalization
+ * object for @a agent.
+ *
+ * @param[out] code_descriptor_count Number of kernel and indirect functions that
+ * have been finalized as part of the finalization object.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully,
+ * and number of code descriptors is queried.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a agent is
+ * NULL or not valid. If @a finalization points to invalid finalization. If
+ * @a code_descriptor_count is NULL.
+ */
+hsa_status_t hsa_ext_query_finalization_code_descriptor_count(
+  hsa_agent_t *agent,
+  hsa_ext_finalization_handle_t finalization,
+  uint32_t *code_descriptor_count);
+
+/**
+ * @brief Queries information about one of the kernel or indirect functions that
+ * have been finalized as part of a finalization object.
+ *
+ * @param[in] agent Agent for which the finalization object contains code.
+ *
+ * @param[in] finalization Finalization handle that references the finalization
+ * object for @a agent.
+ *
+ * @param[in] index Specifies which kernel or indirect function information is
+ * being requested. Must be in the range 0 to
+ * ::hsa_ext_query_finalization_code_descriptor_count – 1.
+ *
+ * @param[out] code_descriptor The information about the requested kernel or
+ * indirect function.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully,
+ * and code descriptor is queried.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @a agent is
+ * NULL or not valid. If @a finalization points to invalid finalization. If
+ * @a code_descriptor_count is NULL.
+ */
+hsa_status_t hsa_ext_query_finalization_code_descriptor(
+  hsa_agent_t *agent,
+  hsa_ext_finalization_handle_t finalization,
+  uint32_t index,
+  hsa_ext_code_descriptor_t *code_descriptor);
+
+/**
+ * @brief Destroys a finalization. This may reclaim the memory occupied by the
+ * finalization object, and remove corresponding isa code from the associated
+ * agent. Once destroyed, all code that is part of the finalization object is
+ * invalidated. It is undefined if any dispatch is executing, or will
+ * subsequently be executed, when the finalization containing its code is
+ * destroyed.
+ *
+ * @param[in] agent Agent for which the finalization object contains code.
+ *
+ * @param[in] finalization Handle to the finalization to be destroyed.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -2602,7 +2657,8 @@ hsa_status_t HSA_API hsa_ext_finalize(
  * during initialization by the runtime could not be freed.
  */
 hsa_status_t HSA_API hsa_ext_destroy_finalization(
-  hsa_ext_finalization_t finalization);
+  hsa_agent_t *agent, 
+  hsa_ext_finalization_handle_t finalization);
 
 /**
  * @brief Serializes the finalization.
@@ -2617,7 +2673,7 @@ hsa_status_t HSA_API hsa_ext_destroy_finalization(
  * @param[in] agent The HSA agent for which @a finalization must be
  * serialized.
  *
- * @param[in] finalization Finalization descriptor to serialize.
+ * @param[in] finalization Handle to the finalization to be serialized.
  *
  * @param[in] alloc_serialize_data_callback Call back function for allocation.
  *
@@ -2641,7 +2697,7 @@ hsa_status_t HSA_API hsa_ext_destroy_finalization(
 hsa_status_t HSA_API hsa_ext_serialize_finalization(
   hsa_runtime_caller_t caller,
   hsa_agent_t agent,
-  hsa_ext_finalization_t *finalization,
+  hsa_ext_finalization_handle_t finalization,
   hsa_runtime_alloc_data_callback_t alloc_serialize_data_callback,
   hsa_ext_error_message_callback_t error_message_callback,
   int debug_information,
@@ -2677,7 +2733,7 @@ hsa_status_t HSA_API hsa_ext_serialize_finalization(
  * information for @a finalization. 0 - exclude debug information,
  * 1 - include debug information.
  *
- * @param[out] finalization Deserialized finalization descriptor.
+ * @param[out] finalization Handle to the deserialized finalization.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -2696,9 +2752,8 @@ hsa_status_t HSA_API hsa_ext_deserialize_finalization(
   hsa_ext_symbol_address_callback_t symbol_address_callback,
   hsa_ext_error_message_callback_t error_message_callback,
   int debug_information,
-  hsa_ext_finalization_t **finalization);
+  hsa_ext_finalization_handle_t *finalization);
 /** @} */
-
 
 /** \defgroup linker HSAIL Linker Service Layer
  *  @{
@@ -2726,6 +2781,14 @@ typedef struct hsa_ext_program_handle_s {
    */
   uint64_t handle;
 } hsa_ext_program_handle_t;
+
+/**
+ * ID of an agent within a program that it is a member. It is used to index
+ * a kernel descriptor to access the code descriptor for the agent. An agent
+ * can be a member of multiple programs and can have different
+ * ::hsa_ext_program_agent_id_t in each program.
+ */
+typedef uint32_t hsa_ext_program_agent_id_t;
 
 /**
  * @brief Creates an HSAIL program.
@@ -2946,7 +3009,7 @@ hsa_status_t HSA_API hsa_ext_finalize_program(
 hsa_status_t HSA_API hsa_ext_query_program_agent_id(
   hsa_ext_program_handle_t program,
   hsa_agent_t agent,
-  uint32_t *program_agent_id);
+  hsa_ext_program_agent_id_t *program_agent_id);
 
 /**
  * @brief Queries the number of HSA components contained in specified
@@ -3289,7 +3352,9 @@ hsa_status_t HSA_API hsa_ext_query_readonly_variable_address(
  *
  * @param[in] symbol Offset in the HSAIL module to get the address from.
  *
- * @param[out] address Queried address.
+ * @param[out] kernel_descriptor The address of the kernel descriptor for the
+ * requested kernel, which is an array of ::hsa_ext_code_descriptor_t
+ * indexed by ::hsa_ext_program_agent_id_t.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully,
  * and the kernel descriptor address is queried from specified HSAIL program.
@@ -3301,7 +3366,7 @@ hsa_status_t HSA_API hsa_ext_query_kernel_descriptor_address(
   hsa_ext_program_handle_t program,
   hsa_ext_brig_module_handle_t module,
   hsa_ext_brig_code_section_offset32_t symbol,
-  void** address);
+  hsa_ext_code_descriptor_t** kernel_descriptor);
 
 /**
  * @brief Queries indirect function descriptor address from specified HSAIL
@@ -3316,7 +3381,10 @@ hsa_status_t HSA_API hsa_ext_query_kernel_descriptor_address(
  *
  * @param[in] symbol Offset in the HSAIL module to get the address from.
  *
- * @param[out] address Queried address.
+ * @param[out] indirect_function_descriptor The address of the indirect
+ * function descriptor for the requested indirect function, which is an array
+ * of ::hsa_ext_code_descriptor_t indexed by
+ * ::hsa_ext_program_call_convention_id32_t.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully,
  * and the indirect function descriptor address is queried from specified HSAIL
@@ -3329,7 +3397,7 @@ hsa_status_t HSA_API hsa_ext_query_indirect_function_descriptor_address(
   hsa_ext_program_handle_t program,
   hsa_ext_brig_module_handle_t module,
   hsa_ext_brig_code_section_offset32_t symbol,
-  void** address);
+  hsa_ext_code_descriptor_t** indirect_function_descriptor);
 
 /**
  * @brief Validates HSAIL program with specified HSAIL program handle. Checks
