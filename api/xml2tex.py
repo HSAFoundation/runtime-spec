@@ -101,6 +101,9 @@ def linkify(definition):
 
 def process_typedef(typedef, tex, defs):
   name = node2tex(typedef.find('name'))
+  if name in ['hsa_\-signal_\-value_\-t']:
+    #blacklist
+    return
   tex.write('\\subsubsection{' + name + '}\n\\vspace{-2mm}')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
@@ -116,7 +119,8 @@ def process_typedef(typedef, tex, defs):
   # end box
   tex.write('\\end{tcolorbox}\n')
   # brief
-  tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\\\\")
+  paras = typedef.findall('briefdescription/para')
+  map(lambda para: tex.write(node2tex(para) + "\n\\\\"), paras)
 
 def process_struct_or_union(typedef, tex, defs):
   typename = node2tex(typedef.find('name'))
@@ -212,25 +216,28 @@ def process_enum(enum, tex, defs):
   tex.write("\\\\[2mm]\n".join(vals))
   tex.write("\n\\end{longtable}")
 
-def process_function(func, tex, listings, commands):
+def register_function(func, tex, listings, commands):
   funid = func.get('id')
   funname = node2tex(func.find('name'))
-  tex.write('\\subsubsection{' + funname + '}\n\\vspace{-2mm}')
-  # begin box
-  tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,colframe=white,colback=lightgray,left=0mm]\n')
-  # signature - return value
-  rettype = node2tex(func.find('type'))
-  rettype = rettype.replace(' HSA_API','') # macros are passed as part of the type, so we have to delete them manually
-  tex.write(rettype + " ")
-  # signature - func name
   index = 'ext' if funname.startswith('hsa_\-ext_\-') else 'api';
   tex.write("\\index[" + index + "]{" + funname + "}") # add function name to function API index
-  tex.write("\\hypertarget{" + funid + "}")
-  typename_id[funname] = funid
-  tex.write("{\\textbf{" + funname + "}}(")
   listings.write(funname + ",") # add function name to listings keyword list
   commands.append(('reffun', funname))
-  # signature - parameters
+  typename_id[funname] = funid
+
+# print function signature (gray box)
+def print_signature(func, tex):
+  funid = func.get('id')
+  funname = node2tex(func.find('name'))
+  # return value
+  rettype = node2tex(func.find('type'))
+  rettype = rettype.replace(' HSA_\-API','') # macros are passed as part of the type, so we have to delete them manually
+  rettype = rettype.replace(' HSA_API','')
+  tex.write(rettype + " ")
+  # func name
+  tex.write("\\hypertarget{" + funid + "}")
+  tex.write("{\\textbf{" + funname + "}}(")
+  # parameters
   sigargs = func.findall("param")
   if sigargs:
     tex.write("\n")
@@ -240,14 +247,35 @@ def process_function(func, tex, listings, commands):
       argtxt = "\\hspace{1.7em}" + node2tex(arg.find('type'))
       argtxt += " \\hsaarg{" + node2tex(arg.find('declname')) + "}"
       argtxt += node2tex(arg.find('array')) # array length, if any
-
       arglst.append(argtxt)
     tex.write(",\\\\\n".join(arglst))
-    tex.write(")\\end{longtable}")
+    tex.write(");\\end{longtable}")
   else:
-    tex.write(")")
-  tex.write("\n\n")
+    tex.write(");")
+
+# returns None if function is not a memory order variant
+# otherwise, it returns the name without the memory order
+def function_name_minus_memory_order(name):
+  memorders = ['_\-acquire', '_\-acq_\-rel', '_\-relaxed', '_\-release']
+  return next((name[:-len(x)] for x in memorders if name.endswith(x)), None)
+
+def process_function(func, tex, listings, commands, variants):
+  map(lambda f : register_function(f, tex, listings, commands), variants)
+  funname = node2tex(func.find('name'))
+  tex.write('\\subsubsection{')
+  if len(variants) == 1:
+     tex.write(funname)
+  else:
+     tex.write(function_name_minus_memory_order(funname))
+  tex.write('}\n\\vspace{-2mm}')
+
+  # begin box
+  tex.write('\\vspace{-1mm}')
+  tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,colframe=white,colback=lightgray,left=0mm]\n')
+  # signature
+  map(lambda f : print_signature(f, tex), variants)
   # end box
+  tex.write("\n\n")
   tex.write('\\end{tcolorbox}\n')
   # brief
   tex.write(node2tex(func.find('briefdescription/para')) + "\n\n")
@@ -283,16 +311,14 @@ def process_function(func, tex, listings, commands):
         argtxt +=  "\\\\" + "\\hspace{2em}" + retdesc
       arglst.append(argtxt)
     tex.write("\\\\[2mm]\n".join(arglst))
-    tex.write("\n\\end{longtable}" + "\n")
+    tex.write("\n\\end{longtable}\\vspace{-3mm}" + "\n")
+
   # returns/return description
   ret = func.find("detaileddescription/para/simplesect[@kind='return']")
   if ret is not None:
     tex.write('\\vspace{-5mm}')
     tex.write("\\noindent\\textbf{Returns}\\\\[1mm]"+ "\n")
     tex.write(node2tex(ret) + "\n\n")
-    # add the longtable anyway so margin are kept constant
-    tex.write('\\noindent\\begin{longtable}{@{}>{\\hangindent=2em}p{\\linewidth}}' + "\n")
-    tex.write("\n\\end{longtable}" + "\n")
 
   # detailed description
   paras = func.findall('detaileddescription/para')
@@ -302,10 +328,21 @@ def process_function(func, tex, listings, commands):
     if para.find('parameterlist') is None and para.find("simplesect[@kind='return']") is None:
       paraslst.append(node2tex(para))
   if paraslst:
-    tex.write('\\vspace{-4mm}')
     tex.write("\\noindent\\textbf{Description}\\\\[1mm]"+ "\n")
     tex.write("\\\\[2mm]\n".join(paraslst))
   tex.write(" \n")
+
+def function_variants(currfunc, funcs):
+  ret = [currfunc]
+  currname = node2tex(currfunc.find('name'))
+  currpre = function_name_minus_memory_order(currname)
+  if currpre is not None:
+    for func in funcs:
+      name = node2tex(func.find('name'))
+      pre = function_name_minus_memory_order(name)
+      if pre == currpre and func != currfunc:
+        ret += [func]
+  return ret
 
 def process_file(file, listings, defs):
   tree = ET.parse(os.path.join('xml',file))
@@ -317,6 +354,8 @@ def process_file(file, listings, defs):
   # Doxygen sorts members by type (e.g. enums appear first and all together)
   # Instead, we sort them according to location (source line number)
   memberdefs.sort(key=lambda memberdef: int(memberdef.find('location').get('line')))
+  funcdefs = filter(lambda x : x.get('kind') == 'function', memberdefs)
+  processed_funcs = []
 
   # main processing loop
   for memberdef in memberdefs:
@@ -330,8 +369,10 @@ def process_file(file, listings, defs):
         process_struct_or_union(memberdef, tex, defs)
     elif k == 'enum':
       process_enum(memberdef, tex, defs)
-    elif k == 'function':
-      process_function(memberdef, tex, listings, defs)
+    elif k == 'function' and memberdef not in processed_funcs:
+      variants = function_variants(memberdef, funcdefs)
+      process_function(memberdef, tex, listings, defs, variants)
+      processed_funcs += variants
 
   tex.close()
 

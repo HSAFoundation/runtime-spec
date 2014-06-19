@@ -12,26 +12,33 @@
 
 #include "hsa.h"
 
-hsa_status_t get_first_component(hsa_agent_t agent, void* data) {
-  // Assume that the first agent is also a component
-  hsa_agent_t* ret = (hsa_agent_t*) data;
-  *ret = agent;
-  return HSA_STATUS_INFO_BREAK;
+// Find component that can process Dispatch packets.
+hsa_status_t get_dispatch_component(hsa_agent_t agent, void* data) {
+  uint32_t features = 0;
+  hsa_agent_get_info(agent, HSA_AGENT_INFO_COMPONENT_FEATURES, &features);
+  if (features & HSA_COMPONENT_FEATURE_DISPATCH) {
+    // Store component in user-provided buffer and return
+    hsa_agent_t* ret = (hsa_agent_t*) data;
+    *ret = agent;
+    return HSA_STATUS_INFO_BREAK;
+  }
+  // Keep iterating
+  return HSA_STATUS_SUCCESS;
 }
 
-int main() {
 
+int main() {
   // Initialize the runtime
   hsa_init();
 
-  // Retrieve the first available component
-  hsa_agent_t* component = NULL;
-  hsa_iterate_agents(get_first_component, component);
+  // Retrieve the component
+  hsa_agent_t component;
+  hsa_iterate_agents(get_dispatch_component, &component);
 
   // Create a queue in the selected component. The queue can hold up to four
   // packets, and has no callback or service queue associated with it.
   hsa_queue_t *queue;
-  hsa_queue_create(*component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
+  hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
 
   // Setup the packet encoding the task to execute
   hsa_aql_dispatch_packet_t dispatch_packet;
@@ -52,8 +59,8 @@ int main() {
   // field in the packet.
 
   // Create a signal with an initial value of one to monitor the task completion
-  hsa_signal_handle_t signal;
-  hsa_signal_create(1, &signal);
+  hsa_signal_t signal;
+  hsa_signal_create(1, 0, NULL, &signal);
   dispatch_packet.completion_signal = signal;
 
   // Request a packet ID from the queue
@@ -71,9 +78,7 @@ int main() {
 
   // Wait for the task to finish, which is the same as waiting for the value of the
   // completion signal to be zero.
-  hsa_signal_value_t *observed = NULL;
-  while (hsa_signal_wait_acquire(signal, HSA_EQ, 0, observed) == HSA_STATUS_ERROR_WAIT_ABANDONED);
-  assert(*observed == 0);
+  while (hsa_signal_wait_acquire(signal, HSA_EQ, 0, UINT64_MAX, HSA_WAIT_LATENCY_UNKNOWN) != 0);
 
   // Done! The kernel has completed. Time to cleanup resources and leave.
   hsa_signal_destroy(signal);

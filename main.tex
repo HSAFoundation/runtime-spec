@@ -1,6 +1,6 @@
 \documentclass[final]{book}
 \newcommand{\doctitle}{HSA Runtime Programmer's Reference Manual}
-\newcommand{\docversion}{0.183}
+\newcommand{\docversion}{0.184}
 
 % Needed so characters such as underscore are recognized in PDF
 % viewers. Otherwise searching for say `hsa_open` produces no
@@ -98,6 +98,7 @@
         basicstyle=\small,
         breaklines=true,
         breakatwhitespace=true,
+        columns=flexible,
         tabsize=4,
         showstringspaces=false,
         frame=none,
@@ -155,8 +156,6 @@
 % N.B.: floatpagefraction MUST be less than topfraction !!
 \renewcommand{\dblfloatpagefraction}{0.7}	% require fuller float pages
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 % push footer a little further away
 \setlength{\footskip}{35pt}
 
@@ -190,6 +189,9 @@
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 }
+
+% avoid vertical spacing in order to get a fixed-size page
+\raggedbottom
 
 \pagestyle{fancy}
 \renewcommand{\chaptermark}[1]{\markboth{#1}{}}
@@ -606,7 +608,7 @@ memory, or by using signals. In an HSA system, a signal can be more power
 efficient than coherent global memory for communication.
 
 A signal allows multiple producers and consumers. The runtime API uses opaque
-signal handlers of type \hsaref{hsa_signal_handle_t} to represent signals. A
+signal handlers of type \hsaref{hsa_signal_t} to represent signals. A
 signal carries a value that can be updated or conditionally waited upon through
 an API call or HSAIL instruction. The value occupies four or eight bytes
 depending on the machine model being used.
@@ -628,10 +630,8 @@ the wait by checking the output status.
 
 Waiting implies reading the current signal value (which is returned to the
 application) using an acquire (\hsaref{hsa_signal_wait_acquire}) or a relaxed
-(\hsaref{hsa_signal_wait_relaxed}) memory order. The synchronization should only
-assume to have been applied if the status returned by the wait API is
-\hsaref{HSA_STATUS_SUCCESS}. HSA implementations might establish a maximum
-waiting time.
+(\hsaref{hsa_signal_wait_relaxed}) memory order. HSA implementations might
+establish a maximum waiting time.
 
 As explained above, an application can modify or wait on signals by using
 the runtime API. However, signals also allow expressing complex tasks
@@ -649,9 +649,24 @@ For more information on HSA interfaces related to adding packets to a queue,
 refer to Section~\ref{sec:queues}. For more information on AQL packets, refer
 to Section~\ref{sec:aql}.
 
-
-
 \subsection{API}
+
+% Macro-dependent typedefs are not showing up correctly in the XML generated
+% by Doxygen, so we need to hardcode them :-(
+\subsubsection{hsa_\-signal_\-value_\-t}
+\vspace{-2mm}\noindent\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]
+\vspace{-3.5mm}\begin{longtable}{@{}p{\textwidth}}
+\hypertarget{group__signals_1ga67ca2818879c9990e1b5f1b14ce7ed27}{}
+\#ifdef HSA_LARGE_MODEL\\
+\hspace{1.7em}typedef int64_\-t  \textbf{hsa_\-signal_\-value_\-t}\\
+\#else \\
+\hspace{1.7em}typedef int32_\-t  \textbf{hsa_\-signal_\-value_\-t}\\
+\#endif
+\end{longtable}
+\end{tcolorbox}
+Signal value. The value occupies 32 bits in small machine mode, and 64 bits in large machine mode.
+\\
+
 \input{api/altlatex/group-signals}
 
 \section{Queues} \label{sec:queues}
@@ -835,9 +850,15 @@ diagram.
   If an error is detected during launch, the queue is set into an error state
   and the event callback associated with the queue (if present) is invoked. The
   runtime passes an error status to the callback that indicates the source of
-  the problem.  The flag \hsaref{HSA_STATUS_ERROR_INVALID_PACKET_FORMAT}
-  indicates that an AQL packet is malformed.
-
+  the problem.  The following error codes might be returned:\\[3mm]
+  {\renewcommand{\arraystretch}{1.75}%
+  \begin{tabular}{p{8.4cm}p{7.4cm}}
+  \hsaref{HSA_STATUS_ERROR_INVALID_PACKET_FORMAT} &
+   Malformed AQL packet \\
+  \hsaref{HSA_STATUS_ERROR_OUT_OF_RESOURCES} &
+  The packet processor is unable to allocate the resources required by the launch \\
+  \end{tabular}
+  }
 \item[Active] The active state means that the kernel encoded by the packet
   has started execution. If an error is detected during this phase, a release
   fence is applied to the packet and its completion signal (if present) is
@@ -880,7 +901,7 @@ of Dispatch packets.
 \subsection{Barrier packet}\label{barrier-packet}
 
 The Barrier packet \hsaref{hsa_aql_barrier_packet_t} allows an application to
-specify up to five dependencies as \hsaref{hsa_signal_handle_t} objects and
+specify up to five dependencies as \hsaref{hsa_signal_t} objects and
 requires the HSA Packet Processor to resolve those dependencies before proceeding.
 The Barrier packet is a blocking packet in the sense that the processing of the
 Barrier packet completes the packet. This is unlike a Dispatch packet whose
