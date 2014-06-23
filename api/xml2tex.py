@@ -104,7 +104,7 @@ def process_typedef(typedef, tex, defs):
   if name in ['hsa_\-signal_\-value_\-t']:
     #blacklist
     return
-  tex.write('\\subsubsection{' + name + '}\n\\vspace{-2mm}')
+  tex.write('\\subsubsection{' + name + '}\n\\vspace{-3mm}')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # typedef definition. We use the 'definition' string because in the presence
@@ -124,7 +124,7 @@ def process_typedef(typedef, tex, defs):
 
 def process_struct_or_union(typedef, tex, defs):
   typename = node2tex(typedef.find('name'))
-  tex.write('\\subsubsection{' + typename + '}\n\\vspace{-2mm}')
+  tex.write('\\subsubsection{' + typename + '}\n\\vspace{-3mm}')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # name
@@ -185,7 +185,7 @@ def process_struct_or_union(typedef, tex, defs):
 
 def process_enum(enum, tex, defs):
   typename = node2tex(enum.find('name'))
-  tex.write('\\subsubsection{' + typename + '}\n\\vspace{-2mm}')
+  tex.write('\\subsubsection{' + typename + '}\n\\vspace{-3mm}')
   # begin box
   tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
   # enum name
@@ -227,31 +227,37 @@ def register_function(func, tex, listings, commands):
 
 # print function signature (gray box)
 def print_signature(func, tex):
+  ret = ""
   funid = func.get('id')
   funname = node2tex(func.find('name'))
-  # return value
+  ret += "\n\pbox{\\textwidth}{"
+  # return type
   rettype = node2tex(func.find('type'))
   rettype = rettype.replace(' HSA_\-API','') # macros are passed as part of the type, so we have to delete them manually
   rettype = rettype.replace(' HSA_API','')
-  tex.write(rettype + " ")
+  ret += rettype + " "
   # func name
-  tex.write("\\hypertarget{" + funid + "}")
-  tex.write("{\\textbf{" + funname + "}}(")
+  ret += "\\hypertarget{" + funid + "}"
+  ret += "{\\textbf{" + funname + "}}("
   # parameters
   sigargs = func.findall("param")
   if sigargs:
-    tex.write("\n")
-    tex.write("\\vspace{-3.5mm}\\begin{longtable}{@{}p{\\textwidth}}" + "\n")
     arglst = []
     for arg in sigargs:
-      argtxt = "\\hspace{1.7em}" + node2tex(arg.find('type'))
-      argtxt += " \\hsaarg{" + node2tex(arg.find('declname')) + "}"
+      argtxt = "\\hspace*{1.7em}"
+      type = node2tex(arg.find('type'))
+      name = "\\hsaarg{" + node2tex(arg.find('declname')) + "}"
+      # pointers to functions require the argument to be printed inside the type 
+      if "(*)" in type:
+        type = type.replace("(*)", " (" + name + "*)")
+        argtxt += type
+      else:
+        argtxt += type + " " + name
       argtxt += node2tex(arg.find('array')) # array length, if any
       arglst.append(argtxt)
-    tex.write(",\\\\\n".join(arglst))
-    tex.write(");\\end{longtable}")
-  else:
-    tex.write(");")
+    ret += "\\\\" + ",\\\\".join(arglst)
+  ret += ");}"
+  return ret
 
 # returns None if function is not a memory order variant
 # otherwise, it returns the name without the memory order
@@ -267,16 +273,12 @@ def process_function(func, tex, listings, commands, variants):
      tex.write(funname)
   else:
      tex.write(function_name_minus_memory_order(funname))
-  tex.write('}\n\\vspace{-2mm}')
+  tex.write('}\n')
 
-  # begin box
-  tex.write('\\vspace{-1mm}')
-  tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,colframe=white,colback=lightgray,left=0mm]\n')
   # signature
-  map(lambda f : print_signature(f, tex), variants)
-  # end box
-  tex.write("\n\n")
-  tex.write('\\end{tcolorbox}\n')
+  tex.write("\\vspace{-3.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
+  tex.write("\\\\[8mm]\n".join(map(lambda f : print_signature(f, tex), variants))) 
+  tex.write("\\end{mylongtable}\\vspace{-3mm}\n")
   # brief
   tex.write(node2tex(func.find('briefdescription/para')) + "\n\n")
   # parameters

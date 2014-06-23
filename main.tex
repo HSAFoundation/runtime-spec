@@ -18,6 +18,7 @@
   \definecolor{lightgray}{gray}{0.9}
 \usepackage{makeidx}
 \usepackage[final]{graphicx}
+\usepackage{pbox}
 \usepackage{sidecap}
 \usepackage{float}
 
@@ -134,6 +135,12 @@
   \ifnum\value{section}=0 \else\clearpage\fi
 }{}{}
 
+% alternate rowcolors for all long-tables
+\let\oldlongtable\longtable
+\let\endoldlongtable\endlongtable
+\newenvironment{mylongtable}{\rowcolors{0}{lightgray}{lightgray}\longtable} {
+\endlongtable}
+
 % define marginparwidth so todonotes renders properly
 \setlength{\marginparwidth}{2cm}
 \usepackage[obeyDraft,obeyFinal,textsize=scriptsize]{todonotes}
@@ -191,7 +198,13 @@
 }
 
 % avoid vertical spacing in order to get a fixed-size page
-\raggedbottom
+%\hfuzz=20pt
+%\vfuzz=20pt
+%\hbadness=2000
+%\vbadness=\maxdimen
+%\raggedbottom
+%\setlength{\emergencystretch}{1mm}
+\fussy
 
 \pagestyle{fancy}
 \renewcommand{\chaptermark}[1]{\markboth{#1}{}}
