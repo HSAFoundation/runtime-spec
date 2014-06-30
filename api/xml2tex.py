@@ -104,39 +104,38 @@ def process_typedef(typedef, tex, defs):
   if name in ['hsa_\-signal_\-value_\-t']:
     #blacklist
     return
-  tex.write('\\subsubsection{' + name + '}\n\\vspace{-3mm}')
-  # begin box
-  tex.write('\\noindent\\begin{tcolorbox}[nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
+  tex.write('\\subsubsection{' + name + '}\n')
   # typedef definition. We use the 'definition' string because in the presence
   # of pointers to functions using the type itself is tricky.
+  tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
+  tex.write("\\rule{0pt}{3ex}")
+  tex.write("\\rule[-2.5ex]{0pt}{0pt}")
   definition = node2tex(typedef.find('definition'))
   definition = linkify(definition)
-  defs.append(('reftyp', name))
-  typename_id[name] = typedef.get('id')
   newname = " \\hypertarget{" + typedef.get('id') + "}{\\textbf{" + name + "}}"
   definition = definition.replace(name, newname, 1)
   tex.write(definition + "\n")
-  # end box
-  tex.write('\\end{tcolorbox}\n')
+  tex.write("\\end{mylongtable}\\vspace{-3mm}\n")
+  defs.append(('reftyp', name))
+  typename_id[name] = typedef.get('id')
   # brief
+  tex.write('\\vspace{-2mm}')
   paras = typedef.findall('briefdescription/para')
   map(lambda para: tex.write(node2tex(para) + "\n\\\\"), paras)
 
 def process_struct_or_union(typedef, tex, defs):
   typename = node2tex(typedef.find('name'))
-  tex.write('\\subsubsection{' + typename + '}\n\\vspace{-3mm}')
-  # begin box
-  tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
+  tex.write('\\subsubsection{' + typename + '}\n')
   # name
+  tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
   typ = typedef.find('type').text;
   actname = typedef.find('type/ref').text
-  tex.write("typedef " + typ + " " + actname + " \{\n")
+  tex.write("typedef " + typ + " " + actname + " \{\\\\\n")
   # members. Doxygen stores their info in a separate file.
   membersfile = typedef.find('type/ref').get('refid') + ".xml"
   memberstree = ET.parse(os.path.join('xml',membersfile))
   membersroot = memberstree.getroot()
   members = membersroot.findall(".//memberdef[@kind='variable']")
-  tex.write("\\vspace{-3.5mm}\\begin{longtable}{@{}p{\\textwidth}}" + "\n")
   vals = []
   fields = []
   for member in members:
@@ -155,18 +154,17 @@ def process_struct_or_union(typedef, tex, defs):
     paras = member.findall('detaileddescription/para')
     paraslst = map(lambda para: "\\hspace{2em}" + node2tex(para), paras)
     if paraslst:
-      txt += "\\\\[2mm]\n".join(paraslst)
+      txt += "\\\\\n".join(paraslst)
     fields.append(txt)
   tex.write(''.join(vals) + "\} ")
   tex.write(" \\hypertarget{" + typedef.get('id') + "}")
   tex.write("{\\textbf{" + typename + "}}")
+  tex.write("\n\\end{mylongtable}" + "\n\n")
   defs.append(('reftyp', typename))
   typename_id[typename] = typedef.get('id')
-  tex.write("\n\\end{longtable}" + "\n\n")
 
-  # end box
-  tex.write('\\end{tcolorbox}\n')
   # brief
+  tex.write('\\vspace{-2mm}')
   tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\n")
   # data fields
   tex.write("\\noindent\\textbf{Data Fields}\\\\[-6mm]" + "\n")
@@ -185,18 +183,18 @@ def process_struct_or_union(typedef, tex, defs):
 
 def process_enum(enum, tex, defs):
   typename = node2tex(enum.find('name'))
-  tex.write('\\subsubsection{' + typename + '}\n\\vspace{-3mm}')
-  # begin box
-  tex.write('\\noindent\\begin{tcolorbox}[breakable,nobeforeafter,arc=0mm,colframe=white,colback=lightgray,left=0mm]\n')
+  tex.write('\\subsubsection{' + typename + '}\n')
   # enum name
+  tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
+  tex.write("\\rule{0pt}{3ex}")
+  tex.write("\\rule[-2.5ex]{0pt}{0pt}")
   tex.write('enum ' + "\\hypertarget{" + enum.get('id') + "}")
   tex.write("{\\textbf{" + typename + "}}" + "\n")
+  tex.write("\\end{mylongtable}\n")
   defs.append(('reftyp', typename))
   typename_id[typename] = enum.get('id')
-
-  # end box
-  tex.write('\\end{tcolorbox}\n')
   # brief
+  tex.write('\\vspace{-2mm}')
   tex.write(node2tex(enum.find('briefdescription/para')) + "\n\n")
   # values
   tex.write("\\noindent\\textbf{Values}\\\\[-5mm]" + "\n")
@@ -247,7 +245,7 @@ def print_signature(func, tex):
       argtxt = "\\hspace*{1.7em}"
       type = node2tex(arg.find('type'))
       name = "\\hsaarg{" + node2tex(arg.find('declname')) + "}"
-      # pointers to functions require the argument to be printed inside the type 
+      # pointers to functions require the argument to be printed inside the type
       if "(*)" in type:
         type = type.replace("(*)", " (" + name + "*)")
         argtxt += type
@@ -276,10 +274,13 @@ def process_function(func, tex, listings, commands, variants):
   tex.write('}\n')
 
   # signature
-  tex.write("\\vspace{-3.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
-  tex.write("\\\\[8mm]\n".join(map(lambda f : print_signature(f, tex), variants))) 
-  tex.write("\\end{mylongtable}\\vspace{-3mm}\n")
+  tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
+  tex.write("\\rule{0pt}{5ex}")
+  tex.write("\\\\[8mm]\n".join(map(lambda f : print_signature(f, tex), variants)))
+  tex.write("\\rule[-4ex]{0pt}{0pt}")
+  tex.write("\\end{mylongtable}\n")
   # brief
+  tex.write('\\vspace{-2mm}')
   tex.write(node2tex(func.find('briefdescription/para')) + "\n\n")
   # parameters
   args = func.findall(".//parameterlist[@kind='param']/parameteritem")
@@ -296,12 +297,11 @@ def process_function(func, tex, listings, commands, variants):
       argtxt += node2tex(arg.find('parameterdescription/para'))
       arglst.append(argtxt)
     tex.write("\\\\[2mm]\n".join(arglst))
-    tex.write("\n\\end{longtable}" + "\n")
+    tex.write("\n\\end{longtable}" + "\n\\vspace{-5mm}")
+
   # return values
   rets = func.findall(".//parameterlist[@kind='retval']/parameteritem")
   if rets:
-    if args:
-      tex.write('\\vspace{-5mm}')
     tex.write("\\noindent\\textbf{Return Values}\\\\[-6mm]" + "\n")
     tex.write('\\noindent\\begin{longtable}{@{}>{\\hangindent=2em}p{\\linewidth}}' + "\n")
     arglst = []
@@ -313,12 +313,11 @@ def process_function(func, tex, listings, commands, variants):
         argtxt +=  "\\\\" + "\\hspace{2em}" + retdesc
       arglst.append(argtxt)
     tex.write("\\\\[2mm]\n".join(arglst))
-    tex.write("\n\\end{longtable}\\vspace{-3mm}" + "\n")
+    tex.write("\n\\end{longtable}" + "\n\\vspace{-5mm}")
 
   # returns/return description
   ret = func.find("detaileddescription/para/simplesect[@kind='return']")
   if ret is not None:
-    tex.write('\\vspace{-5mm}')
     tex.write("\\noindent\\textbf{Returns}\\\\[1mm]"+ "\n")
     tex.write(node2tex(ret) + "\n\n")
 

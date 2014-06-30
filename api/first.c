@@ -15,8 +15,8 @@
 // Find component that can process Dispatch packets.
 hsa_status_t get_dispatch_component(hsa_agent_t agent, void* data) {
   uint32_t features = 0;
-  hsa_agent_get_info(agent, HSA_AGENT_INFO_COMPONENT_FEATURES, &features);
-  if (features & HSA_COMPONENT_FEATURE_DISPATCH) {
+  hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
+  if (features & HSA_AGENT_FEATURE_DISPATCH) {
     // Store component in user-provided buffer and return
     hsa_agent_t* ret = (hsa_agent_t*) data;
     *ret = agent;
@@ -41,7 +41,7 @@ int main() {
   hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
 
   // Setup the packet encoding the task to execute
-  hsa_aql_dispatch_packet_t dispatch_packet;
+  hsa_dispatch_packet_t dispatch_packet;
   const size_t packet_size = sizeof(dispatch_packet);
   memset(&dispatch_packet, 0, packet_size); // reserved fields are zeroed
   dispatch_packet.header.acquire_fence_scope = HSA_FENCE_SCOPE_COMPONENT;
@@ -73,12 +73,12 @@ int main() {
   memcpy(dst, &dispatch_packet, packet_size);
 
   // Notify the queue that the packet is ready to be processed
-  dispatch_packet.header.format = HSA_AQL_PACKET_FORMAT_DISPATCH;
+  dispatch_packet.header.type = HSA_PACKET_TYPE_DISPATCH;
   hsa_signal_store_release(queue->doorbell_signal, write_index);
 
   // Wait for the task to finish, which is the same as waiting for the value of the
   // completion signal to be zero.
-  while (hsa_signal_wait_acquire(signal, HSA_EQ, 0, UINT64_MAX, HSA_WAIT_LATENCY_UNKNOWN) != 0);
+  while (hsa_signal_wait_acquire(signal, HSA_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
 
   // Done! The kernel has completed. Time to cleanup resources and leave.
   hsa_signal_destroy(signal);
