@@ -20,7 +20,7 @@ diff : all main-diff.pdf
 	latexmk -g -pdf -bibtex -use-make $*.tex
 
 # Use listings.tex as proxy for all the automatically generated LaTeX files
-$(LISTINGS): api/hsa.h api/xml2tex.py
+$(LISTINGS): api/hsa.h api/hsa_ext.h api/xml2tex.py
 	cd api && doxygen Doxyfile
 	cd api && python xml2tex.py
 

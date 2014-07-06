@@ -85,12 +85,15 @@ def node2tex(node):
     return ''
   return ''.join(myitertext(node)).encode("utf-8").strip()
 
+def unscape(text):
+  return text.replace("_\-","_")
+
 def linkify(definition):
   ret = definition
   done = [] # types already processed
   start = definition.find('hsa_', 0)
   while start != -1:
-    end = definition.find('_\-t', start) + 2
+    end = definition.find('_\-t', start) + len('_\-t')
     candidate = definition[start:end]
     refid = typename_id.get(candidate)
     if (candidate not in done) and (refid is not None):
@@ -98,6 +101,12 @@ def linkify(definition):
       done += candidate
     start = definition.find('hsa_', end)
   return ret
+
+def format_arg(line):
+  argname_start = line.rfind(' ') + 1
+  argname = " \\reffld{" + line[argname_start : ] + "}"
+  ret = line[: argname_start] + argname
+  return "\\hspace{1.7em}" + ret.strip()
 
 def process_typedef(typedef, tex, defs):
   name = node2tex(typedef.find('name'))
@@ -108,13 +117,23 @@ def process_typedef(typedef, tex, defs):
   # typedef definition. We use the 'definition' string because in the presence
   # of pointers to functions using the type itself is tricky.
   tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
-  tex.write("\\rule{0pt}{3ex}")
-  tex.write("\\rule[-2.5ex]{0pt}{0pt}")
   definition = node2tex(typedef.find('definition'))
   definition = linkify(definition)
   newname = " \\hypertarget{" + typedef.get('id') + "}{\\textbf{" + name + "}}"
   definition = definition.replace(name, newname, 1)
-  tex.write(definition + "\n")
+
+  if node2tex(typedef.find('argsstring')) == '':
+    tex.write("\\rule{0pt}{3ex}")
+    tex.write("\\rule[-2.5ex]{0pt}{0pt}")
+    tex.write(definition + ";\n")
+  else:
+    # pointer to function
+    tex.write(definition[0 : definition.rfind("(") + 1])
+    tex.write("\\rule{0pt}{3ex}" + "\\\\\n")
+    args = definition[definition.rfind("(") + 1 : - 1].split(",")
+    args = map(format_arg, args)
+    tex.write(',\\\\\n'.join(args) + "\\rule[-2ex]{0pt}{0pt}" + ");\n")
+
   tex.write("\\end{mylongtable}\\vspace{-3mm}\n")
   defs.append(('reftyp', name))
   typename_id[name] = typedef.get('id')
@@ -184,42 +203,53 @@ def process_struct_or_union(typedef, tex, defs):
 def process_enum(enum, tex, defs):
   typename = node2tex(enum.find('name'))
   tex.write('\\subsubsection{' + typename + '}\n')
-  # enum name
-  tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
-  tex.write("\\rule{0pt}{3ex}")
-  tex.write("\\rule[-2.5ex]{0pt}{0pt}")
-  tex.write('enum ' + "\\hypertarget{" + enum.get('id') + "}")
-  tex.write("{\\textbf{" + typename + "}}" + "\n")
-  tex.write("\\end{mylongtable}\n")
-  defs.append(('reftyp', typename))
-  typename_id[typename] = enum.get('id')
-  # brief
-  tex.write('\\vspace{-2mm}')
-  tex.write(node2tex(enum.find('briefdescription/para')) + "\n\n")
-  # values
-  tex.write("\\noindent\\textbf{Values}\\\\[-5mm]" + "\n")
-  tex.write('\\begin{longtable}{@{\\hspace{2em}}p{\\linewidth-2em}}' + "\n")
+
   vals = []
+  valsdescs = []
   for val in enum.findall("enumvalue"):
-    valtxt = "\\hspace{-2em}\\hypertarget{" + val.get('id') + "}{"
     valname = node2tex(val.find('name'))
     typename_id[valname] = val.get('id')
     defs.append(('refenu', valname))
+    valtxt = "\\hspace{1.7em}\\hypertarget{" + val.get('id') + "}{"
     valtxt += "\\refenu{" + valname + "}}"
     valtxt += ' ' + node2tex(val.find('initializer'))
-    valdesc = node2tex(val.find('detaileddescription'))
-    if valdesc != '':
-      valtxt +=  "\\\\" + valdesc
+    valtxt = valtxt.strip()
+    valdesc = "\\hspace{-2em}\\refenu{" + valname + "}"
+    desc = node2tex(val.find('detaileddescription'))
+    if desc != '':
+      valdesc +=  "\\\\" + desc
     vals.append(valtxt)
-  tex.write("\\\\[2mm]\n".join(vals))
+    valsdescs.append(valdesc)
+
+  # enum box: name and values
+  tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
+  tex.write("\\rule{0pt}{3ex}")
+  tex.write('typedef enum \{\\\\')
+  tex.write(",\\\\\n".join(vals) + "\\\\\n")
+  tex.write("\} \\hypertarget{" + enum.get('id') + "}")
+  tex.write("{\\textbf{" + typename + "}};")
+  tex.write("\\rule[-2ex]{0pt}{0pt}")
+  tex.write("\\end{mylongtable}\n")
+  defs.append(('reftyp', typename))
+  typename_id[typename] = enum.get('id')
+
+  # brief
+  tex.write('\\vspace{-2mm}')
+  tex.write(node2tex(enum.find('briefdescription/para')) + "\n\n")
+
+  # value descriptions
+  tex.write("\\noindent\\textbf{Values}\\\\[-5mm]" + "\n")
+  tex.write('\\begin{longtable}{@{\\hspace{2em}}p{\\linewidth-2em}}' + "\n")
+  tex.write("\\\\[2mm]\n".join(valsdescs))
   tex.write("\n\\end{longtable}")
 
 def register_function(func, tex, listings, commands):
   funid = func.get('id')
   funname = node2tex(func.find('name'))
+  unescaped_funname = unscape(funname)
   index = 'ext' if funname.startswith('hsa_\-ext_\-') else 'api';
-  tex.write("\\index[" + index + "]{" + funname + "}") # add function name to function API index
-  listings.write(funname + ",") # add function name to listings keyword list
+  tex.write("\\index[" + index + "]{" + unescaped_funname + "}") # add function name to function API index
+  listings.write(unescaped_funname + ",") # add function name to listings keyword list
   commands.append(('reffun', funname))
   typename_id[funname] = funid
 
@@ -403,10 +433,16 @@ def generate_hsaref(defs):
 #
 # If groups definitions are scattered across the header (i.e. \addgroup is used)
 # then this logic is broken
+#
 def group_location(file):
   tree = ET.parse(os.path.join('xml',file))
   root = tree.getroot()
-  return int(root.find(".//location").get('line'))
+  line = int(root.find(".//location").get('line'))
+  # groups in hsa_ext.h are processed after groups in hsa.h
+  header = os.path.basename(root.find(".//location").get("file"))
+  if header == "hsa_ext.h":
+    return line + 100000
+  return line
 
 def main():
   outdir = 'altlatex'
