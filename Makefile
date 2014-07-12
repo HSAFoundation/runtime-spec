@@ -17,7 +17,7 @@ all : $(LISTINGS) main.pdf
 diff : all main-diff.pdf
 
 %.pdf: $(DOXYLATEX) %.tex
-	latexmk -g -pdf -bibtex -use-make $*.tex
+	latexmk -g -xelatex -bibtex -use-make $*.tex
 
 # Use listings.tex as proxy for all the automatically generated LaTeX files
 $(LISTINGS): api/hsa.h api/hsa_ext.h api/xml2tex.py

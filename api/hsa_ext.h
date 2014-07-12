@@ -2720,4 +2720,3 @@ hsa_status_t HSA_API hsa_ext_sampler_destroy_handle(
 #ifdef __cplusplus
 }
 #endif  /*__cplusplus*/
-#endif

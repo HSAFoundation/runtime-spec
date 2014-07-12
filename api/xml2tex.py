@@ -147,6 +147,7 @@ def process_struct_or_union(typedef, tex, defs):
   tex.write('\\subsubsection{' + typename + '}\n')
   # name
   tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
+  tex.write("\\rule{0pt}{3ex}")
   typ = typedef.find('type').text;
   actname = typedef.find('type/ref').text
   tex.write("typedef " + typ + " " + actname + " \{\\\\\n")
@@ -178,6 +179,7 @@ def process_struct_or_union(typedef, tex, defs):
   tex.write(''.join(vals) + "\} ")
   tex.write(" \\hypertarget{" + typedef.get('id') + "}")
   tex.write("{\\textbf{" + typename + "}}")
+  tex.write("\\rule[-2ex]{0pt}{0pt}")
   tex.write("\n\\end{mylongtable}" + "\n\n")
   defs.append(('reftyp', typename))
   typename_id[typename] = typedef.get('id')
@@ -258,7 +260,7 @@ def print_signature(func, tex):
   ret = ""
   funid = func.get('id')
   funname = node2tex(func.find('name'))
-  ret += "\n\pbox{\\textwidth}{"
+  ret += "\n\pbox{\\textwidth}{\\hspace{1mm}\\\\[1mm]"
   # return type
   rettype = node2tex(func.find('type'))
   rettype = rettype.replace(' HSA_\-API','') # macros are passed as part of the type, so we have to delete them manually
@@ -284,7 +286,7 @@ def print_signature(func, tex):
       argtxt += node2tex(arg.find('array')) # array length, if any
       arglst.append(argtxt)
     ret += "\\\\" + ",\\\\".join(arglst)
-  ret += ");}"
+  ret += ");\\\\}"
   return ret
 
 # returns None if function is not a memory order variant
@@ -305,9 +307,7 @@ def process_function(func, tex, listings, commands, variants):
 
   # signature
   tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
-  tex.write("\\rule{0pt}{5ex}")
-  tex.write("\\\\[8mm]\n".join(map(lambda f : print_signature(f, tex), variants)))
-  tex.write("\\rule[-4ex]{0pt}{0pt}")
+  tex.write("\\\\[4mm]\n".join(map(lambda f : print_signature(f, tex), variants)))
   tex.write("\\end{mylongtable}\n")
   # brief
   tex.write('\\vspace{-2mm}')

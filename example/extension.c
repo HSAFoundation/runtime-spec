@@ -1,13 +1,9 @@
-// Sample hsa/vendor_extensions.h
-// Company name is "ACME" and extension is "Foo"
-#define HSA_EXT_ACME_MYDEFINE1 0x1000
-#define HSA_EXT_ACME_MYDEFINE2 0x0100
-
-// The structure which defines the version, functions, and data for
-// the extension:
+// The structure which defines the version, functions, and data for the extension:
 typedef struct hsa_ext_acme_foo_s {
-    int major_version;  // major version number of the extension.
-    int minor_version;  // minor version number of the extension.
+    // Major version number of the extension.
+    int major_version;
+    // Minor version number of the extension.
+    int minor_version;
     // Function pointers:
     int (*function1) ( int p1, int *p2, float p3, int p4);
     int (*function2) ( int* p1, int p2);

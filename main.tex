@@ -11,7 +11,7 @@
 
 \usepackage[toc,page]{appendix}
 \usepackage[usenames,dvipsnames,svgnames,table]{xcolor}
-  \definecolor{lightgray}{gray}{0.9}
+  \definecolor{lightgray}{gray}{0.94}
 \usepackage{makeidx}
 \usepackage[final]{graphicx}
 \usepackage{pbox}
@@ -59,20 +59,24 @@
 % allows customization of description environment (margin, indentation, etc.)
 \usepackage{enumitem}
 
-\lstset{language=C,
-        inputencoding=utf8,
-        basicstyle=\small,
-        breaklines=true,
-        breakatwhitespace=true,
-        captionpos=b,      % sets the caption-position to bottom
-        columns=flexible,
-        tabsize=4,
-        showstringspaces=false,
-        frame=none,
+\lstset{% in alphabetical order
         backgroundcolor=\color{lightgray},
-        keywordstyle=,
+        basicstyle=\footnotesize,
+        breakatwhitespace=true,
+        breaklines=true,
+        captionpos=b,      % sets the caption-position to bottom
+        columns=fullflexible,
+        commentstyle=\color{ForestGreen},
         emphstyle={\textbf},
-        commentstyle=\color{ForestGreen}
+        frame=single,
+        framexbottommargin=3pt, % bottom frame padding
+        framextopmargin=3pt, % top frame padding
+        inputencoding=utf8,
+        keywordstyle=\color{blue},
+        language=C,
+        rulecolor=\color{lightgray}, % invisible (we use it because it allows padding)
+        showstringspaces=false,
+        tabsize=4,
 }
 % Use Example instead of Listing in captions
 \renewcommand{\lstlistingname}{Example}
@@ -398,108 +402,160 @@ Language) path that application runtimes use to send commands directly to
 HSA components. For more information on AQL, refer to Section~\ref{sec:aql}.
 
 
-\section{Execution Model}\label{executionmodel}
+\section{Programming Model}\label{sec:executionmodel}
 
-The HSA runtime exposes several details of the HSA hardware, including
-architected dispatches. The overall goal of the core runtime design is to
-provide a high-performance dispatch mechanism that is portable across multiple
-HSA vendor architectures. Two vendors with the same host ISA but different
-HSA-compliant GPUs will be able to run the same unmodified application binary
-file(s), because they support the HSA-architected AQL interface and supply a
-library that implements the architected core runtime API.
+This section introduces the main concepts behind the HSA programming model by
+outlining how they are exposed in the runtime API. In this introductory example
+we show the basic steps that are needed to launch a kernel.
 
-The HSA core runtime takes advantage of architected dispatch. Architected
-dispatch is the key feature in an HSA system that enables a user-level
-application to directly issue commands to the HSA Component hardware.
-Architected dispatch differentiates the HSA runtime from other higher-level
-runtime systems and programming models: other runtime systems provide
-software APIs for setting arguments and launching kernels, while HSA architects
-these at the hardware and specification level. The main advantage of architected
-dispatch is that the dispatch mechanism is architected at the HSA hardware level
-which means that an application can use regular memory operations and the
-wrapper API provided by the runtime to launch a kernel. The application creates
-user mode queues and AQL packets in memory, and then signals the HSA component
-to begin executing the packet using lightweight operations.
+The rest of the sections in this specification provide a more formal and
+detailed description of the different components of the HSA API, including many
+not discussed here.
 
-This section describes various features the HSA runtime provides to support
-architected dispatch, and the steps an application needs to perform in order to
-dispatch a kernel.
+\subsection{Initialization and Component Discovery}
+Any HSA application must initialize the runtime before invoking any other API:
+\begin{lstlisting}
+hsa_init();
+\end{lstlisting}
+The next step is to find a device where to launch the kernel. In HSA parlance, a
+regular device is called an \emph{agent}, and if the agent can run kernels then
+it is also a \emph{component}. The Glossary at the end of this document contains
+more precise definitions of these terms. Agents and components are represented
+in the HSA API using opaque handles of type \hsaref{hsa_agent_t}.
 
-\subsection{Initial Setup}
-One of the first steps an application must perform is agent (device) discovery.
-Agent discovery is performed after initialization of the runtime and information
-is made available to the application as opaque data
-structures. Section~\ref{sec:agentinfo} describes how to find the available
-agents and query the runtime to obtain information about their attributes.
+The HSA runtime API exposes the set of available agents via
+\hsaref{hsa_iterate_agents}. This function receives a callback and a buffer from
+the application; the callback is invoked once per agent unless it returns a
+special 'break' value or an error. In this case, the callback queries an agent
+attribute (\hsaref{HSA_AGENT_INFO_FEATURE}) in order to determine whether the
+agent is also a component. If this is the case, the component is stored in the
+buffer and the iteration ends:
 
-The next step in the setup is the creation of the component queues. Queues are an
-HSA architected mechanism that submits work to the HSA component hardware. For
-more information about the interfaces for queue creation, refer to
-Section~\ref{sec:queues}. Different components may provide
-implementation-specific code under the HSA API for these functions.
+\begin{lstlisting}
+hsa_agent_t component;
+hsa_iterate_agents(get_component, &component);
+\end{lstlisting}
+, where the application-provided callback \textit{get_component} is:
+\begin{lstlisting}
+hsa_status_t get_component(hsa_agent_t agent, void* data) {
+    uint32_t features = 0;
+    hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
+    if (features & HSA_AGENT_FEATURE_DISPATCH) {
+        // Store component in the application-provided buffer and return
+        hsa_agent_t* ret = (hsa_agent_t*) data;
+        *ret = agent;
+        return HSA_STATUS_INFO_BREAK;
+    }
+    // Keep iterating
+    return HSA_STATUS_SUCCESS;
+}
+\end{lstlisting}
 
-% \subsection{Compilation Flow}
-% Once an HSAIL program is written or generated by a higher-level compilation
-% step, it needs to be \emph{assembled} to generate a BRIG. BRIG is the HSAIL
-% object format and is specified in the PRM. HSA runtime defines API call to
-% compile the BRIG and generate a code object that has sufficient information to
-% execute the user program. The details of this compilation process and symbol
-% resolution are discussed in Section~\ref{finalizerchapter}.
+Section~\ref{sec:agentinfo} lists the set of available agent and
+system-wide attributes, and describes the functions to query them.
 
-\subsection{Kernel Launch}
-The Systems Architecture Requirements document~\cite{sar} specifies the
-structure of the \emph{packets} (i.e. commands) that can be placed on the HSA
-user mode queues for execution by the component hardware. The Architected
-Queuing Language (AQL) describes the format of the packets. One type of
-AQL packet is a Dispatch packet. An application can create an AQL packet
-and initialize it with the code object that contains a component-specific ISA.
-% The interface for kernel arguments between the
-% runtime and the kernel ISA (instruction set architecture) is also architected
-% at the HSA level. This is covered in the HSAIL ABI, which specifies the
-% in-memory layout of the kernarg segment. Users can determine the layout of the
-% kernarg memory segment at compile time merely by examining the signature of
-% the HSAIL function. The finalizer is required to support this ABI and thus
-% there is no need for runtime metadata to specify the position or format of
-% arguments.  This step can be done once for each AQL packet creation.
+\subsection{Queues and AQL packets}
+When an HSA application wants to launch a kernel in a component, it does so by
+placing an \textit{AQL packet} in a \textit{queue} owned by the component. A
+packet is a memory buffer encoding a single command. There are different types
+of packets; the one used for dispatching a kernel is named \emph{Dispatch}
+packet.
 
-Optimized implementations can cache the result of this step and re-use the AQL
-packet for subsequent launches. Care must be taken to ensure that the AQL
-Dispatch packet (and the associated kernel and spill/arg/private memory) is not
-re-used before the launch completes. For simple cases such as a
-single-thread, synchronous launch, the AQL Dispatch packet(s) can be declared
-as a static variable and initialized at the same time the code is
-finalized. More complex cases might involve creating and tracking several
-Dispatch packets for a single kernel code object.
+The binary structure of the different packet types is defined in the HSA
+Architecture Specification~\cite{sar} standard. For example, all the packets
+types occupy 64 bytes of storage and share a common header, and the Dispatch
+packets should specify the address of the ISA to run at offset 32. The packet
+structure is known to the application (Dispatch packets correspond to the
+\hsaref{hsa_dispatch_packet_t} type in the HSA API), but also to the
+hardware. This is a key HSA feature that enables applications to launch a packet
+in a specific agent by simply placing it in one of its \textit{queues}.
 
-HSA hardware defines a packet processor that parses AQL packets and a
-doorbell mechanism to inform the packet processor hardware that packets have
-been written into the queue. The HSA runtime defines a structure and update API
-to inform the hardware that the Dispatch packet has been written to the queue.
+A queue is a runtime-allocated resource that contains a packet buffer and a
+packet processor. The packet processor tracks which packets in the buffer has
+already processed. When it informed by the application that a new packet has
+been enqueued, the packet processor is able to process it because the packet
+format is standard and the packet contents are self-contained -- they include
+all the necessary information to run a command. The \textit{packet processor} is
+generally a hardware unit that is aware of the different packet formats.
 
-For more information on creating queues and the states of queues, refer to
-Section~\ref{sec:queues}. For more information on packet formats and the states
-of packets, refer to Section~\ref{sec:aql}.
+After introducing the basic concepts related to packets and queues, we can go
+back to our example and create a queue in the component using
+\hsaref{hsa_queue_create}. The queue creation can be configured in multiple
+ways. In the snippet below the application indicates that the queue should
+be able to hold 256 packets.
+\begin{lstlisting}
+hsa_queue_t *queue;
+hsa_queue_create(component, 256, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
+\end{lstlisting}
 
-After a packet is written and the hardware informed by way of the doorbell,
-execution can start. Execution of a kernel happens asynchronously. An application
-can write more packets to launch other kernels in the queue. This activity can
-overlap the actual execution of the kernel.
+The next step is to create a packet and push it into the newly created
+queue. Packets are not created using an HSA runtime function. Instead, the
+application can directly access the packet buffer of any queue and setup a
+kernel dispatch by simply filling all the fields mandated by the Agent packet
+format (type \hsaref{hsa_dispatch_packet_t}). The location of the packet
+buffer is available in the \reffld{base_address} field of any queue:
+\begin{lstlisting}
+hsa_dispatch_packet_t* dispatch_packet = (hsa_dispatch_packet_t*) queue->base_address;
 
-\subsection{Determining Kernel Completion}
-The System Architecture specification~\cite{sar} defines signals as a mechanism
-for communication between different parts of an HSA system. The HSA core runtime
-defines signals as opaque objects. The API is defined to send a value to the
-signal and wait for a value at the signal. For more information on signals,
-refer to Section~\ref{sec:signals}.
+// Configure dispatch dimensions: use a total of 256 work-items
+dispatch_packet->dimensions = 1;
+dispatch_packet->grid_size_x = 256;
 
-The AQL Dispatch packet provides a data field that allows an application to pass
-an opaque signal. When the HSA Component hardware observes a valid signal in
-an AQL packet, it sends a value to this signal when execution of the kernel
-completes (success or error). An application can wait on this signal to determine
-kernel completion.
+// Configuration of the rest of the Dispatch packet is omitted for simplicity
+\end{lstlisting}
 
-\subsection{Example}
-\lstinputlisting[caption=Setup and dispatch a kernel.]{example/first.c}
+In a real-world scenario, the application needs to exercise more caution when
+enqueuing a packet - there could be another thread writing a packet to the same
+memory location! The HSA API exposes several functions that allow the
+application to determine the buffer index where to write a packet, and when to
+write it. For more information on queues, refer to Section~\ref{sec:queues}. For
+more information on AQL packets, refer to Section~\ref{sec:aql}.
+
+\subsection{Signals and Packet launch}
+The Dispatch packet is not launched until the application informs the packet
+processor that there is new work available. The notification is divided in two
+parts. First, the \reffld{type} field in the packet header must be set to the
+appropriate value:
+\begin{lstlisting}
+dispatch_packet->header.type = HSA_PACKET_TYPE_DISPATCH;
+\end{lstlisting}
+Second, the buffer index where the packet has been written (in the example, zero)
+must be stored in the \textit{doorbell signal} of the queue.
+
+A \emph{signal} is runtime-allocated, opaque object used for communication
+between agents in an HSA system. Signal are similar to shared memory locations
+containing an integer. Agents can atomically store a new integer value in a
+signal, atomically read the current value of the signal, etc. using HSA runtime
+functions.  Signals are the preferred communication mechanism in an HSA system
+because signal operations usually perform better (in terms of power or speed)
+than their shared memory counterparts. For more information on signals, refer to
+Section~\ref{sec:signals}.
+
+When the runtime creates a queue, it also automatically creates a ``doorbell''
+signal that must be used by the application to communicate with the packet
+processor and inform him of the index of the packet ready to be consumed. The
+doorbell signal is contained in the \reffld{doorbell_signal} field of the
+queue. The value of a signal can be updated using
+\hsaref{hsa_signal_store_release}:
+
+\begin{lstlisting}
+hsa_signal_store_release(queue->doorbell_signal, 0);
+\end{lstlisting}
+
+After the packet processor has been notified, the execution of the kernel might
+start asynchronously at any moment. The application could simultaneously write
+more packets to launch other kernels in the same queue.
+
+In this introductory example, we omitted some important steps in the dispatch
+process. In particular, we did not discuss how to compile a kernel, indicate
+which ISA to run in the Dispatch packet, or how pass arguments to the kernel
+. However, some relevant differences with other runtime systems and programming
+models are already evident.  Other runtime systems provide software APIs for
+setting arguments and launching kernels, while HSA architects these at the
+hardware and specification level. An HSA application can use regular memory
+operations and a very lightweight set of runtime APIs to launch a kernel or in
+general submit a packet.
+
 
 \chapter{HSA Core Programming Guide} \label{coreapi}
 
@@ -538,19 +594,20 @@ undefined behavior.
 \section{Runtime Notifications}
 \label{sec:error}
 
-The runtime can report notifications (errors or events) synchronously
-or asynchronously. The runtime uses the return value of functions in the HSA API
-to pass notifications synchronously. In this case, the notification is a status
-code of type \hsaref{hsa_status_t} that indicates success or error.
+The runtime can report notifications (errors or events) synchronously or
+asynchronously. The runtime uses the return value of functions in the HSA API to
+pass synchronous notifications to the application. In this case, the
+notification is a status code of type \hsaref{hsa_status_t} that indicates
+success or error.
 
 The documentation of each function defines what constitutes a successful
 execution. When a HSA function does not execute successfully, the returned
-status code might help determining the source of the error. While a few error
+status code might help determining the source of the error. While some
 conditions can be generalized to a certain degree (e.g. failure in allocating
-resources) many errors can have implementation-specific explanations. For
-example, operations on signals (see Section~\ref{sec:signals}) might
-fail if the implementation validates the signal object on which the signals
-operate. Because the representation of a signal is specific to the
+resources), others have implementation-specific explanations. For
+example, certain operations on signals (explained in Section~\ref{sec:signals})
+might fail if the runtime implementation validates the signal object passed by
+the application. Because the representation of a signal is specific to the
 implementation, the reported error would simply indicate that the signal is
 invalid.
 
@@ -563,12 +620,13 @@ statuses are assigned positive integers and their identifiers start with the
 
 The runtime passes \textit{asynchronous} notifications in a different
 fashion. When the runtime detects an asynchronous event, it invokes an
-application-defined callback. For example, queues (see Section~\ref{sec:queues})
-are a common source of asynchronous events because the tasks queued by an
-application are asynchronously consumed by the packet processor. Callbacks are
-associated with queues when they are created. When the runtime detects an error
-in a queue, it invokes the callback associated with that queue and passes it an
-error flag (indicating what happened) and a pointer to the erroneous queue.
+application-defined callback. For example, queues (described in
+Section~\ref{sec:queues}) are a common source of asynchronous events because the
+tasks queued by an application are asynchronously consumed by the packet
+processor. When the runtime detects an error in a queue, it invokes the callback
+associated with that queue and passes it a status code (indicating what
+happened) and a pointer to the erroneous queue. Callbacks are associated with
+queues when they are created.
 
 The application must use caution when using blocking functions within their
 callback implementation -- a callback that does not return can render the
@@ -615,21 +673,26 @@ to~\cite{sar}, Section 2.5.
 
 \section{Signals}\label{sec:signals}
 
-HSA agents can communicate with each other by using coherent global memory, or
-by using signals. Signals allow HSA implementations to optimize for power and
-performance during signal operations. For example, spin loops involving atomic
-memory operations can be replaced with signal wait operations such as
-\hsaref{hsa_signal_wait_acquire} that can be implemented using more efficient
-hardware features.
+HSA agents can communicate with each other by using coherent shared (global)
+memory or by using signals. Agents can perform operations on signals similar to
+those on shared memory locations: atomically store an integer value on them,
+atomically load their current value, etc. However, signals can only be
+manipulated using the HSA runtime API or HSAIL instructions. The advantage of
+signals over shared memory is that signal operations usually perform better in
+terms of power or speed. For example, a spin loop involving atomic memory
+operations that waits for a shared memory location to satisfy a condition can be
+replaced with an HSA signal wait operator such as
+\hsaref{hsa_signal_wait_acquire}, which is implemented by the runtime using
+efficient hardware features.
 
 The runtime API uses opaque signal handlers of type \hsaref{hsa_signal_t} to
 represent signals. A signal carries an integer value of type
 \reftyp{hsa_signal_value_t} that can be accessed or conditionally waited upon
 through an API call or HSAIL instruction. The value occupies four or eight bytes
-depending on the machine model being used. The application creates a signal
-using \hsaref{hsa_signal_create}.
+depending on the machine model (small or large, respectively) being used. The
+application creates a signal using \hsaref{hsa_signal_create}.
 
-Updating the value of a signal is equivalent to sending the signal. In addition
+Modifying the value of a signal is equivalent to sending the signal. In addition
 to the regular update (store) of a signal value, an application can perform
 atomic operations such as add, subtract, or compare-and-swap. Each read or write
 signal operation specifies which memory order to use. For example, store-release
@@ -640,7 +703,7 @@ instructions. For more information on memory orders and the HSA memory model,
 please refer to the other HSA specifications~\cite{prm, sar}.
 
 The application may wait on a signal, with a condition specifying the terms of
-wait. The wait can be done either in the HSA component by using an HSAIL
+the wait. The wait can be done either in the HSA component by using an HSAIL
 \refhsl{wait} instruction or in the host CPU by using a runtime API
 call. Waiting for a signal implies reading the current signal value (which is
 returned to the application) using an acquire (\hsaref{hsa_signal_wait_acquire})
@@ -650,27 +713,13 @@ due to multiple reasons:
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
 \item A spurious wakeup interrupts the wait.
 \item The wait time exceeded the user-specified timeout.
-\item The wait time exceeded the maximum system timeout
+\item The wait time exceeded the system timeout
   \hsaref{HSA_SYSTEM_INFO_SIGNAL_MAX_WAIT}.
 \item The wait has been interrupted because the signal value satisfies the
   specified condition, but the value is modified before the implementation of
   the wait operation has the opportunity of reading it.
 \end{itemize}
 
-As explained above, an application can modify or wait on signals by using the
-runtime API. However, signals also allow expressing complex tasks dependencies
-that are automatically handled by the packet processors. For example, if task
-$y$ executing in one component consumes the result of task $x$ executing in a
-different component, then $y$ \textit{depends} on $x$. In HSA, this dependency
-can be enforced across components by creating a signal that will be
-simultaneously used as \begin{inparaenum}[a\upshape)] \item the completion
-  signal of a Dispatch packet $px$ corresponding to $x$ \item the dependency
-  signal in a Barrier packet that precedes the Dispatch packet $py$
-  corresponding to $y$\end{inparaenum}. The packet processor enforces the task
-dependency by not launching $py$ until $px$ has completed. For more information
-on HSA interfaces related to adding packets to a queue, refer to
-Section~\ref{sec:queues}. For more information on AQL packets, refer to
-Section~\ref{sec:aql}.
 
 \subsection{API}
 
@@ -678,37 +727,84 @@ Section~\ref{sec:aql}.
 % by Doxygen, so we need to hardcode them :-(
 \subsubsection{hsa_\-signal_\-value_\-t}
 \vspace{-3.5mm}\begin{mylongtable}{@{}p{\textwidth}}
-\hypertarget{group__signals_1ga67ca2818879c9990e1b5f1b14ce7ed27}{}
+\rule{0pt}{3ex}\hypertarget{group__signals_1ga67ca2818879c9990e1b5f1b14ce7ed27}{}
 \#ifdef HSA_LARGE_MODEL\\
 \hspace{1.7em}typedef int64_\-t  \textbf{hsa_\-signal_\-value_\-t}\\
 \#else \\
 \hspace{1.7em}typedef int32_\-t  \textbf{hsa_\-signal_\-value_\-t}\\
-\#endif
+\#endif\rule[-2ex]{0pt}{0pt}
 \end{mylongtable}
-Signal value. The value occupies 32 bits in small machine mode, and 64 bits in large machine mode.
+\vspace{-3mm}Signal value. The value occupies 32 bits in small machine mode, and 64 bits in large machine mode.
 \\
 
 \input{api/altlatex/group-signals}
 
 \section{Queues} \label{sec:queues}
 
-HSA hardware supports packet execution through user mode queues. A user mode
-command queue is characterized as runtime-allocated, user-level,
-accessible virtual memory of a certain size, containing packets defined in the
-Architected Queueing Language (AQL is explained in more detail in the next
-section). In this section, we might refer to user mode queues as just queues.
+HSA hardware supports command execution through user mode queues. A user mode
+command queue is characterized~\cite{sar} as runtime-allocated, user-level,
+accessible virtual memory of a certain size, containing packets (commands)
+defined in the Architected Queueing Language (AQL is explained in more detail in
+the next section). A queue is associated with a specific agent, which might have
+several queues attached to it. We will refer to user mode queues as just queues.
 
-A queue is associated with a specific agent, which might have several queues
-attached to it. For example, applications can launch kernels by creating a queue
-on a component and then placing Dispatch packets on it. The queue memory is then
-processed by the packet processor of that component as though it were a ring
-buffer, with separate memory locations defining the current write and read
-addresses.
+The application submits a packet to the queue of an agent by performing the
+following steps:
+\begin{enumerate}[itemsep=1pt,topsep=3pt,partopsep=0pt]
 
-The HSA runtime provides an interface (\hsaref{hsa_queue_create}) to create a
-user mode queue. When an application creates a queue, the runtime allocates
-memory for the data structure that represents the queue, as well as the buffer
-indicated by the \reffld{base_address} field.
+\item Create a queue on the agent, using \hsaref{hsa_queue_create}. The queue
+  should support the desired packet type. When the queue is created, the runtime
+  allocates memory for the \hsaref{hsa_queue_t} data structure that represents
+  the visible part of the queue, as well as the AQL packet buffer pointed by the
+  \reffld{base_address} field.
+
+\item Reserve a packet ID by incrementing the write index of the queue, which is
+  a 64-bit unsigned integer that contains the number of packets allocated so
+  far. The runtime exposes several functions such as
+  \hsaref{hsa_queue_add_write_index_acquire} to increment the value of the write
+  index.
+
+\item Wait until the queue is not full before writing the packet.  If the queue
+  is full, the packet ID obtained in the previous step will be greater or equal
+  than the sum of the current read index and the queue size. The read index of a
+  queue is a 64-bit unsigned integer that contains the number of packets that
+  have been processed and released by the queue's packet processor (i.e., the
+  identifier of the next packet to be released). The application can load the
+  read index using \hsaref{hsa_queue_load_read_index_acquire} or
+  \hsaref{hsa_queue_load_read_index_relaxed}.
+
+  If the application observes that the read index matches the write index, the
+  queue can be considered empty. This does not mean that the kernels have
+  finished execution, just that all packets have been consumed.
+
+\item Populate the packet. This step does not require using any
+  HSA API. Instead, the application directly writes the contents of the AQL
+  packet located at  \reffld{base_address} + (AQL packet size) * ((packet
+  ID) \% \reffld{size}). Note that \reffld{base_address} and \reffld{size} are
+  fields in the queue structure, while the size of any AQL packet is 64
+  bytes. The different packet types are discussed in the next section.
+
+\item Launch the packet by first setting the \reffld{type} field on its header
+  to the corresponding value, and then storing the the packet ID in
+  \reffld{doorbell_signal} using \hsaref{hsa_signal_store_release} (or any
+  variant that uses a different memory order).
+
+  The doorbell signal of the queue is used to indicate the packet processor that
+it has work to do. The value which the doorbell signal must be signaled with
+corresponds to the identifier of the packet that is ready to be launched.
+However, the packet might be consumed by the packet processor even
+before the doorbell signal has been signaled. This is because the packet
+processor might be already processing some other packet and observes that there
+is new work available, so it processes the new packets. In any case, agents are
+required to signal the doorbell for every batch of packets they write.
+
+\item (Optional) Wait for the packet to be complete by waiting on its completion
+  signal, if any.
+
+\item (Optional) Submit more packets by repeating steps 2-6
+
+\item Destroy the queue using \hsaref{hsa_queue_destroy}.
+\end{enumerate}
 
 Queues are semi-opaque objects: there is a visible part, represented by the
 \hsaref{hsa_queue_t} structure and the corresponding ring buffer (pointed by
@@ -719,37 +815,11 @@ and write indexes. The access rules for the different queue parts are:
   its contents, the behavior is undefined.
 \item The ring buffer can be directly accessed by the application.
 \item The read and write indexes of the queue can only be accessed using
-  dedicated runtime APIs.
+  dedicated runtime APIs.  The available index functions differ on the index of
+  interest (read or write), action to be performed (addition, compare and swap,
+  etc.), and memory order applied(relaxed, release, etc.).
 \end{itemize}
 
-The \reffld{doorbell_signal} field in \hsaref{hsa_queue_t} contains a signal
-that the application writing packets uses to indicate the packet processor that
-it has work to do. The value which the doorbell signal must be signaled with
-corresponds to the identifier of the packet that is ready to be launched.
-However, the enqueued command might be consumed by the packet processor even
-before the doorbell signal has been signaled. This is because the packet
-processor might be already processing some other packet and observes that there
-is new work available, so it processes the new packets. In any case, agents are
-required to signal the doorbell for every batch of packets they write.
-
-The write index of a queue contains the number of packets allocated so far in
-that queue; the read index contains the number of packets that have been
-processed and released by the queue's packet processor (i.e., the identifier of
-the next packet to be released). Both the write index and the read index are
-64-bit unsigned integers that can exceed the maximum number of packets the queue
-can hold. The write index and the read index are initialized to a value of 0.
-
-When the application observes that the read index matches the write index, the
-queue can be considered empty -- this does not mean that the kernels have
-finished execution, just that all packets have been consumed. On the other hand,
-if the observed write index is greater or equal than the sum of the read index
-and the size of the queue, then the queue is full.
-
-As mentioned before, the runtime does not directly expose the index values to an
-application, which must access them using dedicated APIs.  The available index
-functions differ on the index of interest (read or write), action to be
-performed (addition, compare and swap, etc.), and memory order (relaxed,
-release, etc.).
 
 % \begin{figure}[t]
 %   \centering
@@ -819,23 +889,274 @@ release, etc.).
 %   structure and the associated resources (ring buffer, indexes, etc.) are no
 %   longer valid.
 % \end{description}
+\vspace{-5mm}
+\subsection{Example - a simple dispatch}\vspace{-1mm}
+In this example, we extend the dispatch code introduced in
+Section~\ref{sec:executionmodel} in order to illustrate how packet IDs are
+reserved (invocation of \hsaref{hsa_queue_add_write_index_relaxed}), and how the
+application can wait for a packet to be complete (invocation of
+\hsaref{hsa_signal_wait_acquire}). The application creates a signal with an
+initial value of 1, sets the completion signal of the Dispatch packet to be the
+newly created signal, and after notifying the packet processor it
+waits for the signal value to become zero. The decrement is performed by the
+packet processor, and indicates that the kernel has finished.
+
+\lstinputlisting[firstline=50]{example/simple_dispatch.c}
+
+\subsection{Example - error callback}
+The previous example can be slightly modified to illustrate the usage of queue
+callbacks. This time the application creates a queue passing a callback function
+named \emph{callback}:
+\begin{lstlisting}
+hsa_agent_t component;
+hsa_iterate_agents(get_component, &component);
+
+hsa_queue_t *queue;
+hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, callback, NULL, &queue);
+\end{lstlisting}
+
+The callback prints the ID of the problematic queue, and the string associated
+with the asynchronous event:
+\begin{lstlisting}
+void callback(hsa_status_t status, hsa_queue_t* queue) {
+  const char* message;
+  hsa_status_string(status, &message);
+  printf("Error at queue %d: %s", queue->id, message);
+}
+\end{lstlisting}
+Let's now assume that the application makes a mistake and submits a invalid
+packet to the queue. For example, the AQL packet type is set to an invalid
+value. When the packet processor encounters this packet, it will trigger an
+error that results in the runtime invoking the callback associated with the
+queue. The message printed to the standard output varies depending on the string
+returned by \hsaref{hsa_status_string}. A possible output is:
+\begin{lstlisting}
+Error at queue 0: Invalid packet format
+\end{lstlisting}
+
+\subsection{Example - concurrent packet submissions}
+In previous examples the packet submission is very simple: there is a unique CPU
+thread submitting a single packet. In this example, we assume a more realistic
+scenario:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item Multiple threads concurrently submit many packets to the same queue.
+\item The queue might be full. Threads should avoid overwriting queue slots
+  containing packets that have not been not processed yet.
+\item The number of packets submitted exceeds the size of the queue, so the
+  submitting thread has to take wrap-around in consideration.
+\end{itemize}
+
+We start by finding a component that allows applications to create queues
+supporting multiple producers:
+\lstinputlisting[firstline=30, lastline=43]{example/multi_dispatch.cc}
+
+, and then creating a queue on it. The queue type is now
+\hsaref{HSA_QUEUE_TYPE_MULTI} instead of \hsaref{HSA_QUEUE_TYPE_SINGLE}.
+\begin{lstlisting}
+hsa_agent_t component;
+hsa_iterate_agents(get_component, &component);
+hsa_queue_t *queue;
+hsa_queue_create(component, 4, HSA_QUEUE_TYPE_MULTI, callback, NULL, &queue);
+\end{lstlisting}
+Each CPU thread submits 1000 Dispatch packets by executing the function listed
+below. For simplicity, we omitted the code that creates the CPU threads.
+
+\lstinputlisting[firstline=50,lastline=75]{example/multi_dispatch.cc}
+
 
 \subsection{API}
 \input{api/altlatex/group-queue}
 
 \section{Architected Queuing Language Packets}\label{sec:aql}
 The Architected Queuing Language (AQL) is a standard binary interface used to
-describe commands such as a Dispatch command or a Barrier command. An AQL packet
-is a blob of data with a defined format encoding one command. This section
-provides more information about AQL packet types and how the HSA API represents
-AQL packet types.
+describe commands such as a kernel dispatch. An AQL packet is a user-mode buffer
+with a defined format encoding one command. The HSA API does not provide any
+functionality to create, destroy or manipulate AQL packets. Instead, the
+application uses regular memory operation to access the contents of packets, and
+user-level allocators (malloc, for example) to create a packet. Applications are
+not mandated to explicitly reserve any storage space for packets, since a queue
+already contains a command buffer where AQL packets can be written into.
+
+The HSA API defines the format of three packet types: Dispatch, Agent Dispatch
+and Barrier. All formats share a common header \hsaref{hsa_packet_type_t} that
+describes their type, barrier bit (force the packet processor to complete
+packets in order), etc.
 
 \subsection{Dispatch packet}\label{dispatch-packet}
 
-An application uses a Dispatch packet to submit tasks to an HSA component. The
-HSA API uses the \hsaref{hsa_dispatch_packet_t} type to represent a dispatch.
-A Dispatch packet can be in one of the following five states: \emph{queued},
-\emph{launch}, \emph{error}, \emph{active} or
+An application uses a Dispatch packet (\hsaref{hsa_dispatch_packet_t}) to
+submit a kernel to an HSA component. The packet contains the following bits of
+information:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item A pointer to the kernel ISA is stored in \reffld{kernel_object_address}.
+\item A pointer to the kernel arguments is stored in
+  \reffld{kernarg_address}. The application populates this field with the
+  address of a global memory buffer previously allocated using
+  \hsaref{hsa_memory_allocate}, which contains the dispatch parameters. Memory
+  allocation is explained in Section~\ref{sec:memory}, which includes an example
+  on how to reserve space for the kernel arguments.
+\item Launch dimensions. The application must specify the number of dimensions
+  of the grid (which is also the number of dimensions of the work-group), the
+  size of each grid dimension, and the size of each work-group dimension.
+\item If the kernel uses group or private memory, the application must specify
+  the storage requirements in the \reffld{group_segment_size} and
+  \reffld{private_segment_size} fields, respectively.
+\end{itemize}
+
+The application must rely on information provided by the finalizer to retrieve
+the amount of kernarg, group, and private memory used by a kernel. The kernel's
+code descriptor (explained in Section~\ref{sec:finalizer}) returned by the
+finalizer contains the kernarg (\reffld{kernarg_segment_byte_size}), group
+(\reffld{workgroup_group_segment_byte_size}) and private
+(\reffld{workitem_private_segment_byte_size}) static storage requirements.
+
+\subsubsection{Example - populating the Dispatch packet}
+Examples of kernel dispatches in previous sections have omitted the setup of the
+Dispatch packet. The code listed below shows how to configure the launch of a
+kernel that receives no arguments (the \reffld{kernel_object_address} field
+is NULL). The dispatch uses 256 work-items, all in the same work-group along the
+X dimension.
+
+\lstinputlisting[firstline=20, lastline=45]{example/simple_dispatch.c}
+
+\subsection{Agent Dispatch packet}\label{agent-packet}
+
+Agent Dispatch packets are used to launch built-in functions in agents. In Agent
+Dispatch packets there is no need to indicate the address of the function to
+run, the launch dimensions, or memory requirements. Instead, the application or
+kernel simply specifies the type of function to be performed (\reffld{type}
+field), the arguments (\reffld{arg}), and when applicable the memory location
+where to store the return value of the function (\reffld{return_address}). The
+HSA API defines the type \hsaref{hsa_agent_dispatch_packet_t} to represent Agent
+Dispatch packets.
+
+While the host application is allowed to submit Agent Dispatch packets to any
+destination agent that supports them, in a more common usage scenario the
+producer will be a kernel executing in a component. The following steps describe
+the set of actions required from the application, the kernel, and the
+destination agent:
+\begin{enumerate}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item (Application) Locate a destination agent that supports Agent Dispatch
+  packets. The application must check whether the feature
+  \hsaref{HSA_AGENT_FEATURE_AGENT_DISPATCH} is present in an agent.
+\item (Application) Create a so-called "service'' queue on the destination agent
+  using \hsaref{hsa_queue_create}.
+\item (Application) Create a queue on the component using
+  \hsaref{hsa_queue_create}, passing a pointer to the service queue obtained in
+  the previous step.  Any service request to the destination agent must use this
+  queue. It is not possible for a work-item to request services from more than
+  one destination agent, or submit Agent Dispatch packets to more than one
+  service queue.
+\item (Kernel) The work-item locates the service queue by accessing the
+  \reffld{service_queue} field of the current queue. For more information on how
+  to retrieve the address of the current pointer, please check the documentation
+  of the \refhsl{queueptr} HSAIL instruction in~\cite{prm}.
+\item (Kernel) The work-item submits an Agent Dispatch packet to the service
+  queue following the steps described in Section~\ref{sec:queues}.
+\item (Destination Agent) The agent parses the packet, executes the indicated
+  service, stores the result in the memory location pointed by
+  \reffld{return_address}, and decrements the completion signal if present.
+\item (Kernel) The work-item consumes the function's output and proceeds to the
+  next instruction.
+\end{enumerate}
+
+\subsubsection{Example - application processes allocation service requests from
+  component}
+In this example, work-items in a kernel might ask the host application to
+allocate memory in their behalf. This is useful because there is no HSAIL
+instruction to allocate virtual memory. In this scenario, the destination agent
+is the application running on the CPU, and the service is memory allocation.
+
+The application starts by finding a CPU agent where to create a queue that
+supports Agent Dispatch packets:
+\begin{lstlisting}
+hsa_status_t get_agent_dispatch_agent(hsa_agent_t agent, void* data) {
+    uint32_t features = 0;
+    hsa_device_type_t device;
+    hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
+    if (features & HSA_AGENT_FEATURE_AGENT_DISPATCH) {
+        hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device);
+        if (device == HSA_DEVICE_TYPE_CPU) {
+            hsa_agent_t* ret = (hsa_agent_t*) data;
+            *ret = agent;
+            return HSA_STATUS_INFO_BREAK;
+        }
+    }
+    return HSA_STATUS_SUCCESS;
+}
+\end{lstlisting}
+A service queue is created on the CPU agent:
+\begin{lstlisting}
+hsa_agent_t agent_dispatch_agent;
+hsa_iterate_agents(get_agent_dispatch_agent, &agent_dispatch_agent);
+hsa_queue_t *service_queue;
+hsa_queue_create(agent_dispatch_agent, 16, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &service_queue);
+\end{lstlisting}
+, and used in the creation of a regular queue on the component (the
+callback definition is omitted for simplicity):
+\begin{lstlisting}
+hsa_agent_t component;
+hsa_iterate_agents(get_component, &component);
+hsa_queue_t* queue;
+hsa_queue_create(component, 16, HSA_QUEUE_TYPE_MULTI, callback, service_queue, &queue);
+\end{lstlisting}
+The application now launches a kernel in the component queue. Every time a
+work-item needs more virtual memory, it will submit a Agent Dispatch packet to
+the service queue. The allocation size is stored in \reffld{arg[0]}, and
+\reffld{return_address} contains the memory address where the application will
+store the starting address of the allocation. Finally, the \reffld{type} is set
+to an application-defined code. Let's assume that the allocation service type is
+0x8000.
+
+The following source code shows how a thread running on the host might process
+the Agent Dispatch packets submitted from the component. The application waits
+for the value of the doorbell signal in the service queue to be monotonically
+increased. When that happens, it simply processes the next service request by
+invoking malloc.
+
+\lstinputlisting[firstline=50, lastline=85]{example/agent_dispatch.cc}
+
+In practice, processing of Agent Dispatch packets is usually more
+complex because the consumer has to take into account multiple-producer
+scenarios.
+
+\subsection{Barrier packet}\label{barrier-packet}
+
+The Barrier packet (of type \hsaref{hsa_barrier_packet_t}) allows an application
+to specify up to five signal dependencies and requires the packet processor to
+resolve those dependencies before proceeding.  The packet processor will not
+launch any further packets in that queue until the Barrier packet is complete,
+which happens when either of these two conditions have been met:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item All of the dependent signals have been observed with the value 0 after the
+  Barrier packet launched. It is not required that all dependent signals are
+  observed to be 0 at the same time.
+\item Any of the dependent signals (\reffld{dep_signal} field) have been
+  observed with a negative value after the Barrier packet launched, in which
+  case the packet processor assigns an error value to \reffld{completion_signal}.
+\end{itemize}
+
+\subsubsection{Example - handling dependencies across kernels running in
+  different components}
+A combination of completion signals and Barrier packets allows expressing
+complex dependencies between packets, queues, and agents that are automatically
+handled by the packet processors. For example, if kernel $b$ executing in
+component $B$ consumes the result of kernel $a$ executing in a different
+component $A$, then $b$ \textit{depends} on $a$. In HSA, this dependency can be
+enforced across components by creating a signal that will be simultaneously used
+as \begin{inparaenum}[I\upshape)] \item the completion signal of a Dispatch
+  packet $packet\_a$ corresponding to $a$ \item the dependency signal in a
+  Barrier packet that precedes the Dispatch packet $packet\_b$ corresponding to
+  $b$\end{inparaenum}. The packet processor enforces the task dependency by not
+launching $packet\_b$ until $packet\_a$ has completed. The following example
+illustrates how to programmatically express the described dependency using the
+HSA API.
+\lstinputlisting[firstline=75]{example/barrier.c}
+
+\subsection{Packet states}\label{packet-states}
+
+After submission, a packet can be in one of the following five states:
+\emph{in queue}, \emph{launch}, \emph{error}, \emph{active} or
 \emph{complete}. Figure~\ref{fig:packetstate} shows the state transition
 diagram.
 
@@ -844,16 +1165,16 @@ diagram.
   \scriptsize
 \begin{tikzpicture}
 [auto,on grid,node distance=4.5cm,state/.style={circle,draw,minimum size=40pt}]
-   \node[state,initial]                 (s0) {Queued};
-   \node[state,right=4.5cm of s0]       (s1) {Launch};
-   \node[state,below=3cm of s1]       (s2) {Active};
-   \node[state,accepting,double distance=1pt,right=of s1]   (s3) {Error};
-   \node[state,accepting,double distance=1pt,right=of s2]   (s4) {Complete};
+   \node[state,initial]                 (s0) {in queue};
+   \node[state,right=4.5cm of s0]       (s1) {launch};
+   \node[state,below=3cm of s1]       (s2) {active};
+   \node[state,accepting,double distance=1pt,right=of s1]   (s3) {error};
+   \node[state,accepting,double distance=1pt,right=of s2]   (s4) {complete};
    \path[->]
-     (s0) edge[bend right]  node[below] {preceding completed} (s1)
-          edge[bend left] node[above]{preceding launched} (s1)
+     (s0) edge[bend right]  node[text width=3cm,align=center,below] {preceding completed\\\textit{barrier=1}} (s1)
+          edge[bend left] node[text width=3cm,align=center,above]{\textit{barrier=0}\\preceding launched} (s1)
      (s1) edge  node {processing error} (s3)
-          edge  node[anchor=center] {success} (s2)
+          edge  node[anchor=center,fill=white,opacity=1] {success} (s2)
      (s2) edge  node{success} (s4)
           edge  node[right]{execution error} (s3)
      ;
@@ -863,152 +1184,159 @@ diagram.
   \label{fig:packetstate}
 \end{figure}
 
-\begin{description}[itemsep=1pt,leftmargin=0cm, labelindent=0cm]
-\item[Queued] The queued state means that the format of the packet is not
-  \hsaref{HSA_PACKET_TYPE_ALWAYS_RESERVED} nor
-  \hsaref{HSA_PACKET_TYPE_INVALID}.  If the \reffld{barrier} bit is set,
-  the transition to launch state occurs after all the preceding kernels have
-  completed execution. If the \reffld{barrier} bit is not set, then the
-  transition to launch state occurs after the preceding kernels have completed
-  their launch phase.
+\begin{description}[itemsep=2pt,leftmargin=0cm, labelindent=0cm]
+\item[In queue] The packet processor has not started to parse the current
+  packet.  The transition to the launch state only occurs after all the
+  preceding packets have completed their execution if the \reffld{barrier} bit
+  is set in the header. If the bit is not set, the transition occurs after the
+  preceding packets have finished their launch phase. In other words, while the
+  packet processor is required to launch any consecutive two packets in order,
+  it is not required to complete them in order unless the barrier bit of the
+  second packet is set.
 
-\item[Launch] The launch state indicates processing of the packet, but not
-  execution of a task. This phase finalizes by applying an acquire memory fence.
-  If an error is detected during launch, the queue is set into an error state
-  and the event callback associated with the queue (if present) is invoked. The
-  runtime passes an error status to the callback that indicates the source of
-  the problem.  The following error codes might be returned:\\[3mm]
-  {\renewcommand{\arraystretch}{1.75}%
-  \begin{tabular}{p{8.4cm}p{7.4cm}}
-  \hsaref{HSA_STATUS_ERROR_INVALID_PACKET_FORMAT} &
-   Malformed AQL packet \\
-  \hsaref{HSA_STATUS_ERROR_OUT_OF_RESOURCES} &
-  The packet processor is unable to allocate the resources required by the launch \\
-  \end{tabular}
-  }
-\item[Active] The active state means that the kernel encoded by the packet
-  has started execution. If an error is detected during this phase, a release
-  fence is applied to the packet and its completion signal (if present) is
-  assigned a negative value.
+\item[Launch] The packet is being parsed, but it did not start executing. This
+  phase finalizes by applying an acquire memory fence with the scope indicated
+  by the \reffld{acquire_fence_scope} header field.  Memory fences are discussed
+  in~\cite{prm}, Section 6.2.6.
 
-\item[Error] The error state means that an error was encountered during the
-  launch or active phases.
+  If an error is detected during launch, the queue transitions to the error
+  state and the event callback associated with the queue (if present) is
+  invoked. The runtime passes a status code to the callback that indicates the
+  source of the problem.  The following status codes might be returned:
+  \begin{description}[itemsep=1.5pt,labelindent=.5cm]
+  \item[\hsaref{HSA_STATUS_ERROR_INVALID_PACKET_FORMAT}] Malformed AQL
+    packet. This could happen if, for example, the packet header type is invalid.
+  \item[\hsaref{HSA_STATUS_ERROR_OUT_OF_RESOURCES}] The packet processor is
+    unable to allocate the resources required by the launch. This could happen
+    if, for example, a Dispatch packet requests more group memory than the size
+    of the group memory declared by the corresponding component.
+  \end{description}
+\item[Active] The execution of the packet has started.
 
-\item[Complete] The complete state means that a memory release fence has been
-  applied and the completion signal (if present) decremented.
+  If an error is detected during this phase, the queue transitions to the error
+  state, a release fence is applied to the packet with the scope indicated by
+  the \reffld{release_fence_scope} header field, and the completion signal (if
+  present) is assigned a negative value. There is no invocation of the callback
+  associated with the queue.
+
+  If no error is detected, the transition to the complete state happens when the
+  associated task finishes (in the case of Dispatch and Agent Dispatch packets),
+  or when the dependencies are satisfied (in the case of a Barrier packet).
+
+\item[Complete] A memory release fence is applied with the scope indicated by
+  the \reffld{release_fence_scope} header field, and the completion signal (if
+  present) decremented.
+
+\item[Error] An error was encountered during the launch or active phases. No
+  further packets will be launched on the queue. The queue cannot be recovered,
+  but only inactivated or destroyed. If the application passes the queue as an
+  argument to any HSA function other than \hsaref{hsa_queue_inactivate} or
+  \hsaref{hsa_queue_destroy}, the behavior is undefined.
+
 \end{description}
-
-\subsubsection{Memory Usage Information}
-
-If the kernel being dispatched uses private or group segments, the HSA runtime
-requires the application to specify the sizes of the segments in the Dispatch
-packet (\reffld{private_segment_size} and \reffld{group_segment_size},
-respectively). The application must rely on information provided by the
-finalizer to get the corresponding segment sizes. The code descriptor (explained
-in Section~\ref{sec:finalizer}) returned by the finalizer indicates the amount
-of group (\reffld{workgroup_group_segment_byte_size}) and private
-(\reffld{workitem_private_segment_byte_size}) used by the kernel.
-
-Another kind of HSA segment is the kernarg segment, used to pass arguments into
-a kernel. The application populates the \reffld{kernarg_address} field of the
-Dispatch packet with the address of a buffer of kernarg memory previously
-allocated using \hsaref{hsa_memory_allocate}, which contains the dispatch
-parameters. The size of the buffer should match the
-\reffld{kernarg_segment_byte_size} field of the code descriptor for the kernel.
-
-\subsection{Agent Dispatch packet}\label{agent-packet}
-
-Agent Dispatch packets dispatch jobs to HSA agents. The HSA API defines type
-\hsaref{hsa_agent_dispatch_packet_t} to represent Agent Dispatch packets.
-The states and state transitions for Agent Dispatch packets is identical to that
-of Dispatch packets.
-
-\subsection{Barrier packet}\label{barrier-packet}
-
-The Barrier packet \hsaref{hsa_barrier_packet_t} allows an application to
-specify up to five dependencies as \hsaref{hsa_signal_t} objects and
-requires the packet processor to resolve those dependencies before proceeding.
-The Barrier packet is a blocking packet in the sense that the processing of the
-Barrier packet completes the packet. This is unlike a Dispatch packet whose
-completion may occur at some future time after the packet has finished
-processing.
-
-The packet processor will not launch any further packets until the Barrier
-packet is complete. The execution phase for the Barrier packet completes when
-either of these two conditions have been met:
-\begin{itemize}
-\item Any of the dependent signals have been observed with a negative value
-  after the Barrier packet launched, in which case the packet
-  processor assigns an error value to \reffld{completion_signal} .
-\item All of the dependent signals have been observed with the value 0 after
-  the Barrier packet launched (note that it is not required that all dependent
-  signals are observed to be 0 at the same time).
-\end{itemize}
-
-As stated above, if any of the dependent signals have been assigned a negative
-value, the Barrier packet will indicate failure in its completion signal. The
-packet processor assigns an error (negative) value to
-\reffld{completion_signal}.
-
-The state diagram of the Barrier packet is identical to that shown for Dispatch
-packets. However, each state might cause a different set of actions:
-\begin{itemize}
-\item No memory fence is applied in the launch phase.
-\item In the active phase, instead of executing a kernel, the packet waits for
-  all the conditions to be met.
-\item No action is performed in the completion phase.
-\end{itemize}
 
 \subsection{API}
 \input{api/altlatex/group-aql}
 
-\section{Memory}\label{memory}
+\section{Memory}\label{sec:memory}
 
 One of the key features of HSA is its ability to share global pointers between
-the host application and code executing on the component. An application can
-directly pass a buffer allocated on the host (for example, using malloc) to a
-kernel function dispatched in any component.
+the host application and code executing on any component in a coherent
+fashion. An application can directly pass a buffer allocated on the host (for
+example, using malloc) to a kernel dispatched in any component. Kernels might
+also access memory that is not in the coherent, global segment.
 
-However, a kernel might also access memory that is not in the coherent, global
-segment. The HSA runtime API provides a simple set of interfaces for inspecting
-the memory \emph{regions} that are visible to an agent, and (if applicable)
-allocating memory on those regions from the host CPU agent.
+The HSA runtime API provides a compact set of functions for inspecting
+the memory \emph{regions} that are accessible from  an agent, and (if applicable)
+allocating memory on those regions from the host.
 
-A memory region represents a block of memory that is directly accessible by an
-specific agent, and contains properties about how memory is accessed from that
-agent. The same memory interval might be accessible to multiple agents, but the
-runtime associates a unique memory region to each agent. The characteristics of
-a memory region include its size, addressability, access speed, and
-corresponding memory segment.
+A memory region represents a block of contiguous memory that is directly
+accessible by an agent, and exposes properties about the block of memory and how
+it is accessed from that particular agent. The same block of memory -virtual or
+physical- might be accessible from multiple agents, but the runtime creates a
+unique region on every agent to represent the memory block. The characteristics
+of a memory region include its size, addressability, access speed, and
+corresponding memory segment. One agent might be able to access multiple regions
+within the same segment.
 
 The function \hsaref{hsa_agent_iterate_regions} can be used to inspect the set
 of regions associated with an agent. Implementations of
-\hsaref{hsa_agent_iterate_regions} are required to at least report:
+\hsaref{hsa_agent_iterate_regions} are required to report the following
+regions on every agent:
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item A region that is visible to all the agents, starts at address 0, and is in
-  the global segment. This corresponds to the coherent, primary HSA memory type.
-\item A region that is visible to all the agents, is in the global segment and
-  can be used to allocate backing storage for the kernarg segment:
-  \hsaref{HSA_REGION_FLAG_KERNARG} is true, and
-  \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} is not 0.
+\item A region that starts at address 0, and is located in the global
+  segment. This corresponds to the coherent, primary HSA memory type. All the
+  regions with these characteristics should have identical sizes.
+\item A region that is located in the global segment and can be used to allocate
+  backing storage for the kernarg segment: \hsaref{HSA_REGION_FLAG_KERNARG} is
+  true, and \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} is not 0. All the regions
+  with these characteristics should have identical sizes.
 \end{itemize}
 
 If the application can allocate memory in a region using
-\hsaref{hsa_memory_allocate}, then the value of the attribute
-\hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} is different from zero. Currently, the
-mentioned runtime allocator can only be used to allocate memory in the global
-segment. Memory in the private, group and kernarg segments is automatically
-allocated when a Dispatch packet is launched.
+\hsaref{hsa_memory_allocate}, the value of the attribute
+\hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} is different from zero. The runtime
+allocator can only be used to allocate memory in the global segment. Memory in
+the private, group and kernarg segments is automatically allocated when a
+Dispatch packet is launched.
 
-When a buffer created in the host is also accessed by a component, programmers
-are encouraged to \emph{register} the corresponding address range beforehand by
-using the \hsaref{hsa_memory_register} API. While kernels running on HSA devices
-can access any memory pointer allocated by means of standard libraries (for
-example, malloc in the C language), registering the buffer might result on
-improved access performance.  When an HSA program no longer needs to access a
-registered buffer in a device, the application should deregister that virtual
-address range by using \hsaref{hsa_memory_deregister}.
+When the application no longer needs a buffer allocated using
+\hsaref{hsa_memory_allocate}, it invokes \hsaref{hsa_memory_free} to release the
+memory. The application shall not release a runtime-allocated buffer using
+standard libraries (for example, free). Conversely, the runtime deallocator
+cannot be used to release memory allocated using standard libraries (for
+example, malloc).
 
+If a buffer created in the host is also accessed by a component, applications
+are encouraged to \emph{register} the corresponding address range beforehand
+using the \hsaref{hsa_memory_register} function. While kernels running on HSA
+components can access any regular host pointer, a registered buffer might
+result on improved access performance.  When the application no longer needs to
+access a registered buffer, it should deregister that virtual address range by
+invoking \hsaref{hsa_memory_deregister}.
+
+\subsection{Example - passing arguments to a kernel}\label{ex:kernarg_dispatch}
+In the kernel setup example listed in Section~\ref{dispatch-packet}, the kernel
+receives no arguments:
+\begin{lstlisting}
+// Indicate which ISA to run. The application is expected to have finalized a kernel (for example, using the finalization API).
+// We will assume the object is located at address 0xDEADBEEF
+dispatch_packet->kernel_object_address = (uint64_t) DEADBEEF;
+
+// Assume our kernel receives no arguments.
+dispatch_packet->kernarg_address = 0;
+\end{lstlisting}
+Let's assume now that the kernel expects a single argument, a signal handle. The
+application needs to populate the \reffld{kernarg_address} field of the Dispatch
+packet with the address of a buffer containing the signal.
+
+The application searches for a memory region that can be used to allocate
+backing storage for the kernarg segment. Once found, it reserves enough space to
+hold the signal argument. While the actual amount of memory to be allocated is
+determined by the finalizer, for simplicity we will assume that it matches the
+natural size of the signal type, 8 bytes.
+\begin{lstlisting}
+// Indicate which ISA to run. The application is expected to have finalized a kernel (for example, using the finalization API).
+// We will assume the object is located at address 0xDEADBEEF
+dispatch_packet->kernel_object_address = (uint64_t) DEADBEEF;
+
+hsa_region_t region;
+hsa_agent_iterate_regions(component, get_kernarg, &region);
+hsa_memory_allocate(region, 8, (void**) &dispatch_packet->kernarg_address);
+\end{lstlisting}
+
+, where the definition of \textit{get_kernarg} is:
+\lstinputlisting[firstline=50, lastline=60]{example/kernarg_dispatch.c}
+
+Finally, the application stores a signal handle in the buffer.
+\begin{lstlisting}
+hsa_signal_t* buffer = (hsa_signal_t*) dispatch_packet->kernarg_address;
+assert(buffer != NULL);
+hsa_signal_t signal;
+hsa_signal_create(1, 1, &component, &signal);
+*buffer = signal;
+\end{lstlisting}
+The rest of the dispatch process remains the same.
 
 \subsection{API}
 \input{api/altlatex/group-memory}
@@ -1074,18 +1402,18 @@ interacts with the \hsaref{hsa_vendor_extension_query} API call.
 
 \section{HSAIL Finalization}\label{sec:finalizer}
 
-Finalizer Core API is used to finalize given kernels and/or indirect functions.
-Finalizer Core API is a vendor-specific low-level API. It can be used to
-generate code for kernels and indirect functions from a specific program for a
-specific HSA component using \hsaref{hsa_ext_finalize}. A kernel can only be
-finalized once per program per agent. An indirect function can only be
-finalized once per program per agent per call convention. Only code for the
-HSA components specified when the program was created can be requested.
+The Finalizer Core API is used to finalize given kernels and/or indirect
+functions.  The Finalizer Core API is a vendor-specific low-level API. It can be
+used to generate code for kernels and indirect functions from a specific program
+for a specific HSA component using \hsaref{hsa_ext_finalize}. A kernel can only
+be finalized once per program per agent. An indirect function can only be
+finalized once per program per agent per call convention. Only code for the HSA
+components specified when the program was created can be requested.
 
 The program must contain a definition for the requested kernels and indirect
-functions amongst the modules that have been added to the program. The modules of
-the program must collectively define all variables, fbarriers, kernels and functions
-referenced by operations in the code block of:
+functions amongst the modules that have been added to the program. The modules
+of the program must collectively define all variables, fbarriers, kernels and
+functions referenced by operations in the code block of:
 \begin{itemize}
 \item{The kernel and indirect functions being finalized.}
 \item{The transitive closure of all functions specified by call or scall
@@ -1102,28 +1430,31 @@ performance than finalizing the kernels and indirect function individually. For
 example, it can allow the finalizer to generate common code for shared functions
 which can reduce code footprint and improve instruction cache performance.
 
-The Finalizer Core API allocates a kernel descriptor for every kernel definition in a
-program, and an indirect function descriptor for every indirect function definition in
-the program. Both kinds of descriptors are represented as an array of
-\hsaref{hsa_ext_code_descriptor_t} in global segment memory. Each code descriptor
-provides the information about a finalization of the kernel or indirect
-function for a specific HSA component, and for indirect functions, a specific
-call convention of that HSA component. An HSA runtmie uses an array of finalization
-handles \hsaref{hsa_ext_finalization_handle_t} to access code descriptors.
+The Finalizer Core API allocates a kernel descriptor for every kernel definition
+in a program, and an indirect function descriptor for every indirect function
+definition in the program. Both kinds of descriptors are represented as an array
+of \hsaref{hsa_ext_code_descriptor_t} in global segment memory. Each code
+descriptor provides the information about a finalization of the kernel or
+indirect function for a specific HSA component, and for indirect functions, a
+specific call convention of that HSA component. An HSA runtmie uses an array of
+finalization handles \hsaref{hsa_ext_finalization_handle_t} to access code
+descriptors.
 
-The kernel descriptor array is indexed by the agent id \hsaref{hsa_ext_program_agent_id_t}
-The kernel descriptor and agent id are available by the \emph{ldk} and \emph{agentid}
-operations respectively, or by an HSA runtime queries \hsaref{hsa_ext_query_kernel_descriptor_address}
-and \hsaref{hsa_ext_query_program_agent_id}. Refer to the HSA Programmer's
-Reference Manual~\cite{prm}, Chapter 4.2.1 for Agent Id and 11.3 for User Mode Queue Operations.
+The kernel descriptor array is indexed by the agent id
+\hsaref{hsa_ext_program_agent_id_t} The kernel descriptor and agent id are
+available by the \emph{ldk} and \emph{agentid} operations respectively, or by an
+HSA runtime queries \hsaref{hsa_ext_query_kernel_descriptor_address} and
+\hsaref{hsa_ext_query_program_agent_id}. Refer to the HSA Programmer's Reference
+Manual~\cite{prm}, Chapter 4.2.1 for Agent Id and 11.3 for User Mode Queue
+Operations.
 
 The indirect function descriptor is indexed by the call convention id
-\hsaref{hsa_ext_program_call_convention_id32_t} which is
-performed implicitly by the \emph{icall} operation. The indirect function descriptor address
-is available by the \emph{ldi} operation or an HSA runtime query
-\hsaref{hsa_ext_query_indirect_function_descriptor_address}. Refer to the HSA Programmer's
-Reference Manual~\cite{prm}, Chapter 4.2.2 for Call Convention Id and 10.8 for
-Indirect Call (icall, ldi) Operations.
+\hsaref{hsa_ext_program_call_convention_id32_t} which is performed implicitly by
+the \emph{icall} operation. The indirect function descriptor address is
+available by the \emph{ldi} operation or an HSA runtime query
+\hsaref{hsa_ext_query_indirect_function_descriptor_address}. Refer to the HSA
+Programmer's Reference Manual~\cite{prm}, Chapter 4.2.2 for Call Convention Id
+and 10.8 for Indirect Call (icall, ldi) Operations.
 
 The finalizer updates the code descriptor corresponding to the agent or call
 convention for each kernel or indirect function that it finalizes.
@@ -1134,302 +1465,67 @@ the code descriptor contains finalized code. If it has been finalized, then for
 kernels the information needed to create a User Mode Queue kernel dispatch
 packet is available, including:
 \begin{itemize}
-\item{The byte size of the group segment for a single work-group::}
-\subitem{Includes module scope and function scope group segment variables used by the
-kernel or any functions it calls directly or indirectly.}
-\subitem{Includes any finalizer allocated temporary space. For example, in the implement of
-exception operations or fbarriers.}
-\subitem{Does not include any dynamically allocated group segment space. Refer to
-the HSA Programmer's Reference Manual~\cite{prm}, Chapter 4.20 Dynamic Group Memory Allocation}
-\item{The byte size of the private segment for a single work-item. This includes:}
-\subitem{Module scope and function scope private segment variables.}
-\subitem{Space for function scope spill segment variables allocated in memory}
-\subitem{Space for argument scope arg segment variables allocated in memory.}
-\subitem{Any space needed for saved HSAIL or ISA registers due to calls.}
-\subitem{Any other finalizer introduced temporaries including spilled ISA registers
-and space for function call stack.}
-\item{The 64-bit opaque code handle to the finalized code that includes the executable
-ISA for the HSA component. It can be used for the kernel dispatch packet kernel
-object address field.}
+\item{The byte size of the group segment for a single work-group:}
+  \subitem{Includes module scope and function scope group segment variables used
+    by the kernel or any functions it calls directly or indirectly.}
+  \subitem{Includes any finalizer allocated temporary space. For example, in the
+    implement of exception operations or fbarriers.}  \subitem{Does not include
+    any dynamically allocated group segment space. Refer to the HSA Programmer's
+    Reference Manual~\cite{prm}, Chapter 4.20 Dynamic Group Memory Allocation}
+\item{The byte size of the private segment for a single work-item. This
+    includes:} \subitem{Module scope and function scope private segment
+    variables.}  \subitem{Space for function scope spill segment variables
+    allocated in memory} \subitem{Space for argument scope arg segment variables
+    allocated in memory.}  \subitem{Any space needed for saved HSAIL or ISA
+    registers due to calls.}  \subitem{Any other finalizer introduced
+    temporaries including spilled ISA registers and space for function call
+    stack.}
+\item{The 64-bit opaque code handle to the finalized code that includes the
+    executable ISA for the HSA component. It can be used for the kernel dispatch
+    packet kernel object address field.}
 \end{itemize}
 
-The code descriptor also includes other information that may be useful to a high-level
-language runtime to invoke and manage the kernel's execution. For example, the size
-and alignment of the kernarg segment and the call convention used by the code of the
-kernel.
+The code descriptor also includes other information that may be useful to a
+high-level language runtime to invoke and manage the kernel's execution. For
+example, the size and alignment of the kernarg segment and the call convention
+used by the code of the kernel.
 
 For an indirect function, a code descriptor includes:
 \begin{itemize}
-\item{The 64-bit opaque code handle to the finalized code that includes the executable
-ISA for a single call convention of the HSA component.}
+\item{The 64-bit opaque code handle to the finalized code that includes the
+    executable ISA for a single call convention of the HSA component.}
 \end{itemize}
 
-Once code has been generated for a kernel for a specific HSA component, it can be
-executed by adding a kernel dispatch packet to a User Mode Queue associated with
-the HSA component. The information required to create the kernel dispatch packet is
-available in the code descriptor addressed by using the agent id to index the kernel
-descriptor.
+Once code has been generated for a kernel for a specific HSA component, it can
+be executed by adding a kernel dispatch packet to a User Mode Queue associated
+with the HSA component. The information required to create the kernel dispatch
+packet is available in the code descriptor addressed by using the agent id to
+index the kernel descriptor.
 
-For an indirect function, the code is only made available to kernel dispatches launched
-after the indirect function has been finalized. Therefore, prior to executing a kernel,
-all indirect functions that it will call must have been finalized for the HSA component
-with the call convention used by the kernel code. The \emph{icall} operation, used to call
-indirect functions, implicitly access the code descriptor addressed by using the call
-convention id of the executing kernel to index the indirect function descriptor. Refer to
-the HSA Programmer's Reference Manual~\cite{prm}, Chapter 4.2.2 for Call Convention Id and 10.8 for
-Indirect Call (icall, ldi) Operations.
+For an indirect function, the code is only made available to kernel dispatches
+launched after the indirect function has been finalized. Therefore, prior to
+executing a kernel, all indirect functions that it will call must have been
+finalized for the HSA component with the call convention used by the kernel
+code. The \emph{icall} operation, used to call indirect functions, implicitly
+access the code descriptor addressed by using the call convention id of the
+executing kernel to index the indirect function descriptor. Refer to the HSA
+Programmer's Reference Manual~\cite{prm}, Chapter 4.2.2 for Call Convention Id
+and 10.8 for Indirect Call (icall, ldi) Operations.
 
 Appropriate memory synchronization is needed to access the code descriptor since
-it is updated concurrently by the HSA runtime. Memory synchronization may include
-using an acquire fence at system scope on the kernel dispatch packet if the code
-descriptor may have changed since the HSA component executed the last packet
-acquire fence at system scope, or using a load acquire at system scope on the code
-descriptor kind field if the code descriptor may change during the execution of the
-kernel dispatch. This applies both to accesses performed explicitly to create kernel
-dispatch packets, and implicitly by the \emph{icall} operation.
+it is updated concurrently by the HSA runtime. Memory synchronization may
+include using an acquire fence at system scope on the kernel dispatch packet if
+the code descriptor may have changed since the HSA component executed the last
+packet acquire fence at system scope, or using a load acquire at system scope on
+the code descriptor kind field if the code descriptor may change during the
+execution of the kernel dispatch. This applies both to accesses performed
+explicitly to create kernel dispatch packets, and implicitly by the \emph{icall}
+operation.
 
-The code will remain available to execute until the HSA runtime is used to destroy the
-HSAIL program with which the code is associated using \hsaref{hsa_ext_program_destroy}. All
-HSAIL programs created by the application are implicitly destroyed when the application terminates.
-
-% Compilation support in the HSA core runtime comprises of a finalization
-% step. The primary functionality of this step is to translate the HSAIL to a
-% component specific instruction set and produce a compilation unit. It resolves
-% user defined symbols that are not already bound via callbacks provided by the
-% user.
-
-% HSA components may support HSAIL natively or may have a native ISA that the
-% HSAIL needs to be translated into. However, compilation is a necessary step and
-% is required despite a HSA components' native support of HSAIL. This is because
-% of two primary reasons:
-
-% \begin{enumerate}
-% \item The HSA kernel code objects (accessible via the
-%   \hsaref{hsa_compilationunit_code_t} structure, discussed in
-%   Section~\ref{finalize:codeobject} ) are an output of the finalization process
-%   and required as an input for the AQL Dispatch packet; to obtain values from
-%   the finalizer for segment sizes etc.\ and also to act as a container for
-%   component specific execution information.
-
-% \item In order to support kernel dispatches from the HSA component, the kernel
-%   code object must reside in a memory layout specification since dispatches
-%   initiated from components are able to use memory operations to get the
-%   information necessary for a dispatch.
-% \end{enumerate}
-
-% \subsubsection{BRIG and .directive Section}
-% The core runtime accepts HSAIL programs coded in the BRIG binary format, as
-% defined in the HSA PRM~\cite{prm}, for its finalization process. BRIG is a
-% binary format defined by the HSA PRM and includes 5 different sections,
-% \emph{.string}, \emph{.directive}, \emph{.code}, \emph{.operand}, and
-% \emph{.debug}. More information on these sections is described in Section 19.1
-% of the HSA PRM. The core runtime structure that represents a BRIG is named
-% \hsaref{hsa_brig_t}. This structure is an in-memory representation of the
-% BRIG. It is defined as follows:
-
-% [DELETED CODE]
-
-% Of the different sections in BRIG, the .directive section provides information
-% to the finalizer on functions, kernels, and global declarations, etc. The
-% symbols in the .directive section have defined placement rules (see PRM for more
-% information). For example, immediately after a function or kernel directive,
-% BRIG requires the directives that describe the arguments to be in a certain
-% order. Return arguments are first, followed by input arguments, followed by the
-% directives that apply only to the function or kernel.
-
-% The \hsaref{hsa_brig_t} structure has the base address of the directive
-% section. A directive for any symbol is represented using an offset into the
-% directive section. HSA core runtime defines a type
-% \hsaref{hsa_brig_directive_offset_t} to represent the .directive section
-% offset. It is typedef to an unsigned 32 bit integer and is defined by all
-% implementations as follows:
-
-% [DELETED CODE]
-
-% There are different types of directives specified in the PRM. Of these, the
-% control directives are a means to allow implementations to pass information to
-% the finalizer via HSAIL. HSA runtime defines a structure
-% \hsaref{hsa_control_directives_t} to represent the values of control
-% directives both at finalization time and to record information in the kernel
-% code object. Control directives may also be specified within the HSAIL
-% code. When conflicting values are specified for a particular directive specified
-% in HSAIL and at finalization time, the runtime will do one of the following: (a)
-% perform a union (OR operation) when possible (e.g. when the value represents a
-% bit field).
-
-% (b) when a union is not meaningful, the runtime will require that the value
-% provided at finalization time via the \hsaref{hsa_control_directives_t}
-% structure match the value for this directive in the HSAIL kernel.
-
-% The \hsaref{hsa_control_directives_t} structure is defined as
-% follows:
-
-% [DELETED CODE]
-
-% Where, the \hsaref{hsa_control_directive_present64_t} is defined as a 64bit
-% unsigned integer.
-% [DELETED CODE]
-
-% The enumeration \hsaref{hsa_control_directive_present64_t} is a bit set
-% indicating which control directives have been specified. It is accessible via a
-% mask, \hsaref{hsa_control_directives_present_mask_t}, which is defined as
-% follows:
-
-% [DELETED CODE]
-
-% User can choose to either break on exceptions or just detect them. The PRM
-% defines the policy to be exception-type specific, i.e.\ different IEEE
-% exceptions supported by HSA (see the definition of the enumeration
-% \hsaref{hsa_exception_kind_mask_t} below) can be handled with different
-% policies (BREAK vs.\ DETECT). The \reffld{enable_break_exceptions} field
-% specifies the set of HSAIL exceptions that must have the BREAK policy
-% enabled. It is possible that on some systems, enabling exceptions may result in
-% lower code performance. If the kernel being finalized has any
-% \texttt{enablebreakexceptions} control directives in HSAIL, then the runtime
-% performs a union (OR operation) of values specified by this argument with the
-% values in HSAIL control directives. If any of the functions the kernel calls
-% have an enablebreakexceptions control directive, then they must be equal to or a
-% subset of this union.
-
-% [DELETED CODE]
-
-% \subsubsection{Code Objects}\label{finalize:codeobject}
-
-% There are different code objects defined by the runtime specification in support
-% of HSAIL: \hsaref{hsa_kernel_code_t}, \hsaref{hsa_compilationunit_code_t}
-% and \hsaref{hsa_function_code_t}. All of them are in memory and can be
-% relocatable and/or position independent (which indicates that the object can be
-% deep-copied to other memory locations for execution). The HSA runtime provides a
-% query API to verify if a particular component supports position independent code
-% objects (see Section~\ref{topology}).
-
-% The \hsaref{hsa_compilationunit_code_t} is the header for the code object
-% produced by the Finalizer and contains information that applies to all code
-% entities in the compilation unit.
-
-% Since core runtime does not define a file format container, the core runtime
-% provides API to work with HSAIL programs encoded in the BRIG binary format and
-% supports generation of code objects that include kernels to be executed in the
-% HSA component and binding of unresolved symbols associated with the code object
-% generated.
-
-% Finalizer allocates a single contiguous area of memory to hold the generated
-% code for all the code objects.
-
-% The structure of this contiguous area is as follows: Starting at offset 0, the
-% ``header'' of this contiguous area is defined by the
-% \hsaref{hsa_compilationunit_code_t} structure. The
-% \hsaref{hsa_compilationunit_code_t} structure in turn contains an offset to
-% an array of \hsaref{hsa_code_entry_t}, one entry per code entity that the
-% finalizer has produced code for. Each \hsaref{hsa_code_entry_t} variable
-% contains an offset to a \hsaref{hsa_*code_t} object that describes that code
-% entity (function/kernel/etc).
-
-% [DELETED CODE]
-
-% Every \hsaref{hsa_*_code_t} code objects start with a common header that also
-% contains what kind of code object it is. The common header,
-% \hsaref{hsa_code_t}, is defined as follows:
-% [DELETED CODE]
-
-% A bit set of flags providing information about the code in a compilation
-% unit. Unused flags must be 0. The \hsaref{hsa_code_properties32_t} must be
-% used as a type for this flag. The values/mask currently supported is defined as
-% follows:
-% [DELETED CODE]
-
-% The \hsaref{hsa_compilationunit_code_t} structure is defined as
-% follows:
-% [DELETED CODE]
-
-% Both the \hsaref{hsa_compilationunit_t} and \hsaref{hsa_*_code_t} objects
-% can have implementation define data towards the end of the structure. All
-% elements in the contiguous location being accessed by offsets enables such
-% definition. This also allows the exact position of the various objects in the
-% contiguous memory area to be implementation defined as long as memory alignment
-% requirements are met.
-
-% Many of the \hsaref{hsa_*_code_t} objects include a size field which is
-% required to be set to the size of the structure. This allows forward
-% compatibility and allows for structure definitions to change or include
-% implementation specific information.
-
-% The \hsaref{hsa_kernel_code_t} is required for all component dispatches and
-% is referred to by the dispatch AQL packets placed in the HSA queue. This allows
-% an implementation to rely on all such objects being the same size for more
-% efficient navigation to the implementation specific data without need to first
-% read the object's size field.
-
-% The \hsaref{hsa_kernel_code_t} is the output of
-% \hsaref{hsa_finalize_brig} API and is defined as follows.
-% [DELETED CODE]
-
-% \subsubsection{Finalize BRIG API}
-% The \hsaref{hsa_finalize_brig} API accepts \hsaref{hsa_brig_t} as an input
-% and produces relocatable code object in which global and group symbols are bound
-% to actual, component recognizable, addresses. A symbol in the finalization step
-% can be a variable, a function, image or a sampler. When finalization occurs, a
-% \hsaref{hsa_kernel_code_t}, representing the kernel that needs to be executed
-% on the component is generated. However, all the symbols referenced in the
-% kernel being finalized may not be resolved with the information provided at its
-% finalization. User is allowed to define callbacks that can resolve the symbols
-% declared in the global segment, with the following signature:
-% [DELETED CODE]
-
-% The finalization step, when successfully executed, can have two distinct
-% outputs. The first is the compilation unit code object,
-% \hsaref{hsa_compilationunit_code_t} which is discussed in
-% Section~\ref{finalize:codeobject}. The second output is of type
-% \hsaref{hsa_compilationunit_debug_t} which is only generated when the code is
-% compiled with a debug option. This debug information is currently implementation
-% defined.
-
-% Since the contiguous memory that {\itshape compilationunit_code} represents and
-% the memory for {\itshape compilationunit_debug} need to be allocated, the user
-% is expected to provide callbacks for memory allocation.
-
-% The callback is required to have the following signature:
-% [DELETED CODE]
-
-% Where caller is the opaque pointer passed to the \hsaref{hsa_finalize_brig}
-% that is calling back this function. {\itshape byte_size} is the size in bytes
-% of the memory to be allocated. {\itshape byte_alignment} is the required byte
-% alignment of the memory allocated. Must be a power of 2. {\itshape address} is
-% pointer to location that will be updated with address of allocated memory if
-% successful, or NULL if not successful. {\itshape return value} is the HSA
-% status of the allocation.
-% [DELETED CODE]
-
-% HSAIL does not define a set of options that a finalizer needs to specify. To
-% ensure portability, \hsaref{hsa_finalize_brig} must not return an error status
-% if a given compilation option is not recognized.
-
-% The callback for the allocation of \hsaarg{compilationunit_debug} is optional
-% and is required when the user passes in a flag at finalization to generate debug
-% information. This callback, when defined, must have the same signature as
-% \hsaref{hsa_alloc_t} above.
-
-% \subsubsection{Freeing The Compilation Unit Code/Debug Object}
-% The core runtime also provides a corresponding destruction API that destroys the
-% compilation unit code and debug objects. This will reclaim all memory used by
-% the \hsaref{hsa_compilationunit_code_t} (including the ISA it contains) and
-% associated \hsaref{hsa_compilationunit_debug_t}. It will also unregister the
-% ISA memory if appropriate.
-
-% [DELETED CODE]
-
-% Note that destroying does not impact any memory segments that may have been
-% allocated/reserved for use in a kernel from this object. It merely releases
-% resources used to build the object.
-
-% \subsubsection{Serializing and Deserializing a Compilation Unit}
-
-% Because of the opaque nature of what the compilation unit actually represents,
-% and in order for the users of the core runtime to build file containers,
-% serialization and deserialization API are defined by the core runtime. The
-% definition is as follows:
-
-% [DELETED CODE]
+The code will remain available to execute until the HSA runtime is used to
+destroy the HSAIL program with which the code is associated using
+\hsaref{hsa_ext_program_destroy}. All HSAIL programs created by the application
+are implicitly destroyed when the application terminates.
 
 \subsection{API}
 \input{api/altlatex/group-ext-finalizer}
@@ -1495,62 +1591,69 @@ HSAIL programs created by the application are implicitly destroyed when the appl
 \section{HSAIL Linking}\label{linking}
 
 HSAIL Linker Service Layer is vendor-neutral high level API that provides
-semantics for HSAIL inter-module linking. Linking between modules is done
-within the context of the HSAIL program.
+semantics for HSAIL inter-module linking. Linking between modules is done within
+the context of the HSAIL program.
 
 An application can use the HSA runtime to create zero or more HSAIL programs
-using \hsaref{hsa_ext_program_create}. Created HSAIL programs can be accessed through
-\hsaref{hsa_ext_program_handle_t}, which is returned from the program creation call.
-When the program is created, one or more HSA components \hsaref{hsa_agent_t} that
-are part of HSA platform must be specified, together with the machine model
-\hsaref{hsa_ext_brig_machine_model8_t} and profile \hsaref{hsa_ext_brig_profile8_t}.
+using \hsaref{hsa_ext_program_create}. Created HSAIL programs can be accessed
+through \hsaref{hsa_ext_program_handle_t}, which is returned from the program
+creation call.  When the program is created, one or more HSA components
+\hsaref{hsa_agent_t} that are part of HSA platform must be specified, together
+with the machine model \hsaref{hsa_ext_brig_machine_model8_t} and profile
+\hsaref{hsa_ext_brig_profile8_t}.
 
 The set of agents associated with a program cannot be changed after it has been
 created. Within a program, each of these HSA component members has a unique
-identifier \hsaref{hsa_ext_program_agent_id_t} in the range 0 to the number
-of agent members minus one. The same HSA component may have a different
-agent identifier in different HSAIL programs that it is a member. In addition,
-each HSA component can support one or more call conventions
-\hsaref{hsa_ext_program_call_convention_id32_t}. For example, an HSA
-component may have different call conventions that each use a different number of
-isa registers to allow different numbers of wavefronts to execute on a compute unit.
-When the HSA runtime is used to create an HSAIL program, it determines
-a dense call convention id ordering for the program. The first agent is
-assigned call convention ids 0 to the number of call conventions it supports minus one.
-The next agent is assigned the next range of call conventions according to the number
-it supports, and so on. Note that the same agent may have a different range of call
-convention ids in different programs of which it is a member. An HSA runtime
-query \hsaref{hsa_ext_query_call_convention} is available to determine the
-range of call convention ids used for a particular agent of a particular program.
+identifier \hsaref{hsa_ext_program_agent_id_t} in the range 0 to the number of
+agent members minus one. The same HSA component may have a different agent
+identifier in different HSAIL programs that it is a member. In addition, each
+HSA component can support one or more call conventions
+\hsaref{hsa_ext_program_call_convention_id32_t}. For example, an HSA component
+may have different call conventions that each use a different number of isa
+registers to allow different numbers of wavefronts to execute on a compute unit.
+When the HSA runtime is used to create an HSAIL program, it determines a dense
+call convention id ordering for the program. The first agent is assigned call
+convention ids 0 to the number of call conventions it supports minus one.  The
+next agent is assigned the next range of call conventions according to the
+number it supports, and so on. Note that the same agent may have a different
+range of call convention ids in different programs of which it is a member. An
+HSA runtime query \hsaref{hsa_ext_query_call_convention} is available to
+determine the range of call convention ids used for a particular agent of a
+particular program.
 
-The machine model address size for the global segment must match the size used by the
-application.
+The machine model address size for the global segment must match the size used
+by the application.
 
-An application can add zero or more HSAIL modules \hsaref{hsa_ext_brig_module_t} to
-the HSAIL program using \hsaref{hsa_ext_add_module}. HSAIL module is the unit of
-HSAIL generation, and can contain multiple symbol declarations and definitions. Distinct
-instances of the symbols it defines are created within each program, and symbol
-declarations are only linked to the definitions provided by other modules in
-the same program. The same HSAIL module can be added to multiple HSAIL
-programs, which allows multiple instances of the same kernel and indirect
-functions that reference distinct allocations of global segment variables.
-The same HSAIL module cannot be added to the same HSAIL program more than
-once. The machine model and profile of the HSAIL module that is being added
-has to match the machine model and profile of the HSAIL program it is
-added to. HSAIL modules and their handles can be queried from the program
-using several query operations, for example \hsaref{hsa_ext_query_program_modules} queries
-specified number of module handles, \hsaref{hsa_ext_query_program_brig_module} queries
-module with specified module handle. HSAIL modules contained in
-the program can be accessed through the module handle \hsaref{hsa_ext_brig_module_handle_t}.
+An application can add zero or more HSAIL modules \hsaref{hsa_ext_brig_module_t}
+to the HSAIL program using \hsaref{hsa_ext_add_module}. HSAIL module is the unit
+of HSAIL generation, and can contain multiple symbol declarations and
+definitions. Distinct instances of the symbols it defines are created within
+each program, and symbol declarations are only linked to the definitions
+provided by other modules in the same program. The same HSAIL module can be
+added to multiple HSAIL programs, which allows multiple instances of the same
+kernel and indirect functions that reference distinct allocations of global
+segment variables.  The same HSAIL module cannot be added to the same HSAIL
+program more than once. The machine model and profile of the HSAIL module that
+is being added has to match the machine model and profile of the HSAIL program
+it is added to. HSAIL modules and their handles can be queried from the program
+using several query operations, for example
+\hsaref{hsa_ext_query_program_modules} queries specified number of module
+handles, \hsaref{hsa_ext_query_program_brig_module} queries module with
+specified module handle. HSAIL modules contained in the program can be accessed
+through the module handle \hsaref{hsa_ext_brig_module_handle_t}.
 
-Linker Service Layer manages linking of symbol declarations to symbol definitions between
-modules, therefore the low\-level APIs can request certain definitions and addresses
-using \hsaref{hsa_ext_symbol_definition_callback_t} and \hsaref{hsa_ext_symbol_address_callback_t}
-respectively. In addition, the application can provide symbol definitions to an HSAIL program
-using \hsaref{hsa_ext_define_agent_allocation_global_variable_address} and
-\hsaref{hsa_ext_define_readonly_variable_address}, and request the address of symbols defined by the HSAIL program
-using \hsaref{hsa_ext_query_symbol_definition}, \hsaref{hsa_ext_query_program_allocation_global_variable_address},
-\hsaref{hsa_ext_query_agent_global_variable_address}, \hsaref{hsa_ext_query_readonly_variable_address}.
+Linker Service Layer manages linking of symbol declarations to symbol
+definitions between modules, therefore the low\-level APIs can request certain
+definitions and addresses using \hsaref{hsa_ext_symbol_definition_callback_t}
+and \hsaref{hsa_ext_symbol_address_callback_t} respectively. In addition, the
+application can provide symbol definitions to an HSAIL program using
+\hsaref{hsa_ext_define_agent_allocation_global_variable_address} and
+\hsaref{hsa_ext_define_readonly_variable_address}, and request the address of
+symbols defined by the HSAIL program using
+\hsaref{hsa_ext_query_symbol_definition},
+\hsaref{hsa_ext_query_program_allocation_global_variable_address},
+\hsaref{hsa_ext_query_agent_global_variable_address},
+\hsaref{hsa_ext_query_readonly_variable_address}.
 
 Once the program is linked and finalized, it is application's responsibility to
 destroy the program. Destroying the program will deallocate all code objects, so
@@ -1839,7 +1942,6 @@ a sampler handle from an agent independent sampler descriptor
 % value different from that of the previous Chapter and Section.
 \newpage
 \markboth{Index - APIs}{Index - APIs}
-Click \hyperlink{page.23}{here} to jump to page 23.
 \printindex[api]
 \printindex[ext]
 
@@ -1860,3 +1962,5 @@ Click \hyperlink{page.23}{here} to jump to page 23.
 \addcontentsline{toc}{chapter}{Bibliography}
 
 \end{document}
+
+%  LocalWords:  incrementing allocators enqueuing
