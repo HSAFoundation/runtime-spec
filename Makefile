@@ -27,7 +27,7 @@ $(LISTINGS): api/hsa.h api/hsa_ext.h api/xml2tex.py
 # Diff previous and current version of the document. The result is another Latex
 # file. The previous version is expected to be named main-all-prev.tex
 main-diff.tex: main-all.tex main-all-prev.tex
-	latexdiff -t UNDERLINE --append-safecmd="hypertarget,hsaarg,reffun,refarg,reffld,reftyp,refenu,refhsl,diffblock" --exclude-textcmd="emph,section,subsection,subsubsection" --config="PICTUREENV=(?:picture|DIFnomarkup|lstlisting|tikzpicture|figure)[\w\d*@]*" main-all-prev.tex main-all.tex > main-diff.tex
+	latexdiff-1.0.3.pl -t UNDERLINE --exclude-textcmd="section,subsection,subsubsection" --config="PICTUREENV=(?:picture|DIFnomarkup|tikzpicture|lstlisting)[\w\d*@]*" main-all-prev.tex main-all.tex > main-diff.tex
 
 # Generate one Latex file out of resolving all \include tags in a given main
 # file. This is is needed because `latexdiff --flatten` requires all included

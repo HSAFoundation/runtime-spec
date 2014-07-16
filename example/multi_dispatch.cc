@@ -42,9 +42,9 @@ hsa_status_t get_component(hsa_agent_t agent, void* data) {
     return HSA_STATUS_SUCCESS;
 }
 
-
-
-
+void packet_type_store_release(hsa_packet_header_t* header, hsa_packet_type_t type) {
+    __atomic_store_n((uint8_t*) header, (uint8_t) type, __ATOMIC_RELEASE);
+}
 
 // DO NOT MOVE THE FUNCTION BELOW - it should start at line 50
 void enqueue(hsa_queue_t* queue) {
@@ -65,7 +65,7 @@ void enqueue(hsa_queue_t* queue) {
 
         initialize_packet(dispatch_packet);
         dispatch_packet->completion_signal = signal;
-        dispatch_packet->header.type = HSA_PACKET_TYPE_DISPATCH;
+        packet_type_store_release(&dispatch_packet->header, HSA_PACKET_TYPE_DISPATCH);
         hsa_signal_store_release(queue->doorbell_signal, packet_id);
     }
 

@@ -1,6 +1,6 @@
 \documentclass[final]{book}
 \newcommand{\doctitle}{HSA Runtime Programmer's Reference Manual}
-\newcommand{\docversion}{0.186}
+\newcommand{\docversion}{0.187}
 
 % Needed so characters such as underscore are recognized in PDF
 % viewers. Otherwise searching for say `hsa_open` produces no
@@ -278,7 +278,7 @@ specifications include requirements for virtual memory, memory coherency,
 architected dispatch mechanisms, and power-efficient signals. HSA refers to
 these accelerators as "components".
 
-The system architecture defines a consistent base for building portable
+The HSA system architecture defines a consistent base for building portable
 applications that access the power and performance benefits of the dedicated HSA
 components. Many of these components, including GPUs and DSPs, are capable and
 flexible processors that have been extended with special hardware for
@@ -286,14 +286,18 @@ accelerating parallel code. Historically these devices have been difficult to
 program due to a need for specialized or proprietary programming languages. HSA
 aims to bring the benefits of these components to mainstream programming
 languages using similar or identical syntax to that which is provided for
-programming multi-core CPUs.
+programming multi-core CPUs. For more information on the system architecture,
+refer to the HSA Platform System Architecture Specification, version 1.0
+'Provisional Ratified'~\cite{sar}.
 
 In addition to the system architecture, HSA defines a portable, low-level,
-compiler intermediate language called ``HSAIL''.  A high-level compiler generates
-the HSAIL for the parallel regions of code. A low-level compiler called the
-``finalizer'' translates the intermediate HSAIL to target machine code.  Each
+compiler intermediate language called ``HSAIL''.  A high-level compiler
+generates the HSAIL for the parallel regions of code. A low-level compiler
+called the ``finalizer'' translates the intermediate HSAIL to target machine
+code. The finalizer can be run at compile-time, install-time, or run-time. Each
 HSA component provides its own implementation of the finalizer.  For more
-information on HSAIL, refer to the HSA Programmer's Reference Manual~\cite{prm}.
+information on HSAIL, refer to the HSA Programmer's Reference Manual, version
+1.0 'Provisional Ratified'~\cite{prm}.
 
 The final piece of the puzzle is the HSA runtime API.  The runtime is a thin,
 user-mode API that provides the interfaces necessary for the host to launch
@@ -514,13 +518,23 @@ more information on AQL packets, refer to Section~\ref{sec:aql}.
 \subsection{Signals and Packet launch}
 The Dispatch packet is not launched until the application informs the packet
 processor that there is new work available. The notification is divided in two
-parts. First, the \reffld{type} field in the packet header must be set to the
-appropriate value:
+parts:
+
+\begin{enumerate}
+\item The \reffld{type} field in the packet header must be atomically
+set to the appropriate value using a release memory ordering. This ensures that
+the modifications to the rest of the packet listed before are globally visible
+before or at the same time the desired packet type is visible. One possible
+implementation of the atomic storage (in GCC) is:
 \begin{lstlisting}
-dispatch_packet->header.type = HSA_PACKET_TYPE_DISPATCH;
+__atomic_store_n((uint8_t*) &dispatch_packet->header, (uint8_t) HSA_PACKET_TYPE_DISPATCH, __ATOMIC_RELEASE);
 \end{lstlisting}
-Second, the buffer index where the packet has been written (in the example, zero)
+, where the specified address is that of the \reffld{header} field, and not
+\reffld{header.type}, because the C standard disallows taking the address of a
+bit-field.
+\item The buffer index where the packet has been written (in the example, zero)
 must be stored in the \textit{doorbell signal} of the queue.
+\end{enumerate}
 
 A \emph{signal} is runtime-allocated, opaque object used for communication
 between agents in an HSA system. Signal are similar to shared memory locations
@@ -561,7 +575,10 @@ general submit a packet.
 
 This chapter describes the HSA Core runtime APIs, organized by functional
 area. For information on definitions that are not specific to any functionality,
-refer to Section~\ref{sec:other}.
+refer to Section~\ref{sec:other}. The API follows the requirements listed in the
+HSA Programmer's Reference Manual, version 1.0 'Provisional
+Ratified'~\cite{prm}, and the HSA Platform System Architecture Specification,
+version 1.0 'Provisional Ratified'~\cite{sar}.
 
 Several operating systems allow functions to be executed when a DLL or a shared
 library is loaded (for example, DLL main in Windows and GCC
@@ -787,7 +804,9 @@ following steps:
 \item Launch the packet by first setting the \reffld{type} field on its header
   to the corresponding value, and then storing the the packet ID in
   \reffld{doorbell_signal} using \hsaref{hsa_signal_store_release} (or any
-  variant that uses a different memory order).
+  variant that uses a different memory order). The application is required to
+  ensure that the rest of the packet is globally visible before or at the same
+  time \reffld{type} is written.
 
   The doorbell signal of the queue is used to indicate the packet processor that
 it has work to do. The value which the doorbell signal must be signaled with
@@ -889,8 +908,7 @@ and write indexes. The access rules for the different queue parts are:
 %   structure and the associated resources (ring buffer, indexes, etc.) are no
 %   longer valid.
 % \end{description}
-\vspace{-5mm}
-\subsection{Example - a simple dispatch}\vspace{-1mm}
+\subsection{Example - a simple dispatch}
 In this example, we extend the dispatch code introduced in
 Section~\ref{sec:executionmodel} in order to illustrate how packet IDs are
 reserved (invocation of \hsaref{hsa_queue_add_write_index_relaxed}), and how the
@@ -1300,8 +1318,8 @@ In the kernel setup example listed in Section~\ref{dispatch-packet}, the kernel
 receives no arguments:
 \begin{lstlisting}
 // Indicate which ISA to run. The application is expected to have finalized a kernel (for example, using the finalization API).
-// We will assume the object is located at address 0xDEADBEEF
-dispatch_packet->kernel_object_address = (uint64_t) DEADBEEF;
+// We will assume that the kernel object location is stored in KERNEL_ADDRESS
+dispatch_packet->kernel_object_address = (uint64_t) KERNEL_ADDRESS;
 
 // Assume our kernel receives no arguments.
 dispatch_packet->kernarg_address = 0;
@@ -1317,8 +1335,8 @@ determined by the finalizer, for simplicity we will assume that it matches the
 natural size of the signal type, 8 bytes.
 \begin{lstlisting}
 // Indicate which ISA to run. The application is expected to have finalized a kernel (for example, using the finalization API).
-// We will assume the object is located at address 0xDEADBEEF
-dispatch_packet->kernel_object_address = (uint64_t) DEADBEEF;
+// We will assume that the kernel object location is stored in KERNEL_ADDRESS
+dispatch_packet->kernel_object_address = (uint64_t) KERNEL_ADDRESS;
 
 hsa_region_t region;
 hsa_agent_iterate_regions(component, get_kernarg, &region);

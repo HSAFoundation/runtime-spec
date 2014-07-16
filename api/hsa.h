@@ -1157,7 +1157,8 @@ typedef struct hsa_queue_s {
  *
  * @details When a queue is created, the runtime creates the packet buffer, the
  * completion signal, and the write and read indexes. The initial value of the
- * write and read indexes is 0.
+ * write and read indexes is 0. The @a type field of every packet in the buffer
+ * is initialized to ::HSA_PACKET_TYPE_ALWAYS_RESERVED.
  *
  * The application should only rely on the error code returned to determine if
  * the queue is valid.
@@ -1415,15 +1416,15 @@ void HSA_API hsa_queue_store_read_index_release(
  */
 typedef enum {
   /**
-   * Initial type of any packet when the queue is created. Always reserved
-   * packets have never been assigned to the packet processor. From a functional
-   * view always reserved packets are equivalent to invalid packets. All queues
-   * support this packet type.
+   * Initial type of any packet when the queue is created. A packet processor
+   * must not process a packet of this type. All queues support this packet
+   * type.
    */
   HSA_PACKET_TYPE_ALWAYS_RESERVED = 0,
   /**
    * The packet has been processed in the past, but has not been reassigned to
-   * the packet processor. All queues support this packet type.
+   * the packet processor. A packet processor must not process a packet of this
+   * type. All queues support this packet type.
    */
   HSA_PACKET_TYPE_INVALID = 1,
   /**

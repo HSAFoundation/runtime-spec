@@ -279,7 +279,7 @@ def print_signature(func, tex):
       name = "\\hsaarg{" + node2tex(arg.find('declname')) + "}"
       # pointers to functions require the argument to be printed inside the type
       if "(*)" in type:
-        type = type.replace("(*)", " (" + name + "*)")
+        type = type.replace("(*)", " (*" + name + ")")
         argtxt += type
       else:
         argtxt += type + " " + name

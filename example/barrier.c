@@ -62,9 +62,9 @@ void fun_b() {
 #define KERNEL_B (fun_b)
 
 
-
-
-
+void packet_type_store_release(hsa_packet_header_t* header, hsa_packet_type_t type) {
+    __atomic_store_n((uint8_t*) header, (uint8_t) type, __ATOMIC_RELEASE);
+}
 
 
 
@@ -93,7 +93,7 @@ int main(){
     packet_a->completion_signal = signal;
 
     // Tell packet processor of A to launch the first Dispatch packet
-    packet_a->header.type = HSA_PACKET_TYPE_DISPATCH;
+    packet_type_store_release(&packet_a->header, HSA_PACKET_TYPE_DISPATCH);
     hsa_signal_store_release(queue_a->doorbell_signal, packet_id_a);
 
     // Create queue in component B
@@ -110,14 +110,14 @@ int main(){
 
     // Add dependency on the first Dispatch Packet
     barrier_packet->dep_signal[0] = signal;
-    barrier_packet->header.type = HSA_PACKET_TYPE_BARRIER;
+    packet_type_store_release(&barrier_packet->header, HSA_PACKET_TYPE_BARRIER);
 
     // Create and enqueue a second Dispatch packet after the Barrier in B. The second dispatch is launched after the first
     // has completed
     hsa_dispatch_packet_t* packet_b = initialize_packet(queue_b->base_address, packet_id_b + 1);
     // KERNEL_B is the memory location of the 2nd kernel object
     packet_b->kernel_object_address = (uint64_t) KERNEL_B;
-    packet_b->header.type = HSA_PACKET_TYPE_DISPATCH;
+    packet_type_store_release(&packet_b->header, HSA_PACKET_TYPE_DISPATCH);
 
     hsa_signal_store_release(queue_b->doorbell_signal, packet_id_b + 1);
 
