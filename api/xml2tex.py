@@ -26,7 +26,7 @@ def myitertext(self):
     return
   if self.text:
     mytex = text2tex(self.text)
-    if tag == 'emphasis':
+    if tag in ['emphasis','computeroutput'] :
       yield '\\textit{' + mytex + '}'
     elif tag == 'ref':
       # brutal hardcoding in order to find out if it is a function name
@@ -142,6 +142,14 @@ def process_typedef(typedef, tex, defs):
   paras = typedef.findall('briefdescription/para')
   map(lambda para: tex.write(node2tex(para) + "\n\\\\"), paras)
 
+# Check that any field reference matches a local field name
+def check_field_refs(fields, typename):
+  # references correspond to @a Doxygen tag
+  refs = set(map(lambda n : n.text, fields.findall(".//emphasis")))
+  fields = set(map(lambda n : n.text, fields.findall(".//memberdef[@kind='variable']/name")))
+  if (refs-fields):
+    sys.exit("\nError: found reference(s) to non-existing field(s): " + repr(refs-fields) + "in " + typename)
+
 def process_struct_or_union(typedef, tex, defs):
   typename = node2tex(typedef.find('name'))
   tex.write('\\subsubsection{' + typename + '}\n')
@@ -156,6 +164,9 @@ def process_struct_or_union(typedef, tex, defs):
   memberstree = ET.parse(os.path.join('xml',membersfile))
   membersroot = memberstree.getroot()
   members = membersroot.findall(".//memberdef[@kind='variable']")
+
+  check_field_refs(membersroot, typedef.find('name').text)
+
   vals = []
   fields = []
   for member in members:
@@ -170,12 +181,17 @@ def process_struct_or_union(typedef, tex, defs):
       txt += " : " + node2tex(bitfield)
     vals.append(txt + ";\\\\\n")
     # field name + description
-    txt = "\\reffld{" + name + "}" + "\\\\"
+    fldname = typename + "." + name
+    defs.append(('reffld', fldname))
+    typename_id[fldname] = fldname
+
+    txt = "\\hypertarget{" + fldname + "}{" + name + "}\\\\"
     paras = member.findall('detaileddescription/para')
     paraslst = map(lambda para: "\\hspace{2em}" + node2tex(para), paras)
     if paraslst:
       txt += "\\\\\n".join(paraslst)
     fields.append(txt)
+
   tex.write(''.join(vals) + "\} ")
   tex.write(" \\hypertarget{" + typedef.get('id') + "}")
   tex.write("{\\textbf{" + typename + "}}")
@@ -255,6 +271,21 @@ def register_function(func, tex, listings, commands):
   commands.append(('reffun', funname))
   typename_id[funname] = funid
 
+# returns None if function is not a memory order variant
+# otherwise, it returns the name without the memory order
+def function_name_minus_memory_order(name):
+  memorders = ['_\-acquire', '_\-acq_\-rel', '_\-relaxed', '_\-release']
+  return next((name[:-len(x)] for x in memorders if name.endswith(x)), None)
+
+# Check that any argument reference matches an argument name in the current function
+def check_argument_refs(func):
+  # references correspond to @p Doxygen tag
+  refs = set(map(lambda n : n.text, func.findall(".//computeroutput")))
+  args = set(map(lambda n : n.text, func.findall(".//param/declname")))
+  if (refs-args):
+    funname = func.find('name').text
+    sys.exit("\nError: found reference(s) to non-existing argument(s): " + repr(refs-args) + "in function " + funname)
+
 # print function signature (gray box)
 def print_signature(func, tex):
   ret = ""
@@ -289,12 +320,6 @@ def print_signature(func, tex):
   ret += ");\\\\}"
   return ret
 
-# returns None if function is not a memory order variant
-# otherwise, it returns the name without the memory order
-def function_name_minus_memory_order(name):
-  memorders = ['_\-acquire', '_\-acq_\-rel', '_\-relaxed', '_\-release']
-  return next((name[:-len(x)] for x in memorders if name.endswith(x)), None)
-
 def process_function(func, tex, listings, commands, variants):
   map(lambda f : register_function(f, tex, listings, commands), variants)
   funname = node2tex(func.find('name'))
@@ -304,6 +329,8 @@ def process_function(func, tex, listings, commands, variants):
   else:
      tex.write(function_name_minus_memory_order(funname))
   tex.write('}\n')
+
+  check_argument_refs(func)
 
   # signature
   tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
@@ -411,7 +438,10 @@ def process_file(file, listings, defs):
 # displayed name
 def id2link(id, type):
   refid = typename_id[id]
-  text = '\\' + type + '{' + id + '}'
+  if type is 'reffld':
+    text = '\\' + type + '{' + id[id.index(".") + 1:] + '}'
+  else:
+    text = '\\' + type + '{' + id + '}'
   return '\\hyperlink{' + refid + '}{' + text + '}'
 
 def generate_hsaref(defs):
@@ -445,6 +475,9 @@ def group_location(file):
   return line
 
 def main():
+  if sys.version_info[0] >= 3:
+    sys.exit("Error: Your Python interpreter must be < 3.0\n")
+
   outdir = 'altlatex'
   if not os.path.exists(outdir):
     os.makedirs(outdir)

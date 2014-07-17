@@ -1,6 +1,6 @@
 \documentclass[final]{book}
 \newcommand{\doctitle}{HSA Runtime Programmer's Reference Manual}
-\newcommand{\docversion}{0.187}
+\newcommand{\docversion}{1.0 Provisional}
 
 % Needed so characters such as underscore are recognized in PDF
 % viewers. Otherwise searching for say `hsa_open` produces no
@@ -207,9 +207,7 @@
 {\Large \doctitle\\[1ex]\large\docversion}\\
 \vspace*{1cm}
 \vspace*{0.5cm}
-{\small \today}\\
-\vspace*{0.5cm}
-{\small Draft}\\
+{\small \today}
 \end{center}
 \end{titlepage}
 \thispagestyle{empty} {\textcopyright 2013-2014 HSA Foundation. All rights
@@ -496,8 +494,8 @@ The next step is to create a packet and push it into the newly created
 queue. Packets are not created using an HSA runtime function. Instead, the
 application can directly access the packet buffer of any queue and setup a
 kernel dispatch by simply filling all the fields mandated by the Agent packet
-format (type \hsaref{hsa_dispatch_packet_t}). The location of the packet
-buffer is available in the \reffld{base_address} field of any queue:
+format (type \hsaref{hsa_dispatch_packet_t}). The location of the packet buffer
+is available in the \hsaref{hsa_queue_t.base_address} field of any queue:
 \begin{lstlisting}
 hsa_dispatch_packet_t* dispatch_packet = (hsa_dispatch_packet_t*) queue->base_address;
 
@@ -521,17 +519,18 @@ processor that there is new work available. The notification is divided in two
 parts:
 
 \begin{enumerate}
-\item The \reffld{type} field in the packet header must be atomically
-set to the appropriate value using a release memory ordering. This ensures that
-the modifications to the rest of the packet listed before are globally visible
-before or at the same time the desired packet type is visible. One possible
-implementation of the atomic storage (in GCC) is:
+\item The \hsaref{hsa_packet_header_t.type} field in the packet header must be
+  atomically set to the appropriate value using a release memory ordering. This
+  ensures that the modifications to the rest of the packet listed before are
+  globally visible before or at the same time the desired packet type is
+  visible. One possible implementation of the atomic storage (in GCC) is:
 \begin{lstlisting}
 __atomic_store_n((uint8_t*) &dispatch_packet->header, (uint8_t) HSA_PACKET_TYPE_DISPATCH, __ATOMIC_RELEASE);
 \end{lstlisting}
-, where the specified address is that of the \reffld{header} field, and not
-\reffld{header.type}, because the C standard disallows taking the address of a
-bit-field.
+, where the specified address is that of the
+\hsaref{hsa_dispatch_packet_t.header} field, and not
+\hsaref{hsa_packet_header_t.type}, because the C standard disallows taking the
+address of a bit-field.
 \item The buffer index where the packet has been written (in the example, zero)
 must be stored in the \textit{doorbell signal} of the queue.
 \end{enumerate}
@@ -548,8 +547,8 @@ Section~\ref{sec:signals}.
 When the runtime creates a queue, it also automatically creates a ``doorbell''
 signal that must be used by the application to communicate with the packet
 processor and inform him of the index of the packet ready to be consumed. The
-doorbell signal is contained in the \reffld{doorbell_signal} field of the
-queue. The value of a signal can be updated using
+doorbell signal is contained in the \hsaref{hsa_queue_t.doorbell_signal} field
+of the queue. The value of a signal can be updated using
 \hsaref{hsa_signal_store_release}:
 
 \begin{lstlisting}
@@ -773,7 +772,7 @@ following steps:
   should support the desired packet type. When the queue is created, the runtime
   allocates memory for the \hsaref{hsa_queue_t} data structure that represents
   the visible part of the queue, as well as the AQL packet buffer pointed by the
-  \reffld{base_address} field.
+  \hsaref{hsa_queue_t.base_address} field.
 
 \item Reserve a packet ID by incrementing the write index of the queue, which is
   a 64-bit unsigned integer that contains the number of packets allocated so
@@ -794,19 +793,21 @@ following steps:
   queue can be considered empty. This does not mean that the kernels have
   finished execution, just that all packets have been consumed.
 
-\item Populate the packet. This step does not require using any
-  HSA API. Instead, the application directly writes the contents of the AQL
-  packet located at  \reffld{base_address} + (AQL packet size) * ((packet
-  ID) \% \reffld{size}). Note that \reffld{base_address} and \reffld{size} are
-  fields in the queue structure, while the size of any AQL packet is 64
-  bytes. The different packet types are discussed in the next section.
+\item Populate the packet. This step does not require using any HSA
+  API. Instead, the application directly writes the contents of the AQL packet
+  located at \hsaref{hsa_queue_t.base_address} + (AQL packet size) * ((packet
+  ID) \% \hsaref{hsa_queue_t.size}). Note that \hsaref{hsa_queue_t.base_address}
+  and \hsaref{hsa_queue_t.size} are fields in the queue structure, while the
+  size of any AQL packet is 64 bytes. The different packet types are discussed
+  in the next section.
 
-\item Launch the packet by first setting the \reffld{type} field on its header
-  to the corresponding value, and then storing the the packet ID in
-  \reffld{doorbell_signal} using \hsaref{hsa_signal_store_release} (or any
-  variant that uses a different memory order). The application is required to
-  ensure that the rest of the packet is globally visible before or at the same
-  time \reffld{type} is written.
+\item Launch the packet by first setting the \hsaref{hsa_packet_header_t.type}
+  field on its header to the corresponding value, and then storing the packet ID
+  in \hsaref{hsa_queue_t.doorbell_signal} using
+  \hsaref{hsa_signal_store_release} (or any variant that uses a different memory
+  order). The application is required to ensure that the rest of the packet is
+  globally visible before or at the same time \hsaref{hsa_packet_header_t.type}
+  is written.
 
   The doorbell signal of the queue is used to indicate the packet processor that
 it has work to do. The value which the doorbell signal must be signaled with
@@ -827,8 +828,9 @@ required to signal the doorbell for every batch of packets they write.
 
 Queues are semi-opaque objects: there is a visible part, represented by the
 \hsaref{hsa_queue_t} structure and the corresponding ring buffer (pointed by
-\reffld{base_address}), and a invisible part, which contains at least the read
-and write indexes. The access rules for the different queue parts are:
+\hsaref{hsa_queue_t.base_address}), and a invisible part, which contains at
+least the read and write indexes. The access rules for the different queue parts
+are:
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
 \item The {hsa_queue_t} structure is read-only. If the application overwrites
   its contents, the behavior is undefined.
@@ -1006,10 +1008,11 @@ An application uses a Dispatch packet (\hsaref{hsa_dispatch_packet_t}) to
 submit a kernel to an HSA component. The packet contains the following bits of
 information:
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item A pointer to the kernel ISA is stored in \reffld{kernel_object_address}.
+\item A pointer to the kernel ISA is stored in
+  \hsaref{hsa_dispatch_packet_t.kernel_object_address}.
 \item A pointer to the kernel arguments is stored in
-  \reffld{kernarg_address}. The application populates this field with the
-  address of a global memory buffer previously allocated using
+  \hsaref{hsa_dispatch_packet_t.kernarg_address}. The application populates this
+  field with the address of a global memory buffer previously allocated using
   \hsaref{hsa_memory_allocate}, which contains the dispatch parameters. Memory
   allocation is explained in Section~\ref{sec:memory}, which includes an example
   on how to reserve space for the kernel arguments.
@@ -1017,23 +1020,26 @@ information:
   of the grid (which is also the number of dimensions of the work-group), the
   size of each grid dimension, and the size of each work-group dimension.
 \item If the kernel uses group or private memory, the application must specify
-  the storage requirements in the \reffld{group_segment_size} and
-  \reffld{private_segment_size} fields, respectively.
+  the storage requirements in the
+  \hsaref{hsa_dispatch_packet_t.group_segment_size} and
+  \hsaref{hsa_dispatch_packet_t.private_segment_size} fields, respectively.
 \end{itemize}
 
 The application must rely on information provided by the finalizer to retrieve
 the amount of kernarg, group, and private memory used by a kernel. The kernel's
 code descriptor (explained in Section~\ref{sec:finalizer}) returned by the
-finalizer contains the kernarg (\reffld{kernarg_segment_byte_size}), group
-(\reffld{workgroup_group_segment_byte_size}) and private
-(\reffld{workitem_private_segment_byte_size}) static storage requirements.
+finalizer contains the kernarg
+(\hsaref{hsa_ext_code_descriptor_t.kernarg_segment_byte_size}), group
+(\hsaref{hsa_ext_code_descriptor_t.workgroup_group_segment_byte_size}) and
+private (\hsaref{hsa_ext_code_descriptor_t.workitem_private_segment_byte_size})
+static storage requirements.
 
 \subsubsection{Example - populating the Dispatch packet}
 Examples of kernel dispatches in previous sections have omitted the setup of the
 Dispatch packet. The code listed below shows how to configure the launch of a
-kernel that receives no arguments (the \reffld{kernel_object_address} field
-is NULL). The dispatch uses 256 work-items, all in the same work-group along the
-X dimension.
+kernel that receives no arguments (the
+\hsaref{hsa_dispatch_packet_t.kernel_object_address} field is NULL). The
+dispatch uses 256 work-items, all in the same work-group along the X dimension.
 
 \lstinputlisting[firstline=20, lastline=45]{example/simple_dispatch.c}
 
@@ -1042,11 +1048,12 @@ X dimension.
 Agent Dispatch packets are used to launch built-in functions in agents. In Agent
 Dispatch packets there is no need to indicate the address of the function to
 run, the launch dimensions, or memory requirements. Instead, the application or
-kernel simply specifies the type of function to be performed (\reffld{type}
-field), the arguments (\reffld{arg}), and when applicable the memory location
-where to store the return value of the function (\reffld{return_address}). The
-HSA API defines the type \hsaref{hsa_agent_dispatch_packet_t} to represent Agent
-Dispatch packets.
+kernel simply specifies the type of function to be performed
+(\hsaref{hsa_agent_dispatch_packet_t.type} field), the arguments
+(\hsaref{hsa_agent_dispatch_packet_t.arg}), and when applicable the memory
+location where to store the return value of the function
+(\hsaref{hsa_agent_dispatch_packet_t.return_address}). The HSA API defines the
+type \hsaref{hsa_agent_dispatch_packet_t} to represent Agent Dispatch packets.
 
 While the host application is allowed to submit Agent Dispatch packets to any
 destination agent that supports them, in a more common usage scenario the
@@ -1066,14 +1073,16 @@ destination agent:
   one destination agent, or submit Agent Dispatch packets to more than one
   service queue.
 \item (Kernel) The work-item locates the service queue by accessing the
-  \reffld{service_queue} field of the current queue. For more information on how
-  to retrieve the address of the current pointer, please check the documentation
-  of the \refhsl{queueptr} HSAIL instruction in~\cite{prm}.
+  \hsaref{hsa_queue_t.service_queue} field of the current queue. For more
+  information on how to retrieve the address of the current pointer, please
+  check the documentation of the \refhsl{queueptr} HSAIL instruction
+  in~\cite{prm}.
 \item (Kernel) The work-item submits an Agent Dispatch packet to the service
   queue following the steps described in Section~\ref{sec:queues}.
 \item (Destination Agent) The agent parses the packet, executes the indicated
   service, stores the result in the memory location pointed by
-  \reffld{return_address}, and decrements the completion signal if present.
+  \hsaref{hsa_agent_dispatch_packet_t.return_address}, and decrements the
+  completion signal if present.
 \item (Kernel) The work-item consumes the function's output and proceeds to the
   next instruction.
 \end{enumerate}
@@ -1120,10 +1129,12 @@ hsa_queue_create(component, 16, HSA_QUEUE_TYPE_MULTI, callback, service_queue, &
 \end{lstlisting}
 The application now launches a kernel in the component queue. Every time a
 work-item needs more virtual memory, it will submit a Agent Dispatch packet to
-the service queue. The allocation size is stored in \reffld{arg[0]}, and
-\reffld{return_address} contains the memory address where the application will
-store the starting address of the allocation. Finally, the \reffld{type} is set
-to an application-defined code. Let's assume that the allocation service type is
+the service queue. The allocation size is stored in the first element of
+\hsaref{hsa_agent_dispatch_packet_t.arg}, and
+\hsaref{hsa_agent_dispatch_packet_t.return_address} contains the memory address
+where the application will store the starting address of the
+allocation. Finally, the \hsaref{hsa_agent_dispatch_packet_t.type} is set to an
+application-defined code. Let's assume that the allocation service type is
 0x8000.
 
 The following source code shows how a thread running on the host might process
@@ -1149,9 +1160,10 @@ which happens when either of these two conditions have been met:
 \item All of the dependent signals have been observed with the value 0 after the
   Barrier packet launched. It is not required that all dependent signals are
   observed to be 0 at the same time.
-\item Any of the dependent signals (\reffld{dep_signal} field) have been
-  observed with a negative value after the Barrier packet launched, in which
-  case the packet processor assigns an error value to \reffld{completion_signal}.
+\item Any of the dependent signals (\hsaref{hsa_barrier_packet_t.dep_signal}
+  field) have been observed with a negative value after the Barrier packet
+  launched, in which case the packet processor assigns an error value to
+  \hsaref{hsa_barrier_packet_t.completion_signal}.
 \end{itemize}
 
 \subsubsection{Example - handling dependencies across kernels running in
@@ -1205,17 +1217,17 @@ diagram.
 \begin{description}[itemsep=2pt,leftmargin=0cm, labelindent=0cm]
 \item[In queue] The packet processor has not started to parse the current
   packet.  The transition to the launch state only occurs after all the
-  preceding packets have completed their execution if the \reffld{barrier} bit
-  is set in the header. If the bit is not set, the transition occurs after the
-  preceding packets have finished their launch phase. In other words, while the
-  packet processor is required to launch any consecutive two packets in order,
-  it is not required to complete them in order unless the barrier bit of the
-  second packet is set.
+  preceding packets have completed their execution if the
+  \hsaref{hsa_packet_header_t.barrier} bit is set in the header. If the bit is
+  not set, the transition occurs after the preceding packets have finished their
+  launch phase. In other words, while the packet processor is required to launch
+  any consecutive two packets in order, it is not required to complete them in
+  order unless the barrier bit of the second packet is set.
 
 \item[Launch] The packet is being parsed, but it did not start executing. This
   phase finalizes by applying an acquire memory fence with the scope indicated
-  by the \reffld{acquire_fence_scope} header field.  Memory fences are discussed
-  in~\cite{prm}, Section 6.2.6.
+  by the \hsaref{hsa_packet_header_t.acquire_fence_scope} header field.  Memory
+  fences are discussed in~\cite{prm}, Section 6.2.6.
 
   If an error is detected during launch, the queue transitions to the error
   state and the event callback associated with the queue (if present) is
@@ -1233,17 +1245,17 @@ diagram.
 
   If an error is detected during this phase, the queue transitions to the error
   state, a release fence is applied to the packet with the scope indicated by
-  the \reffld{release_fence_scope} header field, and the completion signal (if
-  present) is assigned a negative value. There is no invocation of the callback
-  associated with the queue.
+  the \hsaref{hsa_packet_header_t.release_fence_scope} header field, and the
+  completion signal (if present) is assigned a negative value. There is no
+  invocation of the callback associated with the queue.
 
   If no error is detected, the transition to the complete state happens when the
   associated task finishes (in the case of Dispatch and Agent Dispatch packets),
   or when the dependencies are satisfied (in the case of a Barrier packet).
 
 \item[Complete] A memory release fence is applied with the scope indicated by
-  the \reffld{release_fence_scope} header field, and the completion signal (if
-  present) decremented.
+  the \hsaref{hsa_packet_header_t.release_fence_scope} header field, and the
+  completion signal (if present) decremented.
 
 \item[Error] An error was encountered during the launch or active phases. No
   further packets will be launched on the queue. The queue cannot be recovered,
@@ -1325,8 +1337,8 @@ dispatch_packet->kernel_object_address = (uint64_t) KERNEL_ADDRESS;
 dispatch_packet->kernarg_address = 0;
 \end{lstlisting}
 Let's assume now that the kernel expects a single argument, a signal handle. The
-application needs to populate the \reffld{kernarg_address} field of the Dispatch
-packet with the address of a buffer containing the signal.
+application needs to populate the \hsaref{hsa_dispatch_packet_t.kernarg_address}
+field of the Dispatch packet with the address of a buffer containing the signal.
 
 The application searches for a memory region that can be used to allocate
 backing storage for the kernarg segment. Once found, it reserves enough space to

@@ -123,8 +123,8 @@ typedef enum {
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a status is not a valid
- * status code or @a status_string is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p status is not a valid
+ * status code or @p status_string is NULL.
  */
 hsa_status_t HSA_API hsa_status_string(
     hsa_status_t status,
@@ -276,27 +276,27 @@ hsa_status_t HSA_API hsa_shut_down();
 typedef enum {
   /**
    * Major version of the HSA runtime specification supported by the
-   * implementation. The type of this attribute is \c uint16_t.
+   * implementation. The type of this attribute is uint16_t.
    */
   HSA_SYSTEM_INFO_VERSION_MAJOR,
   /**
    * Minor version of the HSA runtime specification supported by the
-   * implementation. The type of this attribute is \c uint16_t.
+   * implementation. The type of this attribute is uint16_t.
    */
   HSA_SYSTEM_INFO_VERSION_MINOR,
   /**
    * Current timestamp. The value of this attribute monotonically increases at a
-   * constant rate. The type of this attribute is \c uint64_t.
+   * constant rate. The type of this attribute is uint64_t.
    */
   HSA_SYSTEM_INFO_TIMESTAMP,
   /**
    * Timestamp value increase rate, in MHz. The timestamp (clock) frequency is
-   * in the range 1-400MHz. The type of this attribute is \c uint16_t.
+   * in the range 1-400MHz. The type of this attribute is uint16_t.
    */
   HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY,
   /**
    * Maximum duration of a signal wait operation. Expressed as a count based on
-   * the timestamp frequency. The type of this attribute is \c uint64_t.
+   * the timestamp frequency. The type of this attribute is uint64_t.
    */
   HSA_SYSTEM_INFO_SIGNAL_MAX_WAIT
 } hsa_system_info_t;
@@ -308,15 +308,15 @@ typedef enum {
  *
  * @param[out] value Pointer to an application-allocated buffer where to store
  * the value of the attribute. If the buffer passed by the application is not
- * large enough to hold the value of @a attribute, the behavior is undefined.
+ * large enough to hold the value of @p attribute, the behavior is undefined.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a attribute is not a valid
- * system attribute, or @a value is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p attribute is not a valid
+ * system attribute, or @p value is NULL.
  */
 hsa_status_t HSA_API hsa_system_get_info(
     hsa_system_info_t attribute,
@@ -374,11 +374,11 @@ typedef enum {
  */
 typedef enum {
   /**
-   * Agent name. The type of this attribute is a NUL-terminated \c char[64].
+   * Agent name. The type of this attribute is a NUL-terminated char[64].
    */
   HSA_AGENT_INFO_NAME,
   /**
-   * Name of vendor. The type of this attribute is a NUL-terminated \c char[64].
+   * Name of vendor. The type of this attribute is a NUL-terminated char[64].
    */
   HSA_AGENT_INFO_VENDOR_NAME,
   /**
@@ -388,7 +388,7 @@ typedef enum {
   /**
    * Number of work-items in a wavefront. Must be a power of 2 in the range
    * [1,256]. The value of this attribute is undefined if the agent is not a
-   * component. The type of this attribute is \c uint32_t.
+   * component. The type of this attribute is uint32_t.
    */
   HSA_AGENT_INFO_WAVEFRONT_SIZE,
   /**
@@ -422,18 +422,17 @@ typedef enum {
   /**
    * Maximum number of fbarriers per work-group. Must be at least 32. The value
    * of this attribute is undefined if the agent is not a component. The type of
-   * this attribute is \c uint32_t.
+   * this attribute is uint32_t.
    */
   HSA_AGENT_INFO_FBARRIER_MAX_SIZE,
   /**
    * Maximum number of queues that can be active (created but not destroyed) at
-   * one time in the agent. The type of this attribute is \c uint32_t.
+   * one time in the agent. The type of this attribute is uint32_t.
    */
   HSA_AGENT_INFO_QUEUES_MAX,
   /**
    * Maximum number of packets that a queue created in the agent can hold. Must
-   * be a power of 2 and greater than 0. The type of this attribute is \c
-   * uint32_t.
+   * be a power of 2 and greater than 0. The type of this attribute is uint32_t.
    */
   HSA_AGENT_INFO_QUEUE_MAX_SIZE,
   /**
@@ -454,7 +453,7 @@ typedef enum {
   /**
    * Array of data cache sizes (L1..L4). Each size is expressed in bytes. A size
    * of 0 for a particular level indicates that there is no cache information
-   * for that level. The type of this attribute is \c uint32_t[4].
+   * for that level. The type of this attribute is uint32_t[4].
    */
   HSA_AGENT_INFO_CACHE_SIZE,
   /**
@@ -485,7 +484,7 @@ typedef enum {
    * Maximum number of image layers in a image array. Must not exceed 2048. The
    * value of this attribute is undefined if the agent is not a component, or
    * the implementation does not support images. The type of this attribute is
-   * \c uint32_t.
+   * uint32_t.
    */
   HSA_EXT_AGENT_INFO_IMAGE_ARRAY_MAX_SIZE,
   /**
@@ -520,7 +519,7 @@ typedef enum {
  *
  * @param[out] value Pointer to an application-allocated buffer where to store
  * the value of the attribute. If the buffer passed by the application is not
- * large enough to hold the value of @a attribute, the behavior is undefined.
+ * large enough to hold the value of @p attribute, the behavior is undefined.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -529,8 +528,8 @@ typedef enum {
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_AGENT If the agent is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a attribute is not a valid
- * agent attribute, or @a value is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p attribute is not a valid
+ * agent attribute, or @p value is NULL.
  */
 hsa_status_t HSA_API hsa_agent_get_info(
     hsa_agent_t agent,
@@ -542,12 +541,12 @@ hsa_status_t HSA_API hsa_agent_get_info(
  * callback on every iteration.
  *
  * @param[in] callback Callback to be invoked once per agent. The runtime passes
- * two arguments to the callback, the agent and the application data.  If @a
+ * two arguments to the callback, the agent and the application data.  If @p
  * callback returns a status other than ::HSA_STATUS_SUCCESS for a particular
  * iteration, the traversal stops and ::hsa_iterate_agents returns that status
  * value.
  *
- * @param[in] data Application data that is passed to @a callback on every
+ * @param[in] data Application data that is passed to @p callback on every
  * iteration. Might be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
@@ -555,7 +554,7 @@ hsa_status_t HSA_API hsa_agent_get_info(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a callback is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p callback is NULL.
 */
 hsa_status_t HSA_API hsa_iterate_agents(
     hsa_status_t (*callback)(hsa_agent_t agent, void* data),
@@ -606,14 +605,14 @@ typedef uint64_t hsa_signal_t;
  *
  * @param[in] initial_value Initial value of the signal.
  *
- * @param[in] num_consumers Size of @a consumers. A value of 0 indicates that
+ * @param[in] num_consumers Size of @p consumers. A value of 0 indicates that
  * any HSA agent might wait on the signal.
  *
  * @param[in] consumers List of agents that might consume (wait on) the
- * signal. If @a num_consumers is 0, this argument is ignored; otherwise, the
+ * signal. If @p num_consumers is 0, this argument is ignored; otherwise, the
  * runtime might use the list to optimize the handling of the signal object. If
- * an agent not listed in @a consumers waits on the returned signal, the
- * behavior is undefined. The memory associated with @a consumers can be reused
+ * an agent not listed in @p consumers waits on the returned signal, the
+ * behavior is undefined. The memory associated with @p consumers can be reused
  * or freed after the function returns.
  *
  * @param[out] signal Pointer to a memory location where the runtime will store
@@ -627,8 +626,8 @@ typedef uint64_t hsa_signal_t;
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is failure to allocate
  * the resources required by the implementation.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a signal is NULL or @a
- * num_consumers is greater than 0 but @a consumers is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p signal is NULL or @p
+ * num_consumers is greater than 0 but @p consumers is NULL.
  */
 hsa_status_t HSA_API hsa_signal_create(
     hsa_signal_value_t initial_value,
@@ -646,9 +645,9 @@ hsa_status_t HSA_API hsa_signal_create(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_SIGNAL If @a signal is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_SIGNAL If @p signal is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a signal is 0.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p signal is 0.
  */
 hsa_status_t HSA_API hsa_signal_destroy(
     hsa_signal_t signal);
@@ -672,8 +671,8 @@ hsa_signal_value_t HSA_API hsa_signal_load_relaxed(
 /**
  * @brief Atomically set the value of a signal.
  *
- * @details If the value of the signal is modified, all the agents waiting on @a
- * signal for which @a value satisfies their wait condition are awakened.
+ * @details If the value of the signal is modified, all the agents waiting on @p
+ * signal for which @p value satisfies their wait condition are awakened.
  *
  * @param[in] signal Signal.
  *
@@ -693,10 +692,10 @@ void HSA_API hsa_signal_store_release(
 /**
  * @brief Atomically set the value of a signal and return its previous value.
  *
- * @details If the value of the signal is modified, all the agents waiting on @a
- * signal for which @a value satisfies their wait condition are awakened.
+ * @details If the value of the signal is modified, all the agents waiting on @p
+ * signal for which @p value satisfies their wait condition are awakened.
  *
- * @param[in] signal Signal. If @a signal is a queue doorbell signal, the
+ * @param[in] signal Signal. If @p signal is a queue doorbell signal, the
  * behavior is undefined.
  *
  * @param[in] value New value.
@@ -734,10 +733,10 @@ hsa_signal_value_t HSA_API hsa_signal_exchange_release(
  * the expected value. The observed value is returned regardless of whether the
  * replacement was done.
  *
- * @details If the value of the signal is modified, all the agents waiting on @a
- * signal for which @a value satisfies their wait condition are awakened.
+ * @details If the value of the signal is modified, all the agents waiting on @p
+ * signal for which @p value satisfies their wait condition are awakened.
  *
- * @param[in] signal Signal. If @a signal is a queue
+ * @param[in] signal Signal. If @p signal is a queue
  * doorbell signal, the behavior is undefined.
  *
  * @param[in] expected Value to compare with.
@@ -779,11 +778,11 @@ hsa_signal_value_t HSA_API hsa_signal_cas_release(
 /**
  * @brief Atomically increment the value of a signal by a given amount.
  *
- * @details If the value of the signal is modified, all the agents waiting on @a
- * signal for which @a value satisfies their wait condition are awakened.
+ * @details If the value of the signal is modified, all the agents waiting on @p
+ * signal for which @p value satisfies their wait condition are awakened.
  *
  *
- * @param[in] signal Signal. If @a signal is a queue doorbell signal, the
+ * @param[in] signal Signal. If @p signal is a queue doorbell signal, the
  * behavior is undefined.
  *
  * @param[in] value Value to add to the value of the signal.
@@ -817,10 +816,10 @@ void HSA_API hsa_signal_add_release(
 /**
  * @brief Atomically decrement the value of a signal by a given amount.
  *
- * @details If the value of the signal is modified, all the agents waiting on @a
- * signal for which @a value satisfies their wait condition are awakened.
+ * @details If the value of the signal is modified, all the agents waiting on @p
+ * signal for which @p value satisfies their wait condition are awakened.
  *
- * @param[in] signal Signal. If @a signal is a queue doorbell signal, the
+ * @param[in] signal Signal. If @p signal is a queue doorbell signal, the
  * behavior is undefined.
  *
  * @param[in] value Value to subtract from the value of the signal.
@@ -855,10 +854,10 @@ void HSA_API hsa_signal_subtract_release(
  * @brief Atomically perform a bitwise AND operation between the value of a signal and a given
  * value.
  *
- * @details If the value of the signal is modified, all the agents waiting on @a
- * signal for which @a value satisfies their wait condition are awakened.
+ * @details If the value of the signal is modified, all the agents waiting on @p
+ * signal for which @p value satisfies their wait condition are awakened.
  *
- * @param[in] signal Signal. If @a signal is a queue doorbell signal, the
+ * @param[in] signal Signal. If @p signal is a queue doorbell signal, the
  * behavior is undefined.
  *
  * @param[in] value Value to AND with the value of the signal.
@@ -893,10 +892,10 @@ void HSA_API hsa_signal_and_release(
  * @brief Atomically perform a bitwise OR operation between the value of a signal and a given
  * value.
  *
- * @details If the value of the signal is modified, all the agents waiting on @a
- * signal for which @a value satisfies their wait condition are awakened.
+ * @details If the value of the signal is modified, all the agents waiting on @p
+ * signal for which @p value satisfies their wait condition are awakened.
  *
- * @param[in] signal Signal. If @a signal is a queue doorbell signal, the
+ * @param[in] signal Signal. If @p signal is a queue doorbell signal, the
  * behavior is undefined.
  *
  * @param[in] value Value to OR with the value of the signal.
@@ -930,10 +929,10 @@ void HSA_API hsa_signal_or_release(
  * @brief Atomically perform a bitwise XOR operation between the value of a signal and a given
  * value.
  *
- * @details If the value of the signal is modified, all the agents waiting on @a
- * signal for which @a value satisfies their wait condition are awakened.
+ * @details If the value of the signal is modified, all the agents waiting on @p
+ * signal for which @p value satisfies their wait condition are awakened.
  *
- * @param[in] signal Signal. If @a signal is a queue doorbell signal, the
+ * @param[in] signal Signal. If @p signal is a queue doorbell signal, the
  * behavior is undefined.
  *
  * @param[in] value Value to XOR with the value of the signal.
@@ -1026,7 +1025,7 @@ typedef enum {
  *
  * @param[in] signal Signal.
  *
- * @param[in] condition Condition used to compare the signal value with @a
+ * @param[in] condition Condition used to compare the signal value with @p
  * compare_value.
  *
  * @param[in] compare_value Value to compare with.
@@ -1157,8 +1156,8 @@ typedef struct hsa_queue_s {
  *
  * @details When a queue is created, the runtime creates the packet buffer, the
  * completion signal, and the write and read indexes. The initial value of the
- * write and read indexes is 0. The @a type field of every packet in the buffer
- * is initialized to ::HSA_PACKET_TYPE_ALWAYS_RESERVED.
+ * write and read indexes is 0. The type of every packet in the buffer is
+ * initialized to ::HSA_PACKET_TYPE_ALWAYS_RESERVED.
  *
  * The application should only rely on the error code returned to determine if
  * the queue is valid.
@@ -1167,20 +1166,19 @@ typedef struct hsa_queue_s {
  *
  * @param[in] size Number of packets the queue is expected to hold. Must be a
  * power of 2 that does not exceed the value of ::HSA_AGENT_INFO_QUEUE_MAX_SIZE
- * in @a agent.
+ * in @p agent.
  *
  * @param[in] type Type of the queue. If the value of
- * ::HSA_AGENT_INFO_QUEUE_TYPE in @a agent is ::HSA_QUEUE_TYPE_SINGLE, then @a
+ * ::HSA_AGENT_INFO_QUEUE_TYPE in @p agent is ::HSA_QUEUE_TYPE_SINGLE, then @p
  * type must also be ::HSA_QUEUE_TYPE_SINGLE.
  *
  * @param[in] callback Callback invoked by the runtime for every asynchronous
  * event related to the newly created queue. Might be NULL. The runtime passes
- * two arguments to the callback: @a status is the code identifying the event
- * that triggered the invocation, and @a source is a pointer to the queue where
- * the event originated.
+ * two arguments to the callback: a code identifying the event that triggered
+ * the invocation, and a pointer to the queue where the event originated.
  *
  * @param[in] service_queue Pointer to a service queue to be associated with the
- * newly created queue. Might be NULL. If not NULL, the queue pointed by @a
+ * newly created queue. Might be NULL. If not NULL, the queue pointed by @p
  * service_queue must support the ::HSA_QUEUE_FEATURE_AGENT_DISPATCH feature.
  *
  * @param[out] queue Memory location where the runtime stores a pointer to the
@@ -1196,11 +1194,11 @@ typedef struct hsa_queue_s {
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_AGENT If the agent is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_QUEUE_CREATION If @a agent does not
+ * @retval ::HSA_STATUS_ERROR_INVALID_QUEUE_CREATION If @p agent does not
  * support queues of the given type.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a size is not a power of two,
- * @a type is not a valid queue type, or @a queue is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p size is not a power of two,
+ * @p type is not a valid queue type, or @p queue is NULL.
  *
  */
 hsa_status_t HSA_API hsa_queue_create(
@@ -1232,7 +1230,7 @@ hsa_status_t HSA_API hsa_queue_create(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_QUEUE If the queue is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a queue is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p queue is NULL.
  */
 hsa_status_t HSA_API hsa_queue_destroy(hsa_queue_t *queue);
 
@@ -1252,7 +1250,7 @@ hsa_status_t HSA_API hsa_queue_destroy(hsa_queue_t *queue);
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_QUEUE If the queue is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a queue is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p queue is NULL.
  */
 hsa_status_t HSA_API hsa_queue_inactivate(hsa_queue_t *queue);
 
@@ -1261,7 +1259,7 @@ hsa_status_t HSA_API hsa_queue_inactivate(hsa_queue_t *queue);
  *
  * @param[in] queue Pointer to a queue.
  *
- * @return Read index of the queue pointed by @a queue.
+ * @return Read index of the queue pointed by @p queue.
  */
 uint64_t HSA_API hsa_queue_load_read_index_acquire(hsa_queue_t *queue);
 
@@ -1275,7 +1273,7 @@ uint64_t HSA_API hsa_queue_load_read_index_relaxed(hsa_queue_t *queue);
  *
  * @param[in] queue Pointer to a queue.
  *
- * @return Write index of the queue pointed by @a queue.
+ * @return Write index of the queue pointed by @p queue.
  */
 uint64_t HSA_API hsa_queue_load_write_index_acquire(hsa_queue_t *queue);
 
@@ -1312,8 +1310,8 @@ void HSA_API hsa_queue_store_write_index_release(
  *
  * @param[in] expected Expected value.
  *
- * @param[in] value Value to assign to the write index if @a expected matches
- * the observed write index. Must be greater than @a expected.
+ * @param[in] value Value to assign to the write index if @p expected matches
+ * the observed write index. Must be greater than @p expected.
  *
  * @return Previous value of the write index.
  */
@@ -1450,8 +1448,7 @@ typedef enum {
  */
 typedef enum {
   /**
-   * No scope. Can be only used in the @a acquire_fence_scope field of a Barrier
-   * packet.
+   * No scope. Must only be used as the acquire fence scope of a Barrier packet.
    */
   HSA_FENCE_SCOPE_NONE = 0,
   /**
@@ -1773,15 +1770,15 @@ typedef enum {
  */
 typedef enum {
   /**
-   * Base (starting) address. The type of this attribute is \c void*.
+   * Base (starting) address. The type of this attribute is void*.
    */
   HSA_REGION_INFO_BASE,
   /**
-   * Size, in bytes. The type of this attribute is \c size_t.
+   * Size, in bytes. The type of this attribute is size_t.
    */
   HSA_REGION_INFO_SIZE,
   /**
-   * Agent associated with this region. The type of this attribute is \c
+   * Agent associated with this region. The type of this attribute is
    * hsa_agent_t.
    */
   HSA_REGION_INFO_AGENT,
@@ -1800,28 +1797,28 @@ typedef enum {
    * that the host cannot allocate memory in the region using
    * ::hsa_memory_allocate. If the value of ::HSA_REGION_INFO_SEGMENT is other
    * than ::HSA_SEGMENT_GLOBAL, the maximum allocation size must be 0. The type
-   * of this attribute is \c size_t.
+   * of this attribute is size_t.
    */
   HSA_REGION_INFO_ALLOC_MAX_SIZE,
   /**
    * Allocation granularity of buffers allocated by ::hsa_memory_allocate in
    * this region. The size of a buffer allocated in this region is a multiple of
    * the value of this attribute. If ::HSA_REGION_INFO_ALLOC_MAX_SIZE is 0, the
-   * allocation granularity must be 0. The type of this attribute is \c size_t.
+   * allocation granularity must be 0. The type of this attribute is size_t.
    */
   HSA_REGION_INFO_ALLOC_GRANULE,
   /**
    * Alignment of buffers allocated by ::hsa_memory_allocate in this region. If
    * ::HSA_REGION_INFO_ALLOC_MAX_SIZE is 0, the alignment must be 0. Otherwise,
-   * it must be a power of 2. The type of this attribute is \c size_t.
+   * it must be a power of 2. The type of this attribute is size_t.
    */
   HSA_REGION_INFO_ALLOC_ALIGNMENT,
   /**
-   * Peak bandwidth, in MB/s. The type of this attribute is \c uint32_t.
+   * Peak bandwidth, in MB/s. The type of this attribute is uint32_t.
    */
   HSA_REGION_INFO_BANDWIDTH,
   /**
-   * NUMA node associated with this region. The type of this attribute is \c
+   * NUMA node associated with this region. The type of this attribute is
    * uint32_t.
    */
   HSA_REGION_INFO_NODE
@@ -1836,7 +1833,7 @@ typedef enum {
  *
  * @param[out] value Pointer to a application-allocated buffer where to store
  * the value of the attribute. If the buffer passed by the application is not
- * large enough to hold the value of @a attribute, the behavior is undefined.
+ * large enough to hold the value of @p attribute, the behavior is undefined.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -1845,8 +1842,8 @@ typedef enum {
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_REGION If the region is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a attribute is not a valid
- * region attribute, or @a value is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p attribute is not a valid
+ * region attribute, or @p value is NULL.
  */
 hsa_status_t HSA_API hsa_region_get_info(
     hsa_region_t region,
@@ -1861,11 +1858,11 @@ hsa_status_t HSA_API hsa_region_get_info(
  *
  * @param[in] callback Callback to be invoked once per region that is directly
  * accessible from the agent.  The runtime passes two arguments to the callback,
- * the region and the application data.  If @a callback returns a status other
+ * the region and the application data.  If @p callback returns a status other
  * than ::HSA_STATUS_SUCCESS for a particular iteration, the traversal stops and
  * ::hsa_agent_iterate_regions returns that status value.
  *
- * @param[in] data Application data that is passed to @a callback on every
+ * @param[in] data Application data that is passed to @p callback on every
  * iteration. Might be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
@@ -1875,7 +1872,7 @@ hsa_status_t HSA_API hsa_region_get_info(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_AGENT If the agent is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a callback is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p callback is NULL.
 */
 hsa_status_t HSA_API hsa_agent_iterate_regions(
     hsa_agent_t agent,
@@ -1888,12 +1885,12 @@ hsa_status_t HSA_API hsa_agent_iterate_regions(
  * @param[in] region Region where to allocate memory from.
  *
  * @param[in] size Allocation size, in bytes. This value is rounded up to the
- * the nearest multiple of ::HSA_REGION_INFO_ALLOC_GRANULE in @a
+ * the nearest multiple of ::HSA_REGION_INFO_ALLOC_GRANULE in @p
  * region. Allocations of size 0 are allowed and return a NULL pointer.
  *
  * @param[out] ptr Pointer to the location where to store the base address of
  * the allocated block. The returned base address is aligned to the value of
- * ::HSA_REGION_INFO_ALLOC_ALIGNMENT in @a region.
+ * ::HSA_REGION_INFO_ALLOC_ALIGNMENT in @p region.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -1905,10 +1902,10 @@ hsa_status_t HSA_API hsa_agent_iterate_regions(
  * @retval ::HSA_STATUS_ERROR_INVALID_REGION If the region is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ALLOCATION If the host is not allowed to
- * allocate memory in @a region, or @a size is greater than the value of
- * HSA_REGION_INFO_ALLOC_MAX_SIZE in @a region.
+ * allocate memory in @p region, or @p size is greater than the value of
+ * HSA_REGION_INFO_ALLOC_MAX_SIZE in @p region.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a ptr is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p ptr is NULL.
  */
 hsa_status_t HSA_API hsa_memory_allocate(hsa_region_t region,
     size_t size,
@@ -1918,7 +1915,7 @@ hsa_status_t HSA_API hsa_memory_allocate(hsa_region_t region,
  * @brief Deallocate a block of memory previously allocated using
  * ::hsa_memory_allocate.
  *
- * @param[in] ptr Pointer to a memory block. If @a ptr is NULL, no action is
+ * @param[in] ptr Pointer to a memory block. If @p ptr is NULL, no action is
  * performed.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
@@ -1932,14 +1929,14 @@ hsa_status_t HSA_API hsa_memory_free(void* ptr);
 /*  * @brief Copy block of memory. */
 /*  * */
 /*  * @details Copying a number of bytes larger than the size of the memory regions */
-/*  * pointed by @a dst or @a src results in undefined behavior. */
+/*  * pointed by @p dst or @p src results in undefined behavior. */
 /*  * */
 /*  * @param[out] dst A valid pointer to the destination array where the content is */
 /*  * to be copied. */
 /*  * */
 /*  * @param[in] src A valid pointer to the source of data to be copied. */
 /*  * */
-/*  * @param[in] size Number of bytes to copy. If @a size is 0, no copy is */
+/*  * @param[in] size Number of bytes to copy. If @p size is 0, no copy is */
 /*  * performed and the function returns success. */
 /*  * */
 /*  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully. */
@@ -1971,7 +1968,7 @@ hsa_status_t HSA_API hsa_memory_free(void* ptr);
  * registered. If a NULL pointer is passed, no operation is performed.
  *
  * @param[in] size Requested registration size in bytes. A size of zero is
- * only allowed if @a address is NULL.
+ * only allowed if @p address is NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -1981,7 +1978,7 @@ hsa_status_t HSA_API hsa_memory_free(void* ptr);
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure in
  * allocating the necessary resources.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a size is 0 but @a address
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p size is 0 but @p address
  * is not NULL.
  */
 hsa_status_t HSA_API hsa_memory_register(
@@ -2062,12 +2059,14 @@ typedef enum {
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a extension is not a valid
- * value for a single vendor extension or @a result is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p extension is not a valid
+ * value for a single vendor extension or @p result is NULL.
  */
-hsa_status_t HSA_API hsa_vendor_extension_query(hsa_extension_t extension,
-                                         void *extension_structure,
-                                        int* result);
+hsa_status_t HSA_API hsa_vendor_extension_query(
+    hsa_extension_t extension,
+    void *extension_structure,
+    int* result);
+
 /**
  * @brief Query HSA extensions.
  *
@@ -2080,11 +2079,12 @@ hsa_status_t HSA_API hsa_vendor_extension_query(hsa_extension_t extension,
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @a extension is not a valid
- * value for a HSA extension or @a result is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p extension is not a valid
+ * value for a HSA extension or @p result is NULL.
  */
-  hsa_status_t HSA_API hsa_extension_query(hsa_extension_t extension,
-                                           int* result);
+hsa_status_t HSA_API hsa_extension_query(
+    hsa_extension_t extension,
+    int* result);
 /** @} */
 
 
