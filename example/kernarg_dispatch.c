@@ -16,12 +16,12 @@ void hello_world(uint64_t args) {
 }
 
 
-// Find agent that can process Dispatch packets.
+// Find HSA agent that can process Kernel Dispatch packets.
 hsa_status_t get_component(hsa_agent_t agent, void* data) {
     uint32_t features = 0;
     hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
-    if (features & HSA_AGENT_FEATURE_DISPATCH) {
-        // Store component in the application-provided buffer and return
+    if (features & HSA_AGENT_FEATURE_KERNEL_DISPATCH) {
+        // Store HSA component in the application-provided buffer and return
         hsa_agent_t* ret = (hsa_agent_t*) data;
         *ret = agent;
         return HSA_STATUS_INFO_BREAK;
@@ -68,11 +68,11 @@ int main() {
     // Initialize the runtime
     hsa_init();
 
-    // Retrieve the component
+    // Retrieve the HSA component
     hsa_agent_t component;
     hsa_iterate_agents(get_component, &component);
 
-    // Create a queue in the selected component. The queue can hold up to 4 packets, and has no callback or service queue
+    // Create a queue in the selected HSA component. The queue can hold up to 4 packets, and has no callback or service queue
     // associated with it.
     hsa_queue_t *queue;
     hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
@@ -81,9 +81,9 @@ int main() {
     uint64_t write_index = hsa_queue_add_write_index_relaxed(queue, 1);
 
     // Calculate the virtual address where to place the packet.
-    const size_t packet_size = sizeof(hsa_dispatch_packet_t);
+    const size_t packet_size = sizeof(hsa_kernel_dispatch_packet_t);
     uint64_t curr_address = queue->base_address + write_index * packet_size;
-    hsa_dispatch_packet_t* dispatch_packet = (hsa_dispatch_packet_t*) curr_address;
+    hsa_kernel_dispatch_packet_t* dispatch_packet = (hsa_kernel_dispatch_packet_t*) curr_address;
 
     // Setup the packet encoding the task to execute
     memset(dispatch_packet, 0, packet_size); // reserved fields are zeroed
@@ -118,7 +118,7 @@ int main() {
     dispatch_packet->completion_signal = completion_signal;
 
     // Notify the queue that the packet is ready to be processed
-    dispatch_packet->header.type = HSA_PACKET_TYPE_DISPATCH;
+    dispatch_packet->header.type = HSA_PACKET_TYPE_KERNEL_DISPATCH;
     hsa_signal_store_release(queue->doorbell_signal, write_index);
 
     // Wait for the task to finish, which is the same as waiting for the value of the completion signal to be zero.

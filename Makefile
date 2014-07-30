@@ -1,4 +1,4 @@
-.PHONY: all clean diff check dist
+.PHONY: all clean diff checkversion checkprev dist
 
 ifeq ($(OS),Windows_NT)
    RM = del /Q
@@ -12,6 +12,10 @@ ifneq ("$(wildcard main-diff.tex)","")
 MAIN_DIFF = 1
 endif
 
+ifneq ("$(wildcard main-all-prev.tex)","")
+MAIN_ALL_PREV = 1
+endif
+
 # LaTeX representation of Doxygen API documentation
 DOXYLATEX:= $(wildcard api/altlatex/*.tex)
 
@@ -20,14 +24,18 @@ DOXYLATEX:= $(wildcard api/altlatex/*.tex)
 LISTINGS:=api/altlatex/listings.tex
 
 all : $(LISTINGS) main.pdf
-diff : all main-diff.pdf
 
-check :
-	$(if $(HSA_VERSION),,$(error Variable HSA_VERSION is not set))
+checkprev:
+	$(if $(MAIN_ALL_PREV),,$(error Error: file main-all-prev.tex is missing))
+
+diff : checkprev all main-diff.pdf
+
+checkversion :
+	$(if $(HSA_VERSION),,$(error Error: variable HSA_VERSION is not set))
 
 # Generate the public files
 # Ex: make HSA_VERSION=1_01 dist
-dist : check diff
+dist : checkversion diff
 	$(CP) main.pdf public/hsa_runtime_$(HSA_VERSION).pdf
 	$(CP) main-diff.pdf public/hsa_runtime_$(HSA_VERSION)_diff.pdf
 	$(CP) main-all.tex public/hsa_runtime_$(HSA_VERSION).tex
@@ -53,6 +61,7 @@ main-all.tex: main.tex
 
 clean:
 	@latexmk -silent -C main
+	@$(RM) main-all.tex
         # latexdiff fails if the specified tex input does not exist, but the
         # diff file only exists if 'make diff' was previously invoked.
 	$(if $(MAIN_DIFF),@latexmk -silent -C main-diff,)

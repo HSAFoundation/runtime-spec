@@ -406,10 +406,10 @@ implementation to the HSA runtime. When the language compiler generates code for
 a parallel region, it will include calls to the HSA runtime to set up and
 dispatch the parallel region to the HSA Component. The language runtime is also
 responsible for initializing HSA, selecting target devices, creating execution
-queues, managing memory -- and may use other HSA runtime features as well.
+queues, managing memory, and may use other HSA runtime features as well.
 A runtime implementation may provide optional extensions. Applications can
 query the runtime to determine which extensions are available. This document
-describes the extensions for Finalization, Linking and Images.
+describes the extensions for Finalization, Linking, and Images.
 
 The API for the HSA runtime is standard across all HSA vendors, such that
 languages that use the HSA runtime can execute on the different vendors'
@@ -495,7 +495,7 @@ in a specific agent by simply placing it in one of its \textit{queues}.
 
 A queue is a runtime-allocated resource that contains a packet buffer and a
 packet processor. The packet processor tracks which packets in the buffer have
-already been processed. When it is informed by the application that a new packet
+already been processed. When it has been informed by the application that a new packet
 has been enqueued, the packet processor is able to process it because the packet
 format is standard and the packet contents are self-contained -- they include
 all the necessary information to run a command. The \textit{packet processor} is
@@ -556,7 +556,7 @@ address of a bit-field.
 must be stored in the \textit{doorbell signal} of the queue.
 \end{enumerate}
 
-A \emph{signal} is runtime-allocated, opaque object used for communication
+A \emph{signal} is a runtime-allocated, opaque object used for communication
 between agents in an HSA system. Signals are similar to shared memory locations
 containing an integer. Agents can atomically store a new integer value in a
 signal, atomically read the current value of the signal, etc. using HSA runtime
@@ -567,7 +567,7 @@ Section~\ref{sec:signals}.
 
 When the runtime creates a queue, it also automatically creates a ``doorbell''
 signal that must be used by the application to communicate with the packet
-processor and inform him of the index of the packet ready to be consumed. The
+processor and inform it of the index of the packet ready to be consumed. The
 doorbell signal is contained in the \hsaref{hsa_queue_t.doorbell_signal} field
 of the queue. The value of a signal can be updated using
 \hsaref{hsa_signal_store_release}:
@@ -576,7 +576,7 @@ of the queue. The value of a signal can be updated using
 hsa_signal_store_release(queue->doorbell_signal, 0);
 \end{lstlisting}
 
-After the packet processor has been notified, the execution of the kernel might
+After the packet processor has been notified, the execution of the kernel may
 start asynchronously at any moment. The application could simultaneously write
 more packets to launch other kernels in the same queue.
 
@@ -621,7 +621,7 @@ interfere with each other. Invoking the initialization routine $n$ times within
 a process does not create $n$ runtime instances, but a unique runtime object
 with an associated reference counter of $n$. Shutting down the runtime
 (\hsaref{hsa_shut_down}) is equivalent to decreasing its reference counter. When
-the reference counter is less than one, the runtime object ceases to exists and
+the reference counter is less than one, the runtime object ceases to exist and
 any reference to it (or to any resources created while it was active) results in
 undefined behavior.
 
@@ -683,8 +683,7 @@ The HSA runtime API represents agents using opaque handles of type
 \hsaref{hsa_agent_t}. The application can traverse the list of agents that are
 available in the system using \hsaref{hsa_iterate_agents}, and query
 agent-specific attributes using \hsaref{hsa_agent_get_info}. Examples of agent
-attributes are: name, type of backing device (CPU, GPU), supported queue types,
-etc.
+attributes include: name, type of backing device (CPU, GPU), and supported queue types.
 
 If an agent supports Dispatch packets, then it is also a component (supports the
 AQL packet format and the HSAIL instruction set). The application might inspect
@@ -849,7 +848,7 @@ required to signal the doorbell for every batch of packets they write.
 
 Queues are semi-opaque objects: there is a visible part, represented by the
 \hsaref{hsa_queue_t} structure and the corresponding ring buffer (pointed by
-\hsaref{hsa_queue_t.base_address}), and a invisible part, which contains at
+\hsaref{hsa_queue_t.base_address}), and an invisible part, which contains at
 least the read and write indexes. The access rules for the different queue parts
 are:
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
@@ -1101,7 +1100,7 @@ destination agent:
 \item (Kernel) The work-item submits an Agent Dispatch packet to the service
   queue following the steps described in Section~\ref{sec:queues}.
 \item (Destination Agent) The agent parses the packet, executes the indicated
-  service, stores the result in the memory location pointed by
+  service, stores the result in the memory location pointed to by
   \hsaref{hsa_agent_dispatch_packet_t.return_address}, and decrements the
   completion signal if present.
 \item (Kernel) The work-item consumes the function's output and proceeds to the
@@ -1111,11 +1110,11 @@ destination agent:
 \subsubsection{Example - application processes allocation service requests from
   component}
 In this example, work-items in a kernel might ask the host application to
-allocate memory in their behalf. This is useful because there is no HSAIL
+allocate memory on their behalf. This is useful because there is no HSAIL
 instruction to allocate virtual memory. In this scenario, the destination agent
 is the application running on the CPU, and the service is memory allocation.
 
-The application starts by finding a CPU agent where to create a queue that
+The application starts by finding a CPU agent where it can create a queue that
 supports Agent Dispatch packets:
 \begin{lstlisting}
 hsa_status_t get_agent_dispatch_agent(hsa_agent_t agent, void* data) {
@@ -1211,7 +1210,7 @@ After submission, a packet can be in one of the following five states:
 \emph{complete}. Figure~\ref{fig:packetstate} shows the state transition
 diagram.
 
-\begin{figure}[b]
+\begin{figure}[t]
   \centering
   \scriptsize
 \begin{tikzpicture}
@@ -1285,7 +1284,7 @@ diagram.
   \hsaref{hsa_queue_destroy}, the behavior is undefined.
 
 \end{description}
-
+\newpage %otherwise the state diagram is pushing the API text out of bounds (?)
 \subsection{API}
 \input{api/altlatex/group-aql}
 
@@ -1303,8 +1302,8 @@ allocating memory on those regions from the host.
 
 A memory region represents a block of contiguous memory that is directly
 accessible by an agent, and exposes properties about the block of memory and how
-it is accessed from that particular agent. The same block of memory -virtual or
-physical- might be accessible from multiple agents, but the runtime creates a
+it is accessed from that particular agent. The same block of memory (virtual or
+physical) might be accessible from multiple agents, but the runtime creates a
 unique region on every agent to represent the memory block. The characteristics
 of a memory region include its size, addressability, access speed, and
 corresponding memory segment. One agent might be able to access multiple regions
@@ -1417,7 +1416,7 @@ which defines a unique code for each vendor extension and multi-vendor
 extension. Vendors can reserve enumeration encodings through the HSA
 Foundation. Multi-vendor enumerations begin at the value of
 \hsaref{HSA_EXT_START}, while single-vendor enumerations begin at
-\hsaref{HSA_SVEXT_START}
+\hsaref{HSA_SVEXT_START}.
 
 \subsection{API}
 \input{api/altlatex/group-extensions}

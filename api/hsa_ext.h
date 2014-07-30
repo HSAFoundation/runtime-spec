@@ -10,13 +10,6 @@ extern "C" {
  */
 
 /**
- * @brief Profile is used to specify the kind of profile. This controls what
- * features of HSAIL are supported. For more information see the HSA
- * Programmer's Reference Manual.
- */
-typedef uint8_t hsa_ext_brig_profile8_t;
-
-/**
  * @brief Profile kinds. For more information see the HSA Programmer's
  * Reference Manual.
  */
@@ -33,11 +26,11 @@ typedef enum {
 } hsa_ext_brig_profile_t;
 
 /**
- * @brief Machine model type. This controls the size of addresses used for
- * segment and flat addresses. For more information see the HSA Programmer's
- * Reference Manual.
+ * @brief Profile is used to specify the kind of profile. This controls what
+ * features of HSAIL are supported. For more information see the HSA
+ * Programmer's Reference Manual.
  */
-typedef uint8_t hsa_ext_brig_machine_model8_t;
+typedef uint8_t hsa_ext_brig_profile8_t;
 
 /**
  * @brief Machine model kinds. For more information see the HSA Programmer's
@@ -56,10 +49,12 @@ typedef enum {
 } hsa_ext_brig_machine_model_t;
 
 /**
- * @brief BRIG section ID. The index into the array of sections in a BRIG
- * module.
+ * @brief Machine model type. This controls the size of addresses used for
+ * segment and flat addresses. For more information see the HSA Programmer's
+ * Reference Manual.
  */
-typedef uint32_t hsa_ext_brig_section_id32_t;
+typedef uint8_t hsa_ext_brig_machine_model8_t;
+
 
 /**
  * @brief Predefined BRIG section kinds.
@@ -89,6 +84,12 @@ typedef enum {
    */
   HSA_EXT_BRIG_SECTION_OPERAND = 2
 } hsa_ext_brig_section_id_t;
+
+/**
+ * @brief BRIG section ID. The index into the array of sections in a BRIG
+ * module.
+ */
+typedef uint32_t hsa_ext_brig_section_id32_t;
 
 /**
  * @brief BRIG section header. Every section starts with a
@@ -145,7 +146,7 @@ typedef struct hsa_ext_brig_module_s {
  */
 typedef struct hsa_ext_brig_module_handle_s {
   /**
-   * HSA component specific handle to the brig module.
+   * HSA component-specific handle to the brig module.
    */
   uint64_t handle;
 } hsa_ext_brig_module_handle_t;
@@ -157,12 +158,6 @@ typedef struct hsa_ext_brig_module_handle_s {
  * not reference any entry.
  */
 typedef uint32_t hsa_ext_brig_code_section_offset32_t;
-
-/**
- * @brief The set of exceptions supported by HSAIL. This is represented as a bit
- * set.
- */
-typedef uint16_t hsa_ext_exception_kind16_t;
 
 /**
  * @brief HSAIL exception kinds. For more information see the HSA Programmer's
@@ -221,15 +216,10 @@ typedef enum {
 } hsa_ext_exception_kind_t;
 
 /**
- * @brief Bit set of control directives supported in HSAIL. See the HSA
- * Programmer's Reference Manual description of control directives with the same
- * name for more information. For control directives that have an associated
- * value, the value is given by the field in hsa_ext_control_directives_t. For
- * control directives that are only present or absent (such as
- * requirenopartialworkgroups) they have no corresponding field as the presence
- * of the bit in this mask is sufficient.
+ * @brief The set of exceptions supported by HSAIL. This is represented as a bit
+ * set.
  */
-typedef uint64_t hsa_ext_control_directive_present64_t;
+typedef uint16_t hsa_ext_exception_kind16_t;
 
 /**
  * @brief HSAIL control directive kinds. For more information see the HSA
@@ -382,6 +372,17 @@ typedef enum {
 } hsa_ext_control_directive_present_t;
 
 /**
+ * @brief Bit set of control directives supported in HSAIL. See the HSA
+ * Programmer's Reference Manual description of control directives with the same
+ * name for more information. For control directives that have an associated
+ * value, the value is given by the field in hsa_ext_control_directives_t. For
+ * control directives that are only present or absent (such as
+ * requirenopartialworkgroups) they have no corresponding field as the presence
+ * of the bit in this mask is sufficient.
+ */
+typedef uint64_t hsa_ext_control_directive_present64_t;
+
+/**
  * @brief The hsa_ext_control_directives_t specifies the values for the HSAIL
  * control directives. These control how the finalizer generates code. This
  * struct is used both as an argument to ::hsa_ext_finalize to specify values
@@ -523,12 +524,6 @@ typedef struct hsa_ext_control_directives_s {
 } hsa_ext_control_directives_t;
 
 /**
- * @brief The kinds of code objects that can be contained in
- * ::hsa_ext_code_descriptor_t.
- */
-typedef uint32_t hsa_ext_code_kind32_t;
-
-/**
  * @brief Kinds of code object. For more information see the HSA Programmer's
  * Reference Manual.
  */
@@ -539,7 +534,7 @@ typedef enum {
   HSA_EXT_CODE_NONE = 0,
 
   /**
-   * HSAIL kernel that can be used with an AQL Dispatch packet.
+   * HSAIL kernel that can be used with an AQL Kernel Dispatch packet.
    */
   HSA_EXT_CODE_KERNEL = 1,
 
@@ -555,19 +550,17 @@ typedef enum {
   HSA_EXT_CODE_RUNTIME_LAST = 0x7fffffff,
 
   /**
-   * Vendor specific code objects.
+   * Vendor-specific code objects.
    */
   HSA_EXT_CODE_VENDOR_FIRST = 0x80000000,
   HSA_EXT_CODE_VENDOR_LAST = 0xffffffff
 } hsa_ext_code_kind_t;
 
 /**
- * @brief Each HSA component can support one or more call conventions. For
- * example, an HSA component may have different call conventions that each use a
- * different number of ISA registers to allow different numbers of wavefronts to
- * execute on a compute unit.
+ * @brief The kinds of code objects that can be contained in
+ * ::hsa_ext_code_descriptor_t.
  */
-typedef uint32_t hsa_ext_program_call_convention_id32_t;
+typedef uint32_t hsa_ext_code_kind32_t;
 
 /**
  * @brief Kinds of program call convention IDs.
@@ -580,13 +573,21 @@ typedef enum {
 } hsa_ext_program_call_convention_id_t;
 
 /**
+ * @brief Each HSA component can support one or more call conventions. For
+ * example, an HSA component may have different call conventions that each use a
+ * different number of ISA registers to allow different numbers of wavefronts to
+ * execute on a compute unit.
+ */
+typedef uint32_t hsa_ext_program_call_convention_id32_t;
+
+/**
  * @brief The 64-bit opaque code handle to the finalized code that includes the
- * executable ISA for the HSA component. It can be used for the kernel Dispatch
+ * executable ISA for the HSA component. It can be used for the Kernel Dispatch
  * packet kernel object address field.
  */
 typedef struct hsa_ext_code_handle_s {
   /**
-   * HSA component specific handle to the code.
+   * HSA component-specific handle to the code.
    */
   uint64_t handle;
 } hsa_ext_code_handle_t;
@@ -596,7 +597,7 @@ typedef struct hsa_ext_code_handle_s {
  */
 typedef struct hsa_ext_debug_information_handle_s {
   /**
-   * HSA component specific handle to the debug information.
+   * HSA component-specific handle to the debug information.
    */
   uint64_t handle;
 } hsa_ext_debug_information_handle_t;
@@ -640,7 +641,7 @@ typedef struct hsa_ext_code_descriptor_s {
 
   /**
    * The 64-bit opaque code handle to the finalized code that includes the
-   * executable ISA for the HSA component. It can be used for the kernel
+   * executable ISA for the HSA component. It can be used for the Kernel
    * Dispatch packet kernel object address field.
    */
   hsa_ext_code_handle_t code;
@@ -717,16 +718,18 @@ typedef struct hsa_ext_code_descriptor_s {
   hsa_ext_debug_information_handle_t debug_information;
 
   /**
-   * The vendor of the HSA Component on which this Kernel Code object can
-   * execute. ISO/IEC 624 character encoding must be used. If the name is less
-   * than 24 characters then remaining characters must be set to 0.
+   * Name of vendor. The type of this attribute is a NUL-terminated
+   * char[24]. ISO/IEC 646 character encoding must be used. If the name of the
+   * vendor uses less than 23 characters, the rest of the array must be filled
+   * with NULs.
    */
   char agent_vendor[24];
 
   /**
-   * The vendor's name of the HSA Component on which this Kernel Code object can
-   * execute. ISO/IEC 624 character encoding must be used. If the name is less
-   * than 24 characters then remaining characters must be set to 0.
+   * Name of agent. The type of this attribute is a NUL-terminated
+   * char[24]. ISO/IEC 646 character encoding must be used. If the name of the
+   * agent uses less than 23 characters, the rest of the array must be filled
+   * with NULs.
    */
   char agent_name[24];
 
@@ -786,12 +789,12 @@ typedef struct hsa_ext_finalization_request_s {
 /**
  * @brief Finalization handle is the handle to the object produced by the
  * finalizer that contains the ISA code and related information needed to
- * execute that code for a specific agent for the set of kernels/indirect
+ * execute that code for a specific HSA agent for the set of kernels/indirect
  * functions specified in the finalization request.
  */
 typedef struct hsa_ext_finalization_handle_s {
   /**
-   * HSA component specific handle to the finalization information.
+   * HSA component-specific handle to the finalization information.
    */
   uint64_t handle;
 } hsa_ext_finalization_handle_t;
@@ -833,10 +836,10 @@ typedef hsa_status_t (*hsa_ext_error_message_callback_t)(
  * @brief Finalizes provided list of kernel and/or indirect functions.
  *
  * @details Invokes the finalizer on the provided list of kernels and indirect
- * functions. A kernel can only be finalized once per program per agent.  An
- * indirect function can only be finalized once per program per agent per call
- * convention. Only code for the HSA components specified when the program was
- * created can be requested. The program must contain a definition for the
+ * functions. A kernel can only be finalized once per program per HSA agent.  An
+ * indirect function can only be finalized once per program per HSA agent per
+ * call convention. Only code for the HSA components specified when the program
+ * was created can be requested. The program must contain a definition for the
  * requested kernels and indirect functions among the modules that have been
  * added to the program.
  *
@@ -888,18 +891,18 @@ typedef hsa_status_t (*hsa_ext_error_message_callback_t)(
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH If the directive in the
- * control directive structure and in the HSAIL kernel mismatch or if the same
- * directive is used with a different value in one of the functions used by this
- * kernel.
+ * @retval ::HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH The directive in the
+ * control directive structure and in the HSAIL kernel do not match, or if the
+ * same directive is used with a different value in one of the functions used by
+ * this kernel.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p finalization_request_list
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p finalization_request_list
  * is NULL or invalid.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If the finalize API cannot
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES The finalize API cannot
  * allocate memory for @p finalization.
  *
- * @retval ::HSA_EXT_STATUS_INFO_UNRECOGNIZED_OPTIONS If the options are not
+ * @retval ::HSA_EXT_STATUS_INFO_UNRECOGNIZED_OPTIONS The options are not
  * recognized, no error is returned, just an info status is used to indicate
  * invalid options.
  */
@@ -923,7 +926,7 @@ hsa_status_t HSA_API hsa_ext_finalize(
  * @brief Queries the total number of kernel and indirect functions that have
  * been finalized as part of the finalization object.
  *
- * @param[in] agent Agent for which the finalization object contains code.
+ * @param[in] agent HSA agent for which the finalization object contains code.
  *
  * @param[in] finalization Finalization handle that references the finalization
  * object for @p agent.
@@ -934,9 +937,9 @@ hsa_status_t HSA_API hsa_ext_finalize(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * number of code descriptors is queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p agent is NULL or
- * not valid. If @p finalization points to invalid finalization. If @p
- * code_descriptor_count is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent is NULL or invalid, @p
+ * finalization points to invalid finalization, or @p code_descriptor_count is
+ * NULL.
  */
 hsa_status_t HSA_API hsa_ext_query_finalization_code_descriptor_count(
     hsa_agent_t agent,
@@ -947,7 +950,7 @@ hsa_status_t HSA_API hsa_ext_query_finalization_code_descriptor_count(
  * @brief Queries information about one of the kernel or indirect functions that
  * have been finalized as part of a finalization object.
  *
- * @param[in] agent Agent for which the finalization object contains code.
+ * @param[in] agent HSA agent for which the finalization object contains code.
  *
  * @param[in] finalization Finalization handle that references the finalization
  * object for @p agent.
@@ -962,9 +965,8 @@ hsa_status_t HSA_API hsa_ext_query_finalization_code_descriptor_count(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * code descriptor is queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p agent is NULL or
- * not valid. If @p finalization points to invalid finalization. If @p
- * code_descriptor is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent is NULL or invalid, @p
+ * finalization points to invalid finalization, or @p code_descriptor is NULL.
  */
 hsa_status_t HSA_API hsa_ext_query_finalization_code_descriptor(
     hsa_agent_t agent,
@@ -975,21 +977,21 @@ hsa_status_t HSA_API hsa_ext_query_finalization_code_descriptor(
 /**
  * @brief Destroys a finalization. This may reclaim the memory occupied by the
  * finalization object, and remove corresponding ISA code from the associated
- * agent. Once destroyed, all code that is part of the finalization object is
- * invalidated. It is undefined if any dispatch is executing, or will
+ * HSA agent. Once destroyed, all code that is part of the finalization object
+ * is invalidated. It is undefined if any dispatch is executing, or will
  * subsequently be executed, when the finalization containing its code is
  * destroyed.
  *
- * @param[in] agent Agent for which the finalization object contains code.
+ * @param[in] agent HSA agent for which the finalization object contains code.
  *
  * @param[in] finalization Handle to the finalization to be destroyed.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p finalization is NULL or
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p finalization is NULL or
  * does not point to a valid finalization structure.
  *
- * @retval ::HSA_STATUS_ERROR_RESOURCE_FREE If some of the resources consumed
+ * @retval ::HSA_STATUS_ERROR_RESOURCE_FREE Some of the resources consumed
  * during initialization by the runtime could not be freed.
  */
 hsa_status_t HSA_API hsa_ext_destroy_finalization(
@@ -1023,11 +1025,11 @@ hsa_status_t HSA_API hsa_ext_destroy_finalization(
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p finalization
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p finalization
  * is either NULL or does not point to a valid finalization descriptor object.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If no memory can be allocated
- * for @p serialized_object.
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES No memory can be allocated for @p
+ * serialized_object.
  */
 hsa_status_t HSA_API hsa_ext_serialize_finalization(
     hsa_runtime_caller_t caller,
@@ -1052,10 +1054,10 @@ hsa_status_t HSA_API hsa_ext_serialize_finalization(
  *
  * @param[in] agent The HSA agent for which @p finalization must be deserialized.
  *
- * @param[in] program_agent_id ID of the agent to deserialize the finalization
- * for. Used to implement agentid_u32 operation.
+ * @param[in] program_agent_id ID of the HSA agent to deserialize the
+ * finalization for. Used to implement agentid_u32 operation.
  *
- * @param[in] program_agent_count Number of agents in the program. Used to
+ * @param[in] program_agent_count Number of HSA agents in the program. Used to
  * implement agentcount_u32 operation.
  *
  * @param[in] symbol_address_callback Callback function to get the address of
@@ -1073,10 +1075,10 @@ hsa_status_t HSA_API hsa_ext_serialize_finalization(
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p serialized_object is either
- * NULL, or is not valid, or the size is 0.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p serialized_object is
+ * NULL, or the size is 0.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If no memory can be allocated for
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES No memory can be allocated for
  * @p finalization.
  */
 hsa_status_t HSA_API hsa_ext_deserialize_finalization(
@@ -1113,15 +1115,15 @@ hsa_status_t HSA_API hsa_ext_deserialize_finalization(
  */
 typedef struct hsa_ext_program_handle_s {
   /**
-   * HSA component specific handle to the program.
+   * HSA component-specific handle to the program.
    */
   uint64_t handle;
 } hsa_ext_program_handle_t;
 
 /**
- * ID of an agent within a program that it is a member. It is used to index a
- * kernel descriptor to access the code descriptor for the agent. An agent can
- * be a member of multiple programs and can have different
+ * ID of an HSA agent within a program that it is a member. It is used to index
+ * a kernel descriptor to access the code descriptor for the HSA agent. An HSA
+ * agent can be a member of multiple programs and can have different
  * ::hsa_ext_program_agent_id_t in each program.
  */
 typedef uint32_t hsa_ext_program_agent_id_t;
@@ -1133,7 +1135,7 @@ typedef uint32_t hsa_ext_program_agent_id_t;
  * more HSA components that are part of the HSA platform must be specified
  * (::hsa_agent_t), together with the machine model
  * (::hsa_ext_brig_machine_model8_t) and profile (::hsa_ext_brig_profile8_t).
- * The set of agents associated with the HSAIL being created cannot be changed
+ * The set of HSA agents associated with the HSAIL being created cannot be changed
  * after the program is created. The machine model address size for the global
  * segment must match the size used by the application. All modules added to the
  * program must have the same machine model and profile as the program.  Once
@@ -1160,14 +1162,14 @@ typedef uint32_t hsa_ext_program_agent_id_t;
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * an HSAIL program is created.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p agents is NULL, or not
- * valid. If @p agent_count is 0. If @p machine_model is not valid. If @p
- * profile is not valid. In this case @p program will be NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agents is NULL or invalid, @p
+ * agent_count is 0, @p machine_model is invalid, or @p profile is invalid.  In
+ * this case @p program will be NULL.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure to allocate
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
  * resources required for program creation.
  *
- * @retval ::HSA_EXT_STATUS_INFO_ALREADY_INITIALIZED If @p program is already a
+ * @retval ::HSA_EXT_STATUS_INFO_ALREADY_INITIALIZED @p program is already a
  * valid program. No error is returned, just an info status is used to indicate
  * invalid options.
  */
@@ -1189,11 +1191,10 @@ hsa_status_t HSA_API hsa_ext_program_create(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * an HSAIL program is destroyed.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p program is not a valid
- * ::hsa_ext_program_handle_t object.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_RESOURCE_FREE If @p program is already destroyed
- * or has never been created.
+ * @retval ::HSA_STATUS_ERROR_RESOURCE_FREE @p program is already destroyed or
+ * has never been created.
  */
 hsa_status_t HSA_API hsa_ext_program_destroy(
     hsa_ext_program_handle_t program);
@@ -1224,17 +1225,17 @@ hsa_status_t HSA_API hsa_ext_program_destroy(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * the module is added successfully.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If the @p program is not a valid
- * HSAIL program. If the @p brig_module is not a valid HSAIL module. If the
- * machine model and/or profile of the @p brig_module do not match the machine
- * model and/or profile @p program.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is an invalid HSAIL
+ * program, @p brig_module is an invalid HSAIL module, or the machine model
+ * and/or profile of the @p brig_module do not match the machine model and/or
+ * profile of @p program.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure to allocate
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
  * resources required for module addition.
  *
- * @retval ::HSA_EXT_STATUS_INFO_ALREADY_INITIALIZED If the @p brig_module is
- * already added to the HSAIL program. No error is returned, just an info status
- * is used to indicate invalid options.
+ * @retval ::HSA_EXT_STATUS_INFO_ALREADY_INITIALIZED @p brig_module is already
+ * added to the HSAIL program. No error is returned, just an info status is used
+ * to indicate invalid options.
  */
 hsa_status_t HSA_API hsa_ext_add_module(
     hsa_ext_program_handle_t program,
@@ -1247,12 +1248,12 @@ hsa_status_t HSA_API hsa_ext_add_module(
  * @details Finalizes provided HSAIL program. The HSA runtime finalizer can be
  * used to generate code for kernels and indirect functions from a specific
  * program for a specific HSA component. A kernel can only be finalized once per
- * program per agent. An indirect function can only finalized once per program
- * per agent per call convention. Only code for HSA components specified when
- * the program was created can be requested. The program must contain a
- * definition for the requested kernels and indirect functions among the
- * modules that have been added to the program. The modules of the program must
- * collectively define all variables, fbarriers, kernels and functions
+ * program per HSA agent. An indirect function can only finalized once per
+ * program per HSA agent per call convention. Only code for HSA components
+ * specified when the program was created can be requested. The program must
+ * contain a definition for the requested kernels and indirect functions among
+ * the modules that have been added to the program. The modules of the program
+ * must collectively define all variables, fbarriers, kernels and functions
  * referenced by operations in the code block. In addition, the caller of this
  * function can specify control directives as an input argument, which will be
  * passed to the finalizer. These control directives can be used for low-level
@@ -1292,24 +1293,23 @@ hsa_status_t HSA_API hsa_ext_add_module(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * the requested list of kernels/functions is finalized.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH If the directive in the
- * control directive structure and in the HSAIL kernel mismatch or if the same
+ * @retval ::HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH The directive in the
+ * control directive structure and in the HSAIL kernel mismatch, or if the same
  * directive is used with a different value in one of the functions used by this
  * kernel. The @p error_message_callback can be used to get the string
  * representation of the error.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p agent is NULL or invalid
- * (if one of the specified HSA components is not the part of the HSAIL
- * program). If the @p program is not a valid HSAIL program. If @p
- * finalization_request_list is NULL or invalid.  If @p
- * finalization_request_count is 0. The @p error_message_callback can be used to
- * get the string representation of the error.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent is NULL or invalid (if
+ * one of the specified HSA components is not the part of the HSAIL program), @p
+ * program is an invalid HSAIL program, @p finalization_request_list is NULL or
+ * invalid, or @p finalization_request_count is 0. The @p error_message_callback
+ * can be used to get the string representation of the error.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure to allocate
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
  * resources required for finalization. The @p error_message_callback can be
  * used to get the string representation of the error.
  *
- * @retval ::HSA_EXT_STATUS_INFO_UNRECOGNIZED_OPTIONS If the @p options or @p
+ * @retval ::HSA_EXT_STATUS_INFO_UNRECOGNIZED_OPTIONS @p options or @p
  * optimization_level are not recognized. No error is returned, just an info
  * status is used to indicate invalid options.
  */
@@ -1338,8 +1338,8 @@ hsa_status_t HSA_API hsa_ext_finalize_program(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * HSA component's ID is queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program or @p
- * agent is not valid. If @p program_agent_id is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program or @p agent are
+ * invalid, or @p program_agent_id is NULL.
  */
 hsa_status_t HSA_API hsa_ext_query_program_agent_id(
     hsa_ext_program_handle_t program,
@@ -1358,8 +1358,8 @@ hsa_status_t HSA_API hsa_ext_query_program_agent_id(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * number of HSA components in the HSAIL program is queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is not
- * valid. If @p program_agent_count is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, or @p
+ * program_agent_count is NULL.
  */
 hsa_status_t HSA_API hsa_ext_query_program_agent_count(
     hsa_ext_program_handle_t program,
@@ -1378,8 +1378,7 @@ hsa_status_t HSA_API hsa_ext_query_program_agent_count(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * HSA agents contained in the HSAIL program are queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is
- * invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid.
  */
 hsa_status_t HSA_API hsa_ext_query_program_agents(
     hsa_ext_program_handle_t program,
@@ -1397,8 +1396,8 @@ hsa_status_t HSA_API hsa_ext_query_program_agents(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * the number of HSAIL modules contained in the HSAIL program is queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is
- * invalid. If @p program_module_count is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, or @p
+ * program_module_count is NULL.
  */
 hsa_status_t HSA_API hsa_ext_query_program_module_count(
     hsa_ext_program_handle_t program,
@@ -1417,8 +1416,8 @@ hsa_status_t HSA_API hsa_ext_query_program_module_count(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * HSAIL module handles contained in the HSAIL program are queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is
- * invalid. If @p modules is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, or @p
+ * modules is NULL.
  */
 hsa_status_t HSA_API hsa_ext_query_program_modules(
     hsa_ext_program_handle_t program,
@@ -1438,8 +1437,8 @@ hsa_status_t HSA_API hsa_ext_query_program_modules(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * HSAIL module contained in the HSAIL program is queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is
- * invalid, or @p module is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, or @p
+ * brig_module is invalid.
  */
 hsa_status_t HSA_API hsa_ext_query_program_brig_module(
   hsa_ext_program_handle_t program,
@@ -1463,9 +1462,9 @@ hsa_status_t HSA_API hsa_ext_query_program_brig_module(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * call convention IDs contained in the HSAIL program are queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is not
- * valid. If @p agent is not valid or NULL. If @p first_call_convention_id is
- * NULL. If @p call_convention_count is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, @p agent
+ * is invalid or NULL, @p first_call_convention_id is NULL, or @p
+ * call_convention_count is NULL.
  */
 hsa_status_t HSA_API hsa_ext_query_call_convention(
     hsa_ext_program_handle_t program,
@@ -1492,8 +1491,7 @@ hsa_status_t HSA_API hsa_ext_query_call_convention(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully,
  * and symbol definition contained in the HSAIL program is queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is
- * not valid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid.
  */
 hsa_status_t HSA_API hsa_ext_query_symbol_definition(
     hsa_ext_program_handle_t program,
@@ -1521,8 +1519,8 @@ hsa_status_t HSA_API hsa_ext_query_symbol_definition(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * specified global variable address is defined in specified HSAIL program.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is
- * not valid. If @p module is not valid. If @p address is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, @p module
+ * is invalid, or @p address is NULL.
  */
 hsa_status_t HSA_API hsa_ext_define_program_allocation_global_variable_address(
     hsa_ext_program_handle_t program,
@@ -1546,8 +1544,8 @@ hsa_status_t HSA_API hsa_ext_define_program_allocation_global_variable_address(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * the global variable address is queried from specified HSAIL program.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is
- * invalid, or @p module is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, or @p
+ * module is invalid.
  */
 hsa_status_t HSA_API hsa_ext_query_program_allocation_global_variable_address(
     hsa_ext_program_handle_t program,
@@ -1576,9 +1574,8 @@ hsa_status_t HSA_API hsa_ext_query_program_allocation_global_variable_address(
  * specified global variable address is defined for specified HSA agent in
  * specified HSAIL program.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is not
- * valid. If @p agent is NULL or not valid. If @p module is not valid.  If @p
- * address is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, @p agent
+ * is NULL or invalid, @p module is invalid, or @p address is NULL.
  */
 hsa_status_t HSA_API hsa_ext_define_agent_allocation_global_variable_address(
     hsa_ext_program_handle_t program,
@@ -1605,9 +1602,8 @@ hsa_status_t HSA_API hsa_ext_define_agent_allocation_global_variable_address(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * the global variable address is queried from specified HSAIL program.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is not
- * valid. If @p agent is NULL or not valid. If @p module is not valid.  If @p
- * address is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, @p agent
+ * is NULL or invalid, @p module is invalid, or @p address is NULL.
  */
 hsa_status_t HSA_API hsa_ext_query_agent_global_variable_address(
     hsa_ext_program_handle_t program,
@@ -1637,9 +1633,8 @@ hsa_status_t HSA_API hsa_ext_query_agent_global_variable_address(
  * specified readonly variable address is defined for specified HSA agent in
  * specified HSAIL program.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is not
- * valid. If @p agent is NULL or not valid. If @p module is not valid.  If @p
- * address is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, @p agent
+ * is NULL or invalid, @p module is invalid, or @p address is NULL.
  */
 hsa_status_t HSA_API hsa_ext_define_readonly_variable_address(
     hsa_ext_program_handle_t program,
@@ -1666,9 +1661,8 @@ hsa_status_t HSA_API hsa_ext_define_readonly_variable_address(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * the readonly variable address is queried from specified HSAIL program.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is not
- * valid. If @p agent is NULL or not valid. If @p module is not valid.  If @p
- * address is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, @p agent
+ * is NULL or invalid, @p module is invalid, or @p address is NULL.
  */
 hsa_status_t HSA_API hsa_ext_query_readonly_variable_address(
     hsa_ext_program_handle_t program,
@@ -1679,7 +1673,7 @@ hsa_status_t HSA_API hsa_ext_query_readonly_variable_address(
 
 /**
  * @brief Queries kernel descriptor address from specified HSAIL program.
- * Needed to create a Dispatch packet.
+ * Needed to create a Kernel Dispatch packet.
  *
  * @param[in] program HSAIL program to query kernel descriptor address from.
  *
@@ -1694,8 +1688,8 @@ hsa_status_t HSA_API hsa_ext_query_readonly_variable_address(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * the kernel descriptor address is queried from specified HSAIL program.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is
- * invalid, or @p module is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, or @p
+ * module is invalid.
  */
 hsa_status_t HSA_API hsa_ext_query_kernel_descriptor_address(
     hsa_ext_program_handle_t program,
@@ -1725,8 +1719,8 @@ hsa_status_t HSA_API hsa_ext_query_kernel_descriptor_address(
  * the indirect function descriptor address is queried from specified HSAIL
  * program.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If provided @p program is
- * invalid, or @p module is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid, or @p
+ * module is invalid.
  */
 hsa_status_t HSA_API hsa_ext_query_indirect_function_descriptor_address(
     hsa_ext_program_handle_t program,
@@ -1748,8 +1742,8 @@ hsa_status_t HSA_API hsa_ext_query_indirect_function_descriptor_address(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * specified HSAIL program is a valid program.
  *
- * @retval ::HSA_STATUS_ERROR If specified HSAIL program is not valid, refer to
- * the error callback function to get string representation of the failure.
+ * @retval ::HSA_STATUS_ERROR @p program is invalid. Refer to the error callback
+ * function to get string representation of the failure.
  */
 hsa_status_t HSA_API hsa_ext_validate_program(
     hsa_ext_program_handle_t program,
@@ -1770,9 +1764,9 @@ hsa_status_t HSA_API hsa_ext_validate_program(
  * representation of the error message.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
- * specified HSAIL module is a valid module..
+ * specified HSAIL module is a valid module.
  *
- * @retval ::HSA_STATUS_ERROR If the module is not valid, refer to the error
+ * @retval ::HSA_STATUS_ERROR The module is invalid. Refer to the error
  * callback function to get string representation of the failure.
  */
 hsa_status_t HSA_API hsa_ext_validate_program_module(
@@ -1801,10 +1795,9 @@ hsa_status_t HSA_API hsa_ext_validate_program_module(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * specified program is serialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p program is not a valid
- * program.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure to allocate
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
  * resources required for serialization. The @p error_message_callback can be
  * used to get the string representation of the error.
  */
@@ -1827,9 +1820,9 @@ typedef hsa_status_t (*hsa_ext_program_allocation_symbol_address_t)(
   uint64_t *symbol_adress);
 
 /**
- * @brief Callback function to get agent's address of global segment variables,
- * kernel table variable, indirect function table variable based on the symbolic
- * name.
+ * @brief Callback function to get HSA agent's address of global segment
+ * variables, kernel table variable, indirect function table variable based on
+ * the symbolic name.
  */
 typedef hsa_status_t (*hsa_ext_agent_allocation_symbol_address_t)(
   hsa_runtime_caller_t caller,
@@ -1852,9 +1845,9 @@ typedef hsa_status_t (*hsa_ext_agent_allocation_symbol_address_t)(
  * indirect function table variable based on the symbolic name. Allows symbols
  * defined by application to be relocated.
  *
- * @param[in] agent_allocation_symbol_address Callback function to get agent's
- * address of global segment variables, kernel table variable, indirect function
- * table variable based on the symbolic name. Allows symbols defined by
+ * @param[in] agent_allocation_symbol_address Callback function to get HSA
+ * agent's address of global segment variables, kernel table variable, indirect
+ * function table variable based on the symbolic name. Allows symbols defined by
  * application to be relocated.
  *
  * @param[in] error_message_callback Callback function to get the string
@@ -1868,10 +1861,10 @@ typedef hsa_status_t (*hsa_ext_agent_allocation_symbol_address_t)(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * HSAIL program is deserialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p serialized_object is either
- * NULL, or is not valid, or the size is 0.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p serialized_object is
+ * NULL or invalid, or the size is 0.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If there is a failure to allocate
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
  * resources required for deserialization. The @p error_message_callback can be
  * used to get the string representation of the error.
  */
@@ -1892,12 +1885,12 @@ hsa_status_t HSA_API hsa_ext_deserialize_program(
 
 /**
  * @brief Image handle, populated by ::hsa_ext_image_create_handle. Images
- * handles are only unique within an agent, not across agents.
+ * handles are only unique within an HSA agent, not across HSA agents.
  *
  */
 typedef struct hsa_ext_image_handle_s {
    /**
-    * HSA component specific handle to the image.
+    * HSA component-specific handle to the image.
     */
     uint64_t handle;
 
@@ -1914,22 +1907,22 @@ typedef enum  {
     HSA_EXT_IMAGE_FORMAT_NOT_SUPPORTED = 0x0,
 
    /**
-    * Images of this format can be accessed for read operations.
+    * Images of this format can be accessed only from read operations.
     */
     HSA_EXT_IMAGE_FORMAT_READ_ONLY = 0x1,
 
    /**
-    * Images of this format can be accessed for write operations.
+    * Images of this format can be accessed only from write operations.
     */
     HSA_EXT_IMAGE_FORMAT_WRITE_ONLY = 0x2,
 
     /**
-    * Images of this format can be accessed for read and write operations.
+    * Images of this format can be accessed from read and write operations.
     */
     HSA_EXT_IMAGE_FORMAT_READ_WRITE = 0x4,
 
     /**
-    * Images of this format can be accessed for read-modify-write operations.
+    * Images of this format can be accessed from read-modify-write operations.
     */
     HSA_EXT_IMAGE_FORMAT_READ_MODIFY_WRITE = 0x8,
     /**
@@ -1941,18 +1934,18 @@ typedef enum  {
 } hsa_ext_image_format_capability_t;
 
 /**
- * @brief Agent-specific image size and alignment requirements. This structure
- * stores the agent-dependent image data sizes and alignment, and populated by
- * ::hsa_ext_image_get_info.
+ * @brief HSA agent-specific image size and alignment requirements. This
+ * structure stores the HSA agent-dependent image data sizes and alignment, and
+ * populated by ::hsa_ext_image_get_info.
  */
 typedef struct hsa_ext_image_info_s {
   /**
-   * Component specific image data size in bytes.
+   * HSA component-specific image data size in bytes.
    */
   size_t image_size;
 
   /**
-   * Component specific image data alignment in bytes.
+   * HSA component-specific image data alignment in bytes.
    */
   size_t image_alignment;
 
@@ -2038,8 +2031,7 @@ typedef enum {
  * Programming Reference Manual for definitions on each component type. The
  * enumeration values match the HSAIL BRIG type BrigImageChannelType.
  */
-typedef enum
-{
+typedef enum {
     HSA_EXT_IMAGE_CHANNEL_TYPE_SNORM_INT8 = 0,
     HSA_EXT_IMAGE_CHANNEL_TYPE_SNORM_INT16 = 1,
     HSA_EXT_IMAGE_CHANNEL_TYPE_UNORM_INT8 = 2,
@@ -2056,7 +2048,6 @@ typedef enum
     HSA_EXT_IMAGE_CHANNEL_TYPE_UNSIGNED_INT32 = 13,
     HSA_EXT_IMAGE_CHANNEL_TYPE_HALF_FLOAT = 14,
     HSA_EXT_IMAGE_CHANNEL_TYPE_FLOAT = 15
-
 } hsa_ext_image_channel_type_t;
 
 /**
@@ -2067,7 +2058,6 @@ typedef enum
  *
  */
 typedef enum {
-
     HSA_EXT_IMAGE_CHANNEL_ORDER_A = 0,
     HSA_EXT_IMAGE_CHANNEL_ORDER_R = 1,
     HSA_EXT_IMAGE_CHANNEL_ORDER_RX = 2,
@@ -2088,7 +2078,6 @@ typedef enum {
     HSA_EXT_IMAGE_CHANNEL_ORDER_LUMINANCE = 17,
     HSA_EXT_IMAGE_CHANNEL_ORDER_DEPTH = 18,
     HSA_EXT_IMAGE_CHANNEL_ORDER_DEPTH_STENCIL = 19
-
 } hsa_ext_image_channel_order_t;
 
 /**
@@ -2107,7 +2096,7 @@ typedef struct hsa_ext_image_format_s {
 } hsa_ext_image_format_t;
 
 /**
- * @brief Implementation-independent HSA Image descriptor.
+ * @brief Implementation-independent HSA image descriptor.
  */
 typedef struct hsa_ext_image_descriptor_s {
   /**
@@ -2132,7 +2121,7 @@ typedef struct hsa_ext_image_descriptor_s {
   size_t depth;
 
   /**
-   * Number of images in the image array, only used if geometry is 1DArray and
+   * Number of images in the image array, only used if geometry is 1DArray or
    * 2DArray.
    */
   size_t array_size;
@@ -2186,11 +2175,11 @@ typedef struct hsa_ext_image_region_s {
 /**
  * @brief Sampler handle. Samplers are populated by
  * ::hsa_ext_sampler_create_handle. Sampler handles are only unique within an
- * agent, not across agents.
+ * HSA agent, not across HSA agents.
  */
 typedef struct hsa_ext_sampler_handle_s {
    /**
-    * Component-specific HSA sampler.
+    * HSA component-specific sampler.
     */
     uint64_t handle;
 
@@ -2311,13 +2300,15 @@ typedef struct hsa_ext_sampler_descriptor_s {
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p agent, @p image_format, or
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent, @p image_format, or
  * @p capability_mask are NULL.
  */
-hsa_status_t HSA_API hsa_ext_image_get_format_capability(hsa_agent_t agent,
-                         const hsa_ext_image_format_t *image_format,
-                         hsa_ext_image_geometry_t image_geometry,
-                         uint32_t *capability_mask);
+hsa_status_t HSA_API hsa_ext_image_get_format_capability(
+    hsa_agent_t agent,
+    const hsa_ext_image_format_t *image_format,
+    hsa_ext_image_geometry_t image_geometry,
+    uint32_t *capability_mask);
+
 /**
  *
  * @brief Inquires the required HSA component-specific image data details from a
@@ -2341,19 +2332,20 @@ hsa_status_t HSA_API hsa_ext_image_get_format_capability(hsa_agent_t agent,
  *
  * @param[in] access_permission Access permission of the image by the HSA agent.
  *
- * @param[out] image_info Image info size and alignment requirements that the
- * HSA agent requires.
+ * @param[out] image_info Image info size and alignment required by the HSA
+ * agent.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been initialized.
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
+ * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments are NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT Any of the arguments are NULL.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED If the HSA agent does
+ * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED The HSA agent does
  * not support the image format specified by the descriptor.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_SIZE_UNSUPPORTED If the HSA agent does
+ * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_SIZE_UNSUPPORTED The HSA agent does
  * not support the image dimensions specified by the format descriptor.
  */
 hsa_status_t HSA_API hsa_ext_image_get_info(
@@ -2363,10 +2355,10 @@ hsa_status_t HSA_API hsa_ext_image_get_info(
     hsa_ext_image_info_t *image_info);
 
 /**
- * @brief Creates a agent-defined image handle from an
- * implementation-independent image descriptor and a agent-specific image
+ * @brief Creates a HSA agent-defined image handle from an
+ * implementation-independent image descriptor and a HSA agent-specific image
  * data. The image access defines how the HSA agent expects to use the image and
- * must match the HSAIL image handle type used by the agent.
+ * must match the HSAIL image handle type used by the HSA agent.
  *
  * @details If successful, the image handle is written to the location specified
  * by @p image_handle. The image data memory must be allocated using the
@@ -2399,7 +2391,7 @@ hsa_status_t HSA_API hsa_ext_image_get_info(
  * @param[in] image_descriptor Implementation-independent image descriptor
  * describing the image.
  *
- * @param[in] image_data Address of the component-specific image data.
+ * @param[in] image_data Address of the HSA component-specific image data.
  *
  * @param[in] access_permission Access permission of the image by the HSA agent.
  *
@@ -2410,14 +2402,14 @@ hsa_status_t HSA_API hsa_ext_image_get_info(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT Any of the arguments are NULL.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED If the HSA agent does
+ * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED The HSA agent does
  * not have the capability to support the image format using the specified @p
  * access_permission.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If the HSA agent cannot create
- * the specified handle because it is out of resources.
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES The HSA agent cannot create the
+ * specified handle because it is out of resources.
  *
  */
 hsa_status_t HSA_API hsa_ext_image_create_handle(
@@ -2468,9 +2460,10 @@ hsa_status_t HSA_API hsa_ext_image_create_handle(
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been initialized.
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
+ * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p agent, @p src_memory or @p
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent, @p src_memory or @p
  * image_region are NULL.
  *
  */
@@ -2526,9 +2519,10 @@ hsa_status_t HSA_API hsa_ext_image_import (
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been initialized.
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
+ * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p agent, @p dst_memory or @p
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent, @p dst_memory or @p
  * image_region are NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_export(
@@ -2577,8 +2571,8 @@ hsa_status_t HSA_API hsa_ext_image_export(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p agent or @p image_region
- * are NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent or @p image_region are
+ * NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_copy(
     hsa_agent_t agent,
@@ -2630,8 +2624,8 @@ hsa_status_t HSA_API hsa_ext_image_copy(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p agent or @p
- * image_region are NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent or @p image_region are
+ * NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_clear(
     hsa_agent_t agent,
@@ -2662,7 +2656,7 @@ hsa_status_t HSA_API hsa_ext_image_clear(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If @p agent or @p image_handle is
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent or @p image_handle are
  * NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_destroy_handle (
@@ -2670,7 +2664,7 @@ hsa_status_t HSA_API hsa_ext_image_destroy_handle (
     hsa_ext_image_handle_t *image_handle);
 
 /**
- * @brief Create an HSA component-defined sampler handle from a
+ * @brief Create an HSA component-defined sampler handle from an HSA
  * component-independent sampler descriptor.
  *
  * @details If successful, the sampler handle is written to the location
@@ -2680,17 +2674,17 @@ hsa_status_t HSA_API hsa_ext_image_destroy_handle (
  *
  * @param[in] sampler_descriptor Implementation-independent sampler descriptor.
  *
- * @param[out] sampler_handle Component-specific sampler handle.
+ * @param[out] sampler_handle HSA component-specific sampler handle.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT Any of the arguments are NULL.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES If the HSA agent cannot create
- * the specified handle because it is out of resources.
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES The HSA agent cannot create the
+ * specified handle because it is out of resources.
  */
 hsa_status_t HSA_API hsa_ext_sampler_create_handle(
     hsa_agent_t agent,
@@ -2715,7 +2709,7 @@ hsa_status_t HSA_API hsa_ext_sampler_create_handle(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If any of the arguments is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT Any of the arguments are NULL.
  */
 hsa_status_t HSA_API hsa_ext_sampler_destroy_handle(
     hsa_agent_t agent,

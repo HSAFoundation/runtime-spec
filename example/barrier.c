@@ -11,11 +11,11 @@ typedef struct comp_vector_s {
     hsa_agent_t* comp;
 } comp_vector_t;
 
-// Find agent that can process Dispatch packets.
+// Find HSA agent that can process Kernel Dispatch packets.
 hsa_status_t get_components(hsa_agent_t agent, void* data) {
     uint32_t features = 0;
     hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
-    if (features & HSA_AGENT_FEATURE_DISPATCH) {
+    if (features & HSA_AGENT_FEATURE_KERNEL_DISPATCH) {
         comp_vector_t* ret = (comp_vector_t*)data;
         ret->comp[ret->count] = agent;
         ret->count++;
@@ -31,10 +31,10 @@ hsa_agent_t* get_two_components() {
     return comp_vector.comp;
 }
 
-hsa_dispatch_packet_t* initialize_packet(uint64_t base_address, uint64_t write_index) {
-    const size_t packet_size = sizeof(hsa_dispatch_packet_t);
+hsa_kernel_dispatch_packet_t* initialize_packet(uint64_t base_address, uint64_t write_index) {
+    const size_t packet_size = sizeof(hsa_kernel_dispatch_packet_t);
     uint64_t curr_address = base_address + write_index * packet_size;
-    hsa_dispatch_packet_t* dispatch_packet = (hsa_dispatch_packet_t*)curr_address;
+    hsa_kernel_dispatch_packet_t* dispatch_packet = (hsa_kernel_dispatch_packet_t*)curr_address;
 
     memset(dispatch_packet, 0, packet_size); // reserved fields are zeroed
 
@@ -75,49 +75,49 @@ void packet_type_store_release(hsa_packet_header_t* header, hsa_packet_type_t ty
 int main(){
     hsa_init();
 
-    // Find available components. Let's assume there are two, A and B
+    // Find available HSA components. Let's assume there are two, A and B
     hsa_agent_t* component = get_two_components();
 
-    // Create queue in component A and prepare a Dispatch packet
+    // Create queue in HSA component A and prepare a Kernel Dispatch packet
     hsa_queue_t *queue_a;
     hsa_queue_create(component[0], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue_a);
     uint64_t packet_id_a = hsa_queue_add_write_index_relaxed(queue_a, 1);
 
-    hsa_dispatch_packet_t* packet_a = initialize_packet(queue_a->base_address, packet_id_a);
+    hsa_kernel_dispatch_packet_t* packet_a = initialize_packet(queue_a->base_address, packet_id_a);
     // KERNEL_A is the memory location of the 1st kernel object
     packet_a->kernel_object_address = (uint64_t) KERNEL_A;
 
-    // Create a signal with a value of 1 and attach it to the first Dispatch packet
+    // Create a signal with a value of 1 and attach it to the first Kernel Dispatch packet
     hsa_signal_t signal;
     hsa_signal_create(1, 0, NULL, &signal);
     packet_a->completion_signal = signal;
 
-    // Tell packet processor of A to launch the first Dispatch packet
-    packet_type_store_release(&packet_a->header, HSA_PACKET_TYPE_DISPATCH);
+    // Tell packet processor of A to launch the first Kernel Dispatch packet
+    packet_type_store_release(&packet_a->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
     hsa_signal_store_release(queue_a->doorbell_signal, packet_id_a);
 
-    // Create queue in component B
+    // Create queue in HSA component B
     hsa_queue_t *queue_b;
     hsa_queue_create(component[1], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue_b);
     uint64_t packet_id_b = hsa_queue_add_write_index_relaxed(queue_b, 2);
 
     // Create Barrier packet that is enqueued in a queue of B
-    const size_t packet_size = sizeof(hsa_dispatch_packet_t);
+    const size_t packet_size = sizeof(hsa_kernel_dispatch_packet_t);
     uint64_t curr_address = queue_b->base_address + packet_id_b * packet_size;
     hsa_barrier_packet_t* barrier_packet = (hsa_barrier_packet_t*)curr_address;
     memset(barrier_packet, 0, packet_size);
     barrier_packet->header.release_fence_scope = HSA_FENCE_SCOPE_COMPONENT;
 
-    // Add dependency on the first Dispatch Packet
+    // Add dependency on the first Kernel Dispatch Packet
     barrier_packet->dep_signal[0] = signal;
     packet_type_store_release(&barrier_packet->header, HSA_PACKET_TYPE_BARRIER);
 
-    // Create and enqueue a second Dispatch packet after the Barrier in B. The second dispatch is launched after the first
+    // Create and enqueue a second Kernel Dispatch packet after the Barrier in B. The second dispatch is launched after the first
     // has completed
-    hsa_dispatch_packet_t* packet_b = initialize_packet(queue_b->base_address, packet_id_b + 1);
+    hsa_kernel_dispatch_packet_t* packet_b = initialize_packet(queue_b->base_address, packet_id_b + 1);
     // KERNEL_B is the memory location of the 2nd kernel object
     packet_b->kernel_object_address = (uint64_t) KERNEL_B;
-    packet_type_store_release(&packet_b->header, HSA_PACKET_TYPE_DISPATCH);
+    packet_type_store_release(&packet_b->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
 
     hsa_signal_store_release(queue_b->doorbell_signal, packet_id_b + 1);
 

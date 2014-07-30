@@ -9,7 +9,7 @@
 
 const int kNum = 20;
 
-// Find CPU agent that can process Agent Dispatch packets.
+// Find CPU HSA agent that can process Agent Dispatch packets.
 hsa_status_t get_agent_dispatch_agent(hsa_agent_t agent, void* data) {
     uint32_t features = 0;
     hsa_device_type_t device;
@@ -25,12 +25,12 @@ hsa_status_t get_agent_dispatch_agent(hsa_agent_t agent, void* data) {
     return HSA_STATUS_SUCCESS;
 }
 
-// Find agent that can process Dispatch packets.
+// Find HSA agent that can process Kernel Dispatch packets.
 hsa_status_t get_component(hsa_agent_t agent, void* data) {
     uint32_t features = 0;
     hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
-    if (features & HSA_AGENT_FEATURE_DISPATCH) {
-        // Store component in user-provided buffer and return
+    if (features & HSA_AGENT_FEATURE_KERNEL_DISPATCH) {
+        // Store HSA component in user-provided buffer and return
         hsa_agent_t* ret = (hsa_agent_t*)data;
         *ret = agent;
         return HSA_STATUS_INFO_BREAK;
@@ -64,7 +64,7 @@ void process_agent_dispatch(hsa_queue_t* service_queue) {
         assert(packet->type >= 0x8000);
 
         if (packet->type == 0x8000) {
-            // Component requests memory
+            // HSA component requests memory
             void** ret = (void**) packet->return_address;
             size_t size = (size_t) packet->arg[0];
             *ret = malloc(size);
@@ -125,20 +125,20 @@ int main(){
     hsa_queue_t *service_queue;
     hsa_queue_create(agent_dispatch_agent, 16, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &service_queue);
 
-    // Launch thread serving agent dispatch packets
+    // Launch thread serving Agent Dispatch packets
     std::thread* agent_dispatch_thread = new std::thread(process_agent_dispatch, service_queue);
 
-    // Retrieve the component
+    // Retrieve the HSA component
     hsa_agent_t component;
     hsa_iterate_agents(get_component, &component);
     hsa_queue_t* queue;
     hsa_queue_create(component, 16, HSA_QUEUE_TYPE_MULTI, callback, service_queue, &queue);
 
-    // Dispatch kernel on component that requests multiple allocation via Agent Dispatch packets
+    // Dispatch kernel on HSA component that requests multiple allocation via Agent Dispatch packets
     uint64_t write_index = hsa_queue_add_write_index_relaxed(queue, 1);
-    const size_t packet_size = sizeof(hsa_dispatch_packet_t);
+    const size_t packet_size = sizeof(hsa_kernel_dispatch_packet_t);
     uint64_t curr_address = queue->base_address + write_index * packet_size;
-    hsa_dispatch_packet_t* dispatch_packet = (hsa_dispatch_packet_t*)curr_address;
+    hsa_kernel_dispatch_packet_t* dispatch_packet = (hsa_kernel_dispatch_packet_t*)curr_address;
     memset(dispatch_packet, 0, packet_size); // reserved fields are zeroed
     dispatch_packet->header.acquire_fence_scope = HSA_FENCE_SCOPE_COMPONENT;
     dispatch_packet->header.release_fence_scope = HSA_FENCE_SCOPE_COMPONENT;
@@ -154,7 +154,7 @@ int main(){
     dispatch_packet->completion_signal = signal;
 
     // Notify the queue that the packet is ready to be processed
-    dispatch_packet->header.type = HSA_PACKET_TYPE_DISPATCH;
+    dispatch_packet->header.type = HSA_PACKET_TYPE_KERNEL_DISPATCH;
     hsa_signal_store_release(queue->doorbell_signal, write_index);
 
     // Wait for the task to finish, which is the same as waiting for the value of the

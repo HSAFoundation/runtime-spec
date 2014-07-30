@@ -254,7 +254,7 @@ hsa_status_t HSA_API hsa_init();
  * associated with it (queues, signals, agent information, etc.) are
  * considered invalid and any attempt to reference them in subsequent API calls
  * results in undefined behavior. When the reference count reaches zero, the HSA
- * runtime might release resources associated with it.
+ * runtime may release resources associated with it.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -324,7 +324,7 @@ hsa_status_t HSA_API hsa_system_get_info(
 
 /**
  * @brief Opaque handle representing an agent, a device that participates in the
- * HSA memory model. An agent can submit AQL packets for execution, and might
+ * HSA memory model. An agent can submit AQL packets for execution, and may
  * also accept AQL packets for execution (Agent Dispatch packets or Dispatch
  * packets launching HSAIL-derived binaries).
  */
@@ -1888,7 +1888,7 @@ hsa_status_t HSA_API hsa_agent_iterate_regions(
  *
  * @param[in] region Region where to allocate memory from.
  *
- * @param[in] size Allocation size, in bytes. This value is rounded up to the
+ * @param[in] size Allocation size, in bytes. This value is rounded up to 
  * the nearest multiple of ::HSA_REGION_INFO_ALLOC_GRANULE in @p
  * region. Allocations of size 0 are allowed and return a NULL pointer.
  *

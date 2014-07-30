@@ -16,8 +16,8 @@ void increment(void* kernarg) {
     counter->fetch_add(1, std::memory_order_release);
 }
 
-void initialize_packet(hsa_dispatch_packet_t* dispatch_packet) {
-    memset(dispatch_packet, 0, sizeof(hsa_dispatch_packet_t));
+void initialize_packet(hsa_kernel_dispatch_packet_t* dispatch_packet) {
+    memset(dispatch_packet, 0, sizeof(hsa_kernel_dispatch_packet_t));
     dispatch_packet->header.acquire_fence_scope = HSA_FENCE_SCOPE_COMPONENT;
     dispatch_packet->header.release_fence_scope = HSA_FENCE_SCOPE_COMPONENT;
     dispatch_packet->dimensions = 1;
@@ -30,7 +30,7 @@ void initialize_packet(hsa_dispatch_packet_t* dispatch_packet) {
 hsa_status_t get_component(hsa_agent_t agent, void* data) {
     uint32_t features = 0;
     hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
-    if (features & HSA_AGENT_FEATURE_DISPATCH) {
+    if (features & HSA_AGENT_FEATURE_KERNEL_DISPATCH) {
         hsa_queue_type_t queue_type;
         hsa_agent_get_info(agent, HSA_AGENT_INFO_QUEUE_TYPE, &queue_type);
         if (queue_type == HSA_QUEUE_TYPE_MULTI) {
@@ -51,7 +51,7 @@ void enqueue(hsa_queue_t* queue) {
     // Create a signal with an initial value of 1000 to monitor the overall task completion
     hsa_signal_t signal;
     hsa_signal_create(1000, 0, NULL, &signal);
-    hsa_dispatch_packet_t* packets = (hsa_dispatch_packet_t*)queue->base_address;
+    hsa_kernel_dispatch_packet_t* packets = (hsa_kernel_dispatch_packet_t*)queue->base_address;
 
     for (int i = 0; i < 1000; i++) {
         // Atomically request a new packet ID.
@@ -61,11 +61,11 @@ void enqueue(hsa_queue_t* queue) {
         while (packet_id - hsa_queue_load_read_index_acquire(queue) >= queue->size);
 
         // Compute packet offset, considering wrap-around
-        hsa_dispatch_packet_t* dispatch_packet = packets + packet_id % queue->size;
+        hsa_kernel_dispatch_packet_t* dispatch_packet = packets + packet_id % queue->size;
 
         initialize_packet(dispatch_packet);
         dispatch_packet->completion_signal = signal;
-        packet_type_store_release(&dispatch_packet->header, HSA_PACKET_TYPE_DISPATCH);
+        packet_type_store_release(&dispatch_packet->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
         hsa_signal_store_release(queue->doorbell_signal, packet_id);
     }
 

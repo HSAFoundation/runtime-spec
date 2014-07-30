@@ -182,7 +182,7 @@ namespace hsa {
       }
     }
 
-    bool ProcessDispatch(hsa_dispatch_packet_t& packet) {
+    bool ProcessDispatch(hsa_kernel_dispatch_packet_t& packet) {
       if (packet.dimensions == 0) {
         if (callback_) {
           callback_(HSA_STATUS_ERROR_INVALID_PACKET_FORMAT, &q_);
@@ -222,8 +222,8 @@ namespace hsa {
         size_t curr = read_index_ % q_.size;
         packet_t* packet = packets_ + curr;
         while (packet->header.type <= HSA_PACKET_TYPE_INVALID);
-        if (packet->header.type == HSA_PACKET_TYPE_DISPATCH) {
-          ok &= ProcessDispatch(*((hsa_dispatch_packet_t*)packet));
+        if (packet->header.type == HSA_PACKET_TYPE_KERNEL_DISPATCH) {
+          ok &= ProcessDispatch(*((hsa_kernel_dispatch_packet_t*)packet));
         } else if (packet->header.type == HSA_PACKET_TYPE_BARRIER) {
           ok &= ProcessBarrier(*((hsa_barrier_packet_t*)packet));
         } else {
@@ -403,7 +403,7 @@ namespace hsa {
       }
       case HSA_AGENT_INFO_FEATURE: {
         uint32_t* dst = (uint32_t*)value;
-        *dst = agent_dispatch_enabled_ ? HSA_AGENT_FEATURE_AGENT_DISPATCH : HSA_AGENT_FEATURE_DISPATCH;
+        *dst = agent_dispatch_enabled_ ? HSA_AGENT_FEATURE_AGENT_DISPATCH : HSA_AGENT_FEATURE_KERNEL_DISPATCH;
         return HSA_STATUS_SUCCESS;
       }
       case HSA_AGENT_INFO_QUEUE_TYPE: {
