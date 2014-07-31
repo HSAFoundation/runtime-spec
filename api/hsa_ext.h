@@ -1338,7 +1338,7 @@ hsa_status_t HSA_API hsa_ext_finalize_program(
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully, and
  * HSA component's ID is queried.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program or @p agent are
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p program or @p agent is
  * invalid, or @p program_agent_id is NULL.
  */
 hsa_status_t HSA_API hsa_ext_query_program_agent_id(
@@ -2301,7 +2301,7 @@ typedef struct hsa_ext_sampler_descriptor_s {
  * initialized.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent, @p image_format, or
- * @p capability_mask are NULL.
+ * @p capability_mask is NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_get_format_capability(
     hsa_agent_t agent,
@@ -2464,7 +2464,7 @@ hsa_status_t HSA_API hsa_ext_image_create_handle(
  * initialized.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent, @p src_memory or @p
- * image_region are NULL.
+ * image_region is NULL.
  *
  */
 hsa_status_t HSA_API hsa_ext_image_import (
@@ -2523,7 +2523,7 @@ hsa_status_t HSA_API hsa_ext_image_import (
  * initialized.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent, @p dst_memory or @p
- * image_region are NULL.
+ * image_region is NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_export(
     hsa_agent_t agent,
@@ -2571,7 +2571,7 @@ hsa_status_t HSA_API hsa_ext_image_export(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent or @p image_region are
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent or @p image_region is
  * NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_copy(
@@ -2586,7 +2586,7 @@ hsa_status_t HSA_API hsa_ext_image_copy(
  *
  * @details The operation clears the elements of the image with the data
  * specified. The lowest bits of the data (number of bits depending on the image
- * component type) are stored in the cleared image are based on the image
+ * component type) stored in the cleared image are based on the image
  * component order. The size of the image data cleared is implicitly derived
  * from the image region.
  *
@@ -2603,7 +2603,7 @@ hsa_status_t HSA_API hsa_ext_image_copy(
  * range. For images of SNORM types, the floating point values must be in the
  * [-1..1] range. For images of UINT types, the floating point values are
  * rounded down to an integer value. For images of SRGB types, the clear data is
- * specified in a linear space, which is appropriately converted by the Runtime
+ * specified in a linear space, which is appropriately converted by the runtime
  * to sRGB color space.
  *
  * Specifying clear value outside of the range representable by an image format
@@ -2624,7 +2624,7 @@ hsa_status_t HSA_API hsa_ext_image_copy(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent or @p image_region are
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent or @p image_region is
  * NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_clear(
@@ -2656,7 +2656,7 @@ hsa_status_t HSA_API hsa_ext_image_clear(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent or @p image_handle are
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p agent or @p image_handle is
  * NULL.
  */
 hsa_status_t HSA_API hsa_ext_image_destroy_handle (

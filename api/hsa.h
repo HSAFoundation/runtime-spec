@@ -2021,7 +2021,7 @@ hsa_status_t HSA_API hsa_memory_free(void* ptr);
 /*  * initialized. */
 /*  * */
 /*  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If the source or destination */
-/*  * pointers are NULL. */
+/*  * pointers is NULL. */
 /*  *\/ */
 /* hsa_status_t HSA_API hsa_memory_copy( */
 /*     void *dst, */
