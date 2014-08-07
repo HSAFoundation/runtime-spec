@@ -189,7 +189,7 @@
 % clear all header and footer fields
 \fancyhf{}
 \rfoot{\scriptsize{\thepage}}
-\lfoot{\scriptsize{\doctitle$\:$v1.0 Provisional $\:$-$\:$\today}}
+\lfoot{\scriptsize{\doctitle$\:$v1.00 Provisional $\:$-$\:$\today}}
 \lhead{\scriptsize{\nouppercase{\tidyhdr{\leftmark}{\rightmark}}}}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
@@ -200,6 +200,28 @@
 \hfstyle{}
 \renewcommand{\chaptermark}[1]{\markboth{#1}{}}
 \renewcommand{\sectionmark}[1]{\markright{#1}{}}
+
+\usepackage{datatool}
+\newcommand{\sortitem}[2]{%
+  \DTLnewrow{list}%
+  \DTLnewdbentry{list}{company}{#1}%
+  \DTLnewdbentry{list}{description}{#2}%
+}
+\newcommand*{\processed}{}
+\newenvironment{sorteddescription}{%
+  \DTLifdbexists{list}{\DTLcleardb{list}}{\DTLnewdb{list}}
+}{
+  \DTLsort{company,description}{list}
+  \begin{description}[itemsep=0pt,leftmargin=0pt, labelindent=0cm]
+    \DTLforeach*{list}{\comp=company,\desc=description}{
+      \expandafter\DTLifinlist\expandafter{\comp}{\processed}
+         {\hspace{-1mm}\desc\\}
+         {\ifdefempty{\processed}{\let\processed\comp{\item[\comp]$\;$\\\desc\\}}
+         {\eappto\processed{,\comp}{\item[\comp]$\;$\\\desc\\}}% append to list
+         }
+       }
+  \end{description}
+}
 
 % plain style is identical to fancy style. This avoids different formatting in
 % the first page of every chapter, for example.
@@ -224,7 +246,7 @@
 \includegraphics[width=.4\textwidth]{fig/foundation.png}
 \vspace*{7cm}
 \begin{center}
-{\Large \doctitle\\[1ex]\large 1.0 Provisional}\\ % remember to change footer version too!
+{\Large \doctitle\\[1ex]\large 1.00 Provisional}\\ % remember to change footer version too!
 \vspace*{1cm}
 \vspace*{0.5cm}
 {\small \today}
@@ -272,8 +294,56 @@ whether direct, indirect, special or consequential damages for lost revenues,
 lost profits, or otherwise, arising from or in connection with these materials.
 
 \clearpage
+
+{\Huge \textbf{Acknowledgments}}\\[3mm]
+This specification is the result of the contributions of many people. Here
+is a partial list of the contributors, including the company that they
+represented at the time of their contribution:
+
+\begin{sorteddescription}
+\sortitem{AMD}{M\'{e}ndez-Lojo, Mario (spec editor)}
+\sortitem{AMD}{Tye, Tony}
+\sortitem{AMD}{Zhuravlyov, Konstantin}
+\sortitem{AMD}{Sander, Ben}
+\sortitem{AMD}{Tipparaju, Vinod}
+\sortitem{AMD}{Thangirala, Hari}
+\sortitem{AMD}{Blinzer, Paul}
+\sortitem{Qualcomm}{Howes, Lee}
+\sortitem{Qualcomm}{Gaster, Ben}
+\sortitem{Qualcomm}{Bourd, Alex}
+\sortitem{Qualcomm}{Bin, Lihan}
+\sortitem{Qualcomm}{Rychlik, Bob}
+\sortitem{Qualcomm}{Simpson, Robert J.}
+\sortitem{ARM}{Kovacevic, Djordje}
+\sortitem{ARM}{Parker, Jason}
+\sortitem{ARM}{Persson, H\r{a}kan}
+\sortitem{Imagination}{Aldis, James}
+\sortitem{Imagination}{Meredith, Jason}
+\sortitem{Imagination}{Howson, John}
+\sortitem{Imagination}{Glew, Andy}
+\sortitem{Imagination}{McCarthy, James}
+\sortitem{Imagination}{Rankilor, Mark}
+\sortitem{Mediatek}{Bagley, Richard}
+\sortitem{Mediatek}{Ju, Roy}
+\sortitem{Mediatek}{Lo, Trent}
+\sortitem{Mediatek}{Lin, Jason}
+\sortitem{Mediatek}{Hsu, Barz}
+\sortitem{Mediatek}{Huang, Emerson}
+\sortitem{Mediatek}{Agarwal, Rahul}
+\sortitem{Via Alliance Technologies}{Hong, Mike}
+\sortitem{Sandia National Laboratories}{Stark, Dylan}
+\sortitem{Sandia National Laboratories}{Hammond, Simon D.}
+\sortitem{Samsung Electronics}{Kohii, Soma}
+\sortitem{Samsung Electronics}{Ryu, Soojung}
+\sortitem{Samsung Electronics}{Llamas, Ignacio}
+\sortitem{Samsung Electronics}{Shebanow, Michael}
+\sortitem{Codeplay}{Potter, Ralph}
+\sortitem{Codeplay}{Richards, Andrew (workgroup chair)}
+\end{sorteddescription}
+
+\clearpage
 \phantomsection
-\addcontentsline{toc}{chapter}{Contents} % add TOC to TOC
+\addcontentsline{toc}{chapter}{Contents} % add to TOC
 \tableofcontents
 
 \clearpage
