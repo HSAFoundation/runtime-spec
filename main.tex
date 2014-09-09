@@ -92,7 +92,6 @@
 % formatting of arguments, function names, types, etc.
 % remember to add this commands to the safe command list of Latexdiff so
 % it includes them in the diff algorithm
-\newcommand{\hsaarg}[1]{\textit{#1}}
 \newcommand{\reffun}[1]{\textbf{#1}}
 \newcommand{\refarg}[1]{\textit{#1}}
 \newcommand{\reffld}[1]{\textit{#1}}
@@ -200,6 +199,27 @@
 \hfstyle{}
 \renewcommand{\chaptermark}[1]{\markboth{#1}{}}
 \renewcommand{\sectionmark}[1]{\markright{#1}{}}
+\usepackage{datatool}
+\newcommand{\sortitem}[2]{%
+  \DTLnewrow{list}%
+  \DTLnewdbentry{list}{company}{#1}%
+  \DTLnewdbentry{list}{description}{#2}%
+}
+\newcommand*{\processed}{}
+\newenvironment{sorteddescription}{%
+  \DTLifdbexists{list}{\DTLcleardb{list}}{\DTLnewdb{list}}
+}{
+  \DTLsort{company,description}{list}
+  \begin{description}[itemsep=0pt,leftmargin=0pt, labelindent=0cm]
+    \DTLforeach*{list}{\comp=company,\desc=description}{
+      \expandafter\DTLifinlist\expandafter{\comp}{\processed}
+         {\hspace{-1mm}\desc\\}
+         {\ifdefempty{\processed}{\let\processed\comp{\item[\comp]$\;$\\\desc\\}}
+         {\eappto\processed{,\comp}{\item[\comp]$\;$\\\desc\\}}% append to list
+         }
+       }
+  \end{description}
+}
 
 % plain style is identical to fancy style. This avoids different formatting in
 % the first page of every chapter, for example.
@@ -212,10 +232,13 @@
 % also, changing default 'add color' to avoid collisions with lstlistings colors
 \providecommand{\DIFadd}[1]{{\protect\color{Cerulean}#1}}
 \renewcommand{\DIFadd}[1]{{\protect\color{Cerulean}#1}}
-% \providecommand{\DIFaddbegin}{\begingroup\color{Cerulean}}
-% \renewcommand{\DIFaddbegin}{\begingroup\color{Cerulean}}
-% \providecommand{\DIFaddend}{\endgroup}
-% \renewcommand{\DIFaddend}{\endgroup}
+
+% Surrounding the text with \mbox is the only way \sout can wrap \hyperref or
+% \hypertarget; otherwise, we get a compilation error.
+% However, mbox'ed text does not respect the page margins, resulting in lines
+% that disappear through the right hand-side of the page.
+\providecommand{\DIFdel}[1]{{\protect\color{red}\sout{\mbox{#1}}}}
+\renewcommand{\DIFdel}[1]{{\protect\color{red}\sout{\mbox{#1}}}}
 
 \pagenumbering{roman}
 \addcontentsline{toc}{chapter}{Cover} % add cover to TOC
@@ -272,8 +295,53 @@ whether direct, indirect, special or consequential damages for lost revenues,
 lost profits, or otherwise, arising from or in connection with these materials.
 
 \clearpage
+{\Huge \textbf{Acknowledgments}}\\[3mm]
+This specification is the result of the contributions of many people. Here
+is a partial list of the contributors, including the company that they
+represented at the time of their contribution:
+\begin{sorteddescription}
+\sortitem{AMD}{M\'{e}ndez-Lojo, Mario (spec editor)}
+\sortitem{AMD}{Tye, Tony}
+\sortitem{AMD}{Zhuravlyov, Konstantin}
+\sortitem{AMD}{Sander, Ben}
+\sortitem{AMD}{Tipparaju, Vinod}
+\sortitem{AMD}{Thangirala, Hari}
+\sortitem{AMD}{Blinzer, Paul}
+\sortitem{Qualcomm}{Howes, Lee}
+\sortitem{Qualcomm}{Gaster, Ben}
+\sortitem{Qualcomm}{Bourd, Alex}
+\sortitem{Qualcomm}{Bin, Lihan}
+\sortitem{Qualcomm}{Rychlik, Bob}
+\sortitem{Qualcomm}{Simpson, Robert J.}
+\sortitem{ARM}{Kovacevic, Djordje}
+\sortitem{ARM}{Parker, Jason}
+\sortitem{ARM}{Persson, H\r{a}kan}
+\sortitem{Imagination}{Aldis, James}
+\sortitem{Imagination}{Meredith, Jason}
+\sortitem{Imagination}{Howson, John}
+\sortitem{Imagination}{Glew, Andy}
+\sortitem{Imagination}{McCarthy, James}
+\sortitem{Imagination}{Rankilor, Mark}
+\sortitem{Mediatek}{Bagley, Richard}
+\sortitem{Mediatek}{Ju, Roy}
+\sortitem{Mediatek}{Lo, Trent}
+\sortitem{Mediatek}{Lin, Jason}
+\sortitem{Mediatek}{Hsu, Barz}
+\sortitem{Mediatek}{Huang, Emerson}
+\sortitem{Mediatek}{Agarwal, Rahul}
+\sortitem{Via Alliance Technologies}{Hong, Mike}
+\sortitem{Sandia National Laboratories}{Stark, Dylan}
+\sortitem{Sandia National Laboratories}{Hammond, Simon D.}
+\sortitem{Samsung Electronics}{Kohli, Soma}
+\sortitem{Samsung Electronics}{Ryu, Soojung}
+\sortitem{Samsung Electronics}{Llamas, Ignacio}
+\sortitem{Samsung Electronics}{Shebanow, Michael}
+\sortitem{Codeplay}{Potter, Ralph}
+\sortitem{Codeplay}{Richards, Andrew (workgroup chair)}
+\end{sorteddescription}
+\clearpage
 \phantomsection
-\addcontentsline{toc}{chapter}{Contents} % add TOC to TOC
+\addcontentsline{toc}{chapter}{Contents} % add to TOC
 \tableofcontents
 
 \clearpage
@@ -488,11 +556,11 @@ different types of packets; the one used for dispatching a kernel is named
 The binary structure of the different packet types is defined in the HSA
 Architecture Specification~\cite{sar} standard. For example, all the packets
 types occupy 64 bytes of storage and share a common header, and the Kernel
-Dispatch packets should specify the address of the ISA to run at offset 32. The
-packet structure is known to the application (Kernel Dispatch packets correspond
-to the \hsaref{hsa_kernel_dispatch_packet_t} type in the HSA API), but also to
-the hardware. This is a key HSA feature that enables applications to launch a
-packet in a specific HSA agent by simply placing it in one of its
+Dispatch packets should specify the address of the executable code at offset
+32. The packet structure is known to the application (Kernel Dispatch packets
+correspond to the \hsaref{hsa_kernel_dispatch_packet_t} type in the HSA API),
+but also to the hardware. This is a key HSA feature that enables applications to
+launch a packet in a specific HSA agent by simply placing it in one of its
 \textit{queues}.
 
 A queue is a runtime-allocated resource that contains a packet buffer and a
@@ -584,9 +652,9 @@ start asynchronously at any moment. The application could simultaneously write
 more packets to launch other kernels in the same queue.
 
 In this introductory example, we omitted some important steps in the dispatch
-process. In particular, we did not show how to compile a kernel, indicate
-which ISA to run in the Kernel Dispatch packet, nor how to pass arguments to the
-kernel. However, some relevant differences with other runtime systems and
+process. In particular, we did not show how to compile a kernel, indicate which
+executable code to run in the Kernel Dispatch packet, nor how to pass arguments
+to the kernel. However, some relevant differences with other runtime systems and
 programming models are already evident.  Other runtime systems provide software
 APIs for setting arguments and launching kernels, while HSA architects these at
 the hardware and specification level. An HSA application can use regular memory
@@ -697,8 +765,8 @@ number of work-items in the grid.
 
 Implementations of \hsaref{hsa_iterate_agents} are required to at least report:
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item the host (CPU) HSA agent
-\item one HSA component
+\item The host (CPU) HSA agent
+\item One HSA component
 \end{itemize}
 
 The application can use \hsaref{hsa_system_get_info} to query system-wide
@@ -725,7 +793,7 @@ operator such as \hsaref{hsa_signal_wait_acquire}, which is implemented by the
 runtime using efficient hardware features.
 
 The runtime API uses opaque signal handlers of type \hsaref{hsa_signal_t} to
-represent signals. A signal carries an integer value of type
+represent signals. A signal carries a signed integer value of type
 \reftyp{hsa_signal_value_t} that can be accessed or conditionally waited upon
 through an API call or HSAIL instruction. The value occupies four or eight bytes
 depending on the machine model (small or large, respectively) being used. The
@@ -1022,7 +1090,7 @@ required to explicitly reserve storage space for packets because a
 queue already contains a command buffer where AQL packets can be written.
 
 The HSA API defines the format of the different packet types: Kernel Dispatch,
-Agent Dispatch, Barrier and Trigger. All formats share a common header
+Agent Dispatch, Barrier-AND and Barrier-OR. All formats share a common header
 \hsaref{hsa_packet_type_t} that describes their type, barrier bit (force the
 packet processor to complete packets in order), and other properties.
 
@@ -1032,7 +1100,7 @@ An application uses a Kernel Dispatch packet
 (\hsaref{hsa_kernel_dispatch_packet_t}) to submit a kernel to an HSA
 component. The packet contains the following bits of information:
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item A pointer to the kernel ISA is stored in
+\item A pointer to the kernel executable code is stored in
   \hsaref{hsa_kernel_dispatch_packet_t.kernel_object_address}.
 \item A pointer to the kernel arguments is stored in
   \hsaref{hsa_kernel_dispatch_packet_t.kernarg_address}. The application
@@ -1175,23 +1243,23 @@ In practice, processing of Agent Dispatch packets is usually more
 complex because the consumer has to take into account multiple-producer
 scenarios.
 
-\subsection{Barrier and Trigger packets}\label{barrier-packet}
+\subsection{Barrier-AND and Barrier-OR packets}\label{barrier-packet}
 
-The Barrier packet (of type \hsaref{hsa_barrier_packet_t}) allows an application
-to specify up to five signal dependencies and requires the packet processor to
-resolve those dependencies before proceeding. The packet processor will not
-launch any further packets in that queue until the Barrier packet is complete. A
-Barrier packet is complete when all of the dependent signals have been observed
-with the value 0 after the Barrier packet launched. It is not required that all
-dependent signals are observed to be 0 at the same time.
+The Barrier-AND packet (of type \hsaref{hsa_barrier_and_packet_t}) allows an
+application to specify up to five signal dependencies and requires the packet
+processor to resolve those dependencies before proceeding. The packet processor
+will not launch any further packets in that queue until the Barrier-AND packet
+is complete. A Barrier-AND packet is complete when all of the dependent signals
+have been observed with the value 0 after the Barrier-AND packet launched. It is
+not required that all dependent signals are observed to be 0 at the same time.
 
-The Trigger packet (of type \hsaref{hsa_trigger_packet_t}) is very similar to
-the Barrier packet, but it becomes complete when the packet processor observes
-that any of the dependent signals have a value of 0.
+The Barrier-OR packet (of type \hsaref{hsa_barrier_or_packet_t}) is very similar
+to the Barrier-AND packet, but it becomes complete when the packet processor
+observes that any of the dependent signals have a value of 0.
 
 \subsubsection{Example: handling dependencies across kernels running in
   different HSA components}
-A combination of completion signals and Barrier packets allows expressing
+A combination of completion signals and Barrier-AND packets allows expressing
 complex dependencies between packets, queues, and HSA agents that are
 automatically handled by the packet processors. For example, if kernel $b$
 executing in HSA component $B$ consumes the result of kernel $a$ executing in a
@@ -1199,7 +1267,7 @@ different HSA component $A$, then $b$ \textit{depends} on $a$. In HSA, this
 dependency can be enforced across HSA components by creating a signal that will
 be simultaneously used as \begin{inparaenum}[1\upshape)] \item the completion
   signal of a Kernel Dispatch packet $packet\_a$ corresponding to $a$ \item the
-  dependency signal in a Barrier packet that precedes the Kernel Dispatch packet
+  dependency signal in a Barrier-AND packet that precedes the Kernel Dispatch packet
   $packet\_b$ corresponding to $b$\end{inparaenum}. The packet processor
 enforces the task dependency by not launching $packet\_b$ until $packet\_a$ has
 completed. The following example illustrates how to programmatically express the
@@ -1207,11 +1275,6 @@ described dependency using the HSA API.
 \lstinputlisting[firstline=75]{example/barrier.c}
 
 \subsection{Packet states}\label{packet-states}
-
-After submission, a packet can be in one of the following five states:
-\emph{in queue}, \emph{launch}, \emph{error}, \emph{active} or
-\emph{complete}. Figure~\ref{fig:packetstate} shows the state transition
-diagram.
 
 \begin{figure}[b]
   \centering
@@ -1236,6 +1299,11 @@ diagram.
   \caption{Packet State Diagram}
   \label{fig:packetstate}
 \end{figure}
+
+After submission, a packet can be in one of the following five states:
+\emph{in queue}, \emph{launch}, \emph{error}, \emph{active} or
+\emph{complete}. Figure~\ref{fig:packetstate} shows the state transition
+diagram.
 
 \begin{description}[itemsep=2pt,leftmargin=0cm, labelindent=0cm] \item[In queue]
 The packet processor has not started to parse the current packet. If the
@@ -1271,12 +1339,10 @@ barrier bit of the second packet is set.
   the \hsaref{hsa_packet_header_t.release_fence_scope} header field and the
   event callback associated with the queue (if present) is invoked.
 
-  {\color{red}WHICH ERRORS MIGHT BE REPORTED IN THE ACTIVE PHASE?}
-
   If no error is detected, the transition to the complete state happens when the
   associated task finishes (in the case of Kernel Dispatch and Agent Dispatch
-  packets), or when the dependencies are satisfied (in the case of a Barrier and
-  Trigger packets).
+  packets), or when the dependencies are satisfied (in the case of a Barrier-AND
+  and Barrier-OR packets).
 
 \item[Complete] A memory release fence is applied with the scope indicated by
   the \hsaref{hsa_packet_header_t.release_fence_scope} header field, and the
@@ -1328,7 +1394,7 @@ regions on every HSA agent:
   with these characteristics should have identical sizes.
 \end{itemize}
 
-If the application can allocate memory in a region using the function 
+If the application can allocate memory in a region using the function
 \hsaref{hsa_memory_allocate}, the value of the attribute
 \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} is different from zero. The runtime
 allocator can only be used to allocate memory in the global segment. Memory in
@@ -1354,7 +1420,7 @@ address range by invoking \hsaref{hsa_memory_deregister}.
 In the kernel setup example listed in Section~\ref{dispatch-packet}, the kernel
 receives no arguments:
 \begin{lstlisting}
-// Indicate which ISA to run. The application is expected to have finalized a kernel (for example, using the finalization API).
+// Indicate which executable code to run. The application is expected to have finalized a kernel (for example, using the finalization API).
 // We will assume that the kernel object location is stored in KERNEL_ADDRESS
 dispatch_packet->kernel_object_address = (uint64_t) KERNEL_ADDRESS;
 
@@ -1372,7 +1438,7 @@ hold the signal argument. While the actual amount of memory to be allocated is
 determined by the finalizer, for simplicity we will assume that it matches the
 size of a signal handle (8 bytes).
 \begin{lstlisting}
-// Indicate which ISA to run. The application is expected to have finalized a kernel (for example, using the finalization API).
+// Indicate which executable code to run. The application is expected to have finalized a kernel (for example, using the finalization API).
 // We will assume that the kernel object location is stored in KERNEL_ADDRESS
 dispatch_packet->kernel_object_address = (uint64_t) KERNEL_ADDRESS;
 
@@ -1648,6 +1714,19 @@ so the code will become unavailable.
 \input{api/altlatex/group-ext-linker}
 
 
+% \section{Suggested Finalization API}
+% \subsection{API - HSAIL program}
+% \input{api/altlatex/group-alt-finalizer-program}
+
+% \subsection{API - HSAIL modules}
+% \input{api/altlatex/group-alt-finalizer-module}
+
+% \subsection{API - Finalization of kernels and indirect functions}
+% \input{api/altlatex/group-alt-finalizer-finalization}
+
+% \subsection{API - Validation and Serialization}
+% \input{api/altlatex/group-alt-finalizer-miscellaneous}
+
 \section{Images and Samplers}\label{images}
 
 An HSA runtime uses an image handle \hsaref{hsa_ext_image_handle_t} to access
@@ -1729,6 +1808,9 @@ a sampler handle from an HSA agent-independent sampler descriptor
 \item[Architected Queuing Language (AQL)] A command interface for the dispatch
   of HSA agent commands.
 
+\item[AQL packet] User-mode buffer with a specific format (determined by the
+  Architected Queuing Language) that encodes one command.
+
 \item[Arg segment] A memory segment used to pass arguments into and out of
   functions.
 
@@ -1756,14 +1838,13 @@ a sampler handle from an HSA agent-independent sampler descriptor
   construct and enqueue AQL packets. In some systems, a host CPU can also act as
   an HSA component (with appropriate HSAIL finalizer and AQL mechanisms).
 
-\item[HSA agent] A hardware or software component that participates in the HSA
+\item[HSA agent] A hardware or software part that participates in the HSA
   memory model. An HSA agent can submit AQL packets for execution. An HSA agent
   may also but is not required to be an HSA component. It is possible for a
   system to include HSA agents that are neither HSA components nor host CPUs.
 
-\item[HSA application] A program written in the host CPU instruction set
-  architecture (ISA). In addition to the host CPU code, it may include zero or
-  more HSAIL programs.
+\item[HSA application] A program written in the host CPU instruction set. In
+  addition to the host CPU code, it may include zero or more HSAIL programs.
 
 \item[HSA component]
   An HSA agent that supports the HSAIL instruction set and the AQL packet
@@ -1771,18 +1852,16 @@ a sampler handle from an HSA agent-independent sampler descriptor
   component (including itself) using memory operations to construct and enqueue
   AQL packets. An HSA component is composed of one or more compute units.
 
-\item[HSA implementation] A combination of (1) hardware components that execute
+\item[HSA implementation] A combination of (1) hardware elements that execute
   one or more machine instruction set architectures (ISAs), (2) a compiler,
   linker, and loader, (3) a finalizer that translates HSAIL code into the
-  appropriate native ISA if the hardware components cannot support HSAIL
+  appropriate native ISA if the hardware elements cannot support HSAIL
   natively, and (4) a runtime system.
 
 \item[HSA runtime] A library of services that can be executed by the application
   on a host CPU that supports the execution of HSAIL programs. This includes a
   finalizer that translates HSAIL code into the appropriate native ISA for each
-  HSA component that is part of the HSA system. In addition, it supports a
-  runtime queue that can be used by any agent, including HSA components, to
-  submit Agent Dispatch packets to perform runtime functions.
+  HSA component that is part of the HSA system.
 
 \item[HSAIL] Heterogeneous System Architecture Intermediate Language. A virtual
   machine and a language. The instruction set of the HSA virtual machine that
@@ -1851,7 +1930,7 @@ a sampler handle from an HSA agent-independent sampler descriptor
 
 \bibitem{sar}
 \newblock{HSA Platform System Architecture Specification.}
-\newblock{v1.0, HSA Foundation, 2014/06/18.}
+\newblock{v1.0, HSA Foundation, 2014/08/29.}
 
 \end{thebibliography}
 % add bibliography to Table of Contents

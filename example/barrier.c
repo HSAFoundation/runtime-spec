@@ -101,19 +101,19 @@ int main(){
     hsa_queue_create(component[1], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue_b);
     uint64_t packet_id_b = hsa_queue_add_write_index_relaxed(queue_b, 2);
 
-    // Create Barrier packet that is enqueued in a queue of B
+    // Create Barrier-AND packet that is enqueued in a queue of B
     const size_t packet_size = sizeof(hsa_kernel_dispatch_packet_t);
     uint64_t curr_address = queue_b->base_address + packet_id_b * packet_size;
-    hsa_barrier_packet_t* barrier_packet = (hsa_barrier_packet_t*)curr_address;
-    memset(barrier_packet, 0, packet_size);
-    barrier_packet->header.release_fence_scope = HSA_FENCE_SCOPE_COMPONENT;
+    hsa_barrier_and_packet_t* barrier_and_packet = (hsa_barrier_and_packet_t*)curr_address;
+    memset(barrier_and_packet, 0, packet_size);
+    barrier_and_packet->header.release_fence_scope = HSA_FENCE_SCOPE_COMPONENT;
 
     // Add dependency on the first Kernel Dispatch Packet
-    barrier_packet->dep_signal[0] = signal;
-    packet_type_store_release(&barrier_packet->header, HSA_PACKET_TYPE_BARRIER);
+    barrier_and_packet->dep_signal[0] = signal;
+    packet_type_store_release(&barrier_and_packet->header, HSA_PACKET_TYPE_BARRIER_AND);
 
-    // Create and enqueue a second Kernel Dispatch packet after the Barrier in B. The second dispatch is launched after the first
-    // has completed
+    // Create and enqueue a second Kernel Dispatch packet after the Barrier-AND in B. The second dispatch is launched after
+    // the first has completed
     hsa_kernel_dispatch_packet_t* packet_b = initialize_packet(queue_b->base_address, packet_id_b + 1);
     // KERNEL_B is the memory location of the 2nd kernel object
     packet_b->kernel_object_address = (uint64_t) KERNEL_B;

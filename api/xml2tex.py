@@ -320,7 +320,7 @@ def print_signature(func, tex):
     for arg in sigargs:
       argtxt = "\\hspace*{1.7em}"
       type = node2tex(arg.find('type'))
-      name = "\\hsaarg{" + node2tex(arg.find('declname')) + "}"
+      name = "\\refarg{" + node2tex(arg.find('declname')) + "}"
       # pointers to functions require the argument to be printed inside the type
       if "(*)" in type:
         type = type.replace("(*)", " (*" + name + ")")
@@ -360,7 +360,7 @@ def process_function(func, tex, listings, commands, variants):
     arglst = []
     for arg in args:
       argnamenode = arg.find('./parameternamelist/parametername')
-      argtxt = "\hsaarg{" + node2tex(argnamenode) + "}" + "\\\\"
+      argtxt = "\\refarg{" + node2tex(argnamenode) + "}" + "\\\\"
       direction = argnamenode.get('direction')
       argtxt += "\\hspace{2em}"
       argtxt += '' if direction is None else "(" + direction + ") "

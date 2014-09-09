@@ -34,7 +34,7 @@ void initialize_packet(hsa_kernel_dispatch_packet_t* dispatch_packet) {
     dispatch_packet->grid_size_y = 1;
     dispatch_packet->grid_size_z = 1;
 
-    // Indicate which ISA to run. The application is expected to have finalized a kernel (for example, using the finalization API).
+    // Indicate which executable code to run. The application is expected to have finalized a kernel (for example, using the finalization API).
     // We will assume that the kernel object location is stored in KERNEL_ADDRESS
     dispatch_packet->kernel_object_address = (uint64_t) KERNEL_ADDRESS;
 

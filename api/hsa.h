@@ -100,13 +100,25 @@ typedef enum {
      */
     HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH = 0x14000,
     /**
+     * The program is invalid.
+     */
+    HSA_EXT_STATUS_ERROR_INVALID_PROGRAM = 0x14001,
+    /**
+     * The module is invalid.
+     */
+    HSA_EXT_STATUS_ERROR_INVALID_MODULE = 0x14002,
+    /**
+     * The BRIG module is invalid.
+     */
+    HSA_EXT_STATUS_ERROR_INVALID_BRIG_MODULE = 0x14003,
+    /**
      * Image format is not supported.
      */
-    HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED = 0x14001,
+    HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED = 0x15001,
     /**
      * Image size is not supported.
      */
-    HSA_EXT_STATUS_ERROR_IMAGE_SIZE_UNSUPPORTED = 0x14002
+    HSA_EXT_STATUS_ERROR_IMAGE_SIZE_UNSUPPORTED = 0x15002
 
 } hsa_status_t;
 
@@ -1238,7 +1250,8 @@ hsa_status_t HSA_API hsa_queue_create(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p queue is NULL.
  */
-hsa_status_t HSA_API hsa_queue_destroy(hsa_queue_t *queue);
+hsa_status_t HSA_API hsa_queue_destroy(
+    hsa_queue_t *queue);
 
 /**
  * @brief Inactivate a queue.
@@ -1269,13 +1282,13 @@ hsa_status_t HSA_API hsa_queue_inactivate(
  * @return Read index of the queue pointed by @p queue.
  */
 uint64_t HSA_API hsa_queue_load_read_index_acquire(
-    hsa_queue_t *queue);
+    const hsa_queue_t *queue);
 
 /**
  * @copydoc hsa_queue_load_read_index_acquire
  */
 uint64_t HSA_API hsa_queue_load_read_index_relaxed(
-    hsa_queue_t *queue);
+    const hsa_queue_t *queue);
 
 /**
  * @brief Atomically load the write index of a queue.
@@ -1285,13 +1298,13 @@ uint64_t HSA_API hsa_queue_load_read_index_relaxed(
  * @return Write index of the queue pointed by @p queue.
  */
 uint64_t HSA_API hsa_queue_load_write_index_acquire(
-    hsa_queue_t *queue);
+    const hsa_queue_t *queue);
 
 /**
  * @copydoc hsa_queue_load_write_index_acquire
  */
 uint64_t HSA_API hsa_queue_load_write_index_relaxed(
-    hsa_queue_t *queue);
+    const hsa_queue_t *queue);
 
 /**
  * @brief Atomically set the write index of a queue.
@@ -1302,14 +1315,14 @@ uint64_t HSA_API hsa_queue_load_write_index_relaxed(
  *
  */
 void HSA_API hsa_queue_store_write_index_relaxed(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t value);
 
 /**
  * @copydoc hsa_queue_store_write_index_relaxed
  */
 void HSA_API hsa_queue_store_write_index_release(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t value);
 
 /**
@@ -1327,7 +1340,7 @@ void HSA_API hsa_queue_store_write_index_release(
  * @return Previous value of the write index.
  */
 uint64_t HSA_API hsa_queue_cas_write_index_acq_rel(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t expected,
     uint64_t value);
 
@@ -1335,7 +1348,7 @@ uint64_t HSA_API hsa_queue_cas_write_index_acq_rel(
  * @copydoc hsa_queue_cas_write_index_acq_rel
  */
 uint64_t HSA_API hsa_queue_cas_write_index_acquire(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t expected,
     uint64_t value);
 
@@ -1343,7 +1356,7 @@ uint64_t HSA_API hsa_queue_cas_write_index_acquire(
  * @copydoc hsa_queue_cas_write_index_acq_rel
  */
 uint64_t HSA_API hsa_queue_cas_write_index_relaxed(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t expected,
     uint64_t value);
 
@@ -1351,7 +1364,7 @@ uint64_t HSA_API hsa_queue_cas_write_index_relaxed(
  * @copydoc hsa_queue_cas_write_index_acq_rel
  */
 uint64_t HSA_API hsa_queue_cas_write_index_release(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t expected,
     uint64_t value);
 
@@ -1365,28 +1378,28 @@ uint64_t HSA_API hsa_queue_cas_write_index_release(
  * @return Previous value of the write index.
  */
 uint64_t HSA_API hsa_queue_add_write_index_acq_rel(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t value);
 
 /**
  * @copydoc hsa_queue_add_write_index_acq_rel
  */
 uint64_t HSA_API hsa_queue_add_write_index_acquire(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t value);
 
 /**
  * @copydoc hsa_queue_add_write_index_acq_rel
  */
 uint64_t HSA_API hsa_queue_add_write_index_relaxed(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t value);
 
 /**
  * @copydoc hsa_queue_add_write_index_acq_rel
  */
 uint64_t HSA_API hsa_queue_add_write_index_release(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t value);
 
 /**
@@ -1403,14 +1416,14 @@ uint64_t HSA_API hsa_queue_add_write_index_release(
  *
  */
 void HSA_API hsa_queue_store_read_index_relaxed(
-    hsa_queue_t *queue,
+    const hsa_queue_t *queue,
     uint64_t value);
 
 /**
  * @copydoc hsa_queue_store_read_index_relaxed
  */
 void HSA_API hsa_queue_store_read_index_release(
-   hsa_queue_t *queue,
+   const hsa_queue_t *queue,
    uint64_t value);
 /** @} */
 
@@ -1445,7 +1458,7 @@ typedef enum {
    * express complex dependencies between multiple packets. All queues support
    * this packet type.
    */
-  HSA_PACKET_TYPE_BARRIER = 3,
+  HSA_PACKET_TYPE_BARRIER_AND = 3,
   /**
    * Packet used by HSA agents for dispatching jobs to HSA agents.  Not all
    * queues support packets of this type (see ::hsa_queue_feature_t).
@@ -1456,7 +1469,7 @@ typedef enum {
    * express complex dependencies between multiple packets. All queues support
    * this packet type.
    */
-  HSA_PACKET_TYPE_TRIGGER = 5
+  HSA_PACKET_TYPE_BARRIER_OR = 5
 } hsa_packet_type_t;
 
 /**
@@ -1464,8 +1477,8 @@ typedef enum {
  */
 typedef enum {
   /**
-   * No scope. Must only be used as the acquire fence scope of a Barrier or
-   * Trigger packet.
+   * No scope. Must only be used as the acquire fence scope of a Barrier-AND or
+   * Barrier-OR packet.
    */
   HSA_FENCE_SCOPE_NONE = 0,
   /**
@@ -1496,7 +1509,7 @@ typedef struct hsa_packet_header_s {
   /**
    * Determines the scope and type of the memory fence operation applied before
    * the packet enters the active phase. Must be ::HSA_FENCE_SCOPE_NONE for
-   * Barrier and Trigger packets.
+   * Barrier-AND and Barrier-OR packets.
    */
   hsa_fence_scope_t acquire_fence_scope:2;
 
@@ -1590,7 +1603,7 @@ typedef struct hsa_kernel_dispatch_packet_s {
 
   /**
    * Address of an object in memory that includes an implementation-defined
-   * executable ISA image for the kernel.
+   * executable code for the kernel.
    */
   uint64_t kernel_object_address;
 
@@ -1648,8 +1661,8 @@ typedef struct hsa_agent_dispatch_packet_s {
 
   /**
    * The function to be performed by the destination HSA agent. The limits in
-   * ::hsa_agent_dispatch_type_t determine whether the type corresponds to an
-   * application-defined or a vendor-specific function.
+   * ::hsa_agent_dispatch_type_limits_t determine whether the type corresponds
+   * to an application-defined or a vendor-specific function.
    */
   uint16_t type;
 
@@ -1681,9 +1694,9 @@ typedef struct hsa_agent_dispatch_packet_s {
 } hsa_agent_dispatch_packet_t;
 
 /**
- * @brief Barrier packet.
+ * @brief Barrier-AND packet.
  */
-typedef struct hsa_barrier_packet_s {
+typedef struct hsa_barrier_and_packet_s {
   /**
    * Packet header.
    */
@@ -1715,12 +1728,12 @@ typedef struct hsa_barrier_packet_s {
    */
   hsa_signal_t completion_signal;
 
-} hsa_barrier_packet_t;
+} hsa_barrier_and_packet_t;
 
 /**
- * @brief Trigger packet.
+ * @brief Barrier-OR packet.
  */
-typedef struct hsa_trigger_packet_s {
+typedef struct hsa_barrier_or_packet_s {
   /**
    * Packet header.
    */
@@ -1752,7 +1765,7 @@ typedef struct hsa_trigger_packet_s {
    */
   hsa_signal_t completion_signal;
 
-} hsa_trigger_packet_t;
+} hsa_barrier_or_packet_t;
 
 /** @} */
 
