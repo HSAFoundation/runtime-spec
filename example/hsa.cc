@@ -1,7 +1,8 @@
+#define HSA_LARGE_MODEL 1
 #include "hsa.h"
 
 
-
+#include <inttypes.h>
 #include <algorithm>
 #include <cassert>
 #include <cstring> // memset
@@ -19,7 +20,7 @@ namespace hsa {
   typedef void(*dispatch_t)(void* args);
 
   typedef struct packet_s {
-    hsa_packet_header_t header;
+    uint16_t header;
     uint8_t padding[54]; // TODO(mmario): ensure compiler does not add padding
     hsa_signal_t completion_signal;
   } packet_t;
@@ -143,16 +144,17 @@ namespace hsa {
 
       q_.type = type;
       hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &(q_.features));
-      q_.base_address = (uintptr_t)packets_;
+      q_.base_address = packets_;
       q_.doorbell_signal = (hsa_signal_t)&doorbell_;
+
       q_.size = size;
       q_.id = GetUniqueId();
 
       if (!AgentDispatchQueue()) {
         packet_processor_ = new std::thread(&Queue::Go, this);
-        q_.service_queue = (uint64_t)service_queue;
+        q_.service_queue = (hsa_queue_t*) service_queue;
       } else {
-        assert(service_queue == 0);
+        assert(service_queue == NULL);
         // we need to set the initial value to some negative number
         // otherwise, the application code waiting for the signal to become zero will get confused between
         // unitialized doorbells and doorbells rang with ID zero
@@ -183,7 +185,7 @@ namespace hsa {
     }
 
     bool ProcessDispatch(hsa_kernel_dispatch_packet_t& packet) {
-      if (packet.dimensions == 0) {
+      if (packet.setup == 0) { // dimensions
         if (callback_) {
           callback_(HSA_STATUS_ERROR_INVALID_PACKET_FORMAT, &q_);
         }
@@ -195,15 +197,14 @@ namespace hsa {
 
       std::atomic_thread_fence(std::memory_order_acquire);
 
-      dispatch_t func = (dispatch_t)packet.kernel_object_address;
-      uint64_t args = packet.kernarg_address;
-      func((void*) args);
+      dispatch_t func = (dispatch_t)packet.kernel_object;
+      func(packet.kernarg_address);
       std::atomic_thread_fence(std::memory_order_release);
       DecrementCompletionSignal((packet_t&)packet);
       return true;
     }
 
-    bool ProcessBarrier(hsa_barrier_packet_t& packet) {
+    bool ProcessBarrier(hsa_barrier_and_packet_t& packet) {
       for (int i = 0; i < 5; i++) {
         hsa_signal_t dep = packet.dep_signal[i];
         if (dep != 0) {
@@ -216,21 +217,37 @@ namespace hsa {
       return true;
     }
 
+    static void clear_field(uint16_t* header, unsigned int start, unsigned int width) {
+      *header &= ~(((1 << width) - 1) << start);
+    }
+
+    static unsigned int get_field(uint16_t header, unsigned int start, unsigned int width) {
+      return (header >> start) & ((1 << width) - 1);
+    }
+
+    static void set_field(uint16_t* header, unsigned int start, unsigned int width, unsigned int value) {
+      clear_field(header, start, width);
+      *header |= (value << start);
+    }
+
     void Go() {
       bool ok = true;
       while (ok) {
         size_t curr = read_index_ % q_.size;
         packet_t* packet = packets_ + curr;
-        while (packet->header.type <= HSA_PACKET_TYPE_INVALID);
-        if (packet->header.type == HSA_PACKET_TYPE_KERNEL_DISPATCH) {
+
+        while (get_field(packet->header, HSA_PACKET_HEADER_TYPE, HSA_PACKET_HEADER_WIDTH_TYPE) <= HSA_PACKET_TYPE_INVALID);
+        hsa_packet_type_t type = (hsa_packet_type_t) get_field(packet->header, HSA_PACKET_HEADER_TYPE, HSA_PACKET_HEADER_WIDTH_TYPE);
+        if (type == HSA_PACKET_TYPE_KERNEL_DISPATCH) {
           ok &= ProcessDispatch(*((hsa_kernel_dispatch_packet_t*)packet));
-        } else if (packet->header.type == HSA_PACKET_TYPE_BARRIER) {
-          ok &= ProcessBarrier(*((hsa_barrier_packet_t*)packet));
+        } else if (type == HSA_PACKET_TYPE_BARRIER_AND) {
+          ok &= ProcessBarrier(*((hsa_barrier_and_packet_t*)packet));
         } else {
           // packet format invalid (including agent dispatch)
+          printf("Unknown type: %u\n", type);
           std::abort();
         }
-        packet->header.type = HSA_PACKET_TYPE_INVALID;
+        set_field(&packet->header, HSA_PACKET_HEADER_TYPE, HSA_PACKET_HEADER_WIDTH_TYPE, HSA_PACKET_TYPE_INVALID);
         read_index_++;
       }
     }
@@ -456,7 +473,7 @@ namespace hsa {
     }
 
     virtual hsa_status_t IterateAgents(hsa_status_t(*callback)(hsa_agent_t agent, void* data), void* data) {
-      for (int i = 0; i < agents_.get()->size(); i++) {
+      for (unsigned int i = 0; i < agents_.get()->size(); i++) {
         hsa_agent_t a = (hsa_agent_t)(agents_.get()->at(i));
         hsa_status_t stat = callback(a, data);
         if (stat != HSA_STATUS_SUCCESS) {
@@ -734,82 +751,82 @@ extern "C" {
     return HSA_STATUS_SUCCESS;
   }
 
-  uint64_t hsa_queue_load_read_index_acquire(hsa_queue_t *queue) {
+  uint64_t hsa_queue_load_read_index_acquire(const hsa_queue_t *queue) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->LoadReadIndex(std::memory_order_acquire);
   }
 
-  uint64_t hsa_queue_load_read_index_relaxed(hsa_queue_t *queue) {
+  uint64_t hsa_queue_load_read_index_relaxed(const hsa_queue_t *queue) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->LoadReadIndex(std::memory_order_relaxed);
   }
 
-  uint64_t hsa_queue_load_write_index_acquire(hsa_queue_t *queue) {
+  uint64_t hsa_queue_load_write_index_acquire(const hsa_queue_t *queue) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->LoadWriteIndex(std::memory_order_acquire);
   }
 
-  uint64_t hsa_queue_load_write_index_relaxed(hsa_queue_t *queue) {
+  uint64_t hsa_queue_load_write_index_relaxed(const hsa_queue_t *queue) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->LoadWriteIndex(std::memory_order_relaxed);
   }
 
-  void hsa_queue_store_write_index_relaxed(hsa_queue_t *queue, uint64_t value) {
+  void hsa_queue_store_write_index_relaxed(const hsa_queue_t *queue, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     q->StoreWriteIndex(value, std::memory_order_relaxed);
   }
 
-  void hsa_queue_store_write_index_release(hsa_queue_t *queue, uint64_t value) {
+  void hsa_queue_store_write_index_release(const hsa_queue_t *queue, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     q->StoreWriteIndex(value, std::memory_order_release);
   }
 
-  uint64_t hsa_queue_cas_write_index_acq_rel(hsa_queue_t *queue, uint64_t expected, uint64_t value) {
+  uint64_t hsa_queue_cas_write_index_acq_rel(const hsa_queue_t *queue, uint64_t expected, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->CasWriteIndex(expected, value, std::memory_order_acq_rel);
   }
 
-  uint64_t hsa_queue_cas_write_index_acquire(hsa_queue_t *queue, uint64_t expected, uint64_t value) {
+  uint64_t hsa_queue_cas_write_index_acquire(const hsa_queue_t *queue, uint64_t expected, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->CasWriteIndex(expected, value, std::memory_order_acquire);
   }
 
-  uint64_t hsa_queue_cas_write_index_relaxed(hsa_queue_t *queue, uint64_t expected, uint64_t value) {
+  uint64_t hsa_queue_cas_write_index_relaxed(const hsa_queue_t *queue, uint64_t expected, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->CasWriteIndex(expected, value, std::memory_order_relaxed);
   }
 
-  uint64_t hsa_queue_cas_write_index_release(hsa_queue_t *queue, uint64_t expected, uint64_t value) {
+  uint64_t hsa_queue_cas_write_index_release(const hsa_queue_t *queue, uint64_t expected, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->CasWriteIndex(expected, value, std::memory_order_release);
   }
 
-  uint64_t hsa_queue_add_write_index_acq_rel(hsa_queue_t *queue, uint64_t value) {
+  uint64_t hsa_queue_add_write_index_acq_rel(const hsa_queue_t *queue, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->AddWriteIndex(value, std::memory_order_acq_rel);
   }
 
-  uint64_t hsa_queue_add_write_index_acquire(hsa_queue_t *queue, uint64_t value) {
+  uint64_t hsa_queue_add_write_index_acquire(const hsa_queue_t *queue, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->AddWriteIndex(value, std::memory_order_acquire);
   }
 
-  uint64_t hsa_queue_add_write_index_release(hsa_queue_t *queue, uint64_t value) {
+  uint64_t hsa_queue_add_write_index_release(const hsa_queue_t *queue, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->AddWriteIndex(value, std::memory_order_release);
   }
 
-  uint64_t hsa_queue_add_write_index_relaxed(hsa_queue_t *queue, uint64_t value) {
+  uint64_t hsa_queue_add_write_index_relaxed(const hsa_queue_t *queue, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     return q->AddWriteIndex(value, std::memory_order_relaxed);
   }
 
-  void hsa_queue_store_read_index_relaxed(hsa_queue_t *queue, uint64_t value) {
+  void hsa_queue_store_read_index_relaxed(const hsa_queue_t *queue, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     q->StoreReadIndex(value, std::memory_order_relaxed);
   }
 
-  void hsa_queue_store_read_index_release(hsa_queue_t *queue, uint64_t value) {
+  void hsa_queue_store_read_index_release(const hsa_queue_t *queue, uint64_t value) {
     hsa::Queue* q = (hsa::Queue*) queue;
     q->StoreReadIndex(value, std::memory_order_release);
   }

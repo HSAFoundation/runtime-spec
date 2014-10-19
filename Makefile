@@ -23,7 +23,10 @@ DOXYLATEX:= $(wildcard api/altlatex/*.tex)
 # should be emphasized)
 LISTINGS:=api/altlatex/listings.tex
 
-all : $(LISTINGS) main.pdf
+# Commands that allow LaTeX to include a C function by providing its name
+EXAMPLES:=examples/altlatex/lstinputfunlisting.tex
+
+all : $(EXAMPLES) $(LISTINGS) main.pdf
 
 checkprev:
 	$(if $(MAIN_ALL_PREV),,$(error Error: file main-all-prev.tex is missing))
@@ -42,6 +45,10 @@ dist : checkversion diff
 
 %.pdf: $(DOXYLATEX) %.tex
 	latexmk -g -xelatex -use-make $*.tex
+
+$(EXAMPLES): example/examples.cc example/lstinputfunlisting.py
+	cd example && doxygen Doxyfile
+	cd example && python lstinputfunlisting.py
 
 # Use listings.tex as proxy for all the automatically generated LaTeX files
 $(LISTINGS): api/hsa.h api/hsa_ext.h api/xml2tex.py

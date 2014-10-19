@@ -4,6 +4,49 @@ import xml.etree.ElementTree as ET
 import sys
 import os
 
+def get_ifdef(var):
+  return "\#ifdef " + var + "\\\\"
+
+def get_elif(var):
+  return "\#elif " + var + "\\\\"
+
+def get_else():
+  return "\#else\\\\"
+
+def get_endif():
+  return "\#endif\\\\"
+
+# A replacement directive (f, r) instructs the compiler to replace the text
+# associated with a set of fields 'f' using the expression 'r'. The expression
+# uses integer to denote the index of the fields in 'f'. So for instance 0 is the
+# first field in 'f'
+#
+# Replacement directives are needed becomes Doxygen does not preserve any macro
+# information. Therefore, we need to rebuild the macro information by hand here.
+# For example, a couple of fields [f1,f2] might have been defined in the header as
+#   #IFDEF BLABLA
+#     f1;
+#     f2;
+#   #ELSE
+#     f2;
+#   #ENDIF
+#
+# The replacement directive would force replacement of [f1,f2] with ["#IFDEF
+# BLABLA", f1, f2, '#ELSE', f2, "#ENDIF"]
+replacement_directives=[
+(["hsa_\-queue_\-t.base_\-address", "hsa_\-queue_\-t.reserved0", ],
+ ["\\\\[-2mm]" + get_ifdef("HSA_LARGE_MODEL"), 0, get_elif(" defined HSA_LITTLE_ENDIAN"), 0, 1, get_else(), 1, 0, get_endif() + "[2mm]"])
+,
+(["hsa_\-queue_\-t.service_\-queue", "hsa_\-queue_\-t.reserved1", ],
+ ["\\\\[-2mm]" + get_ifdef("HSA_LARGE_MODEL"), 0, get_elif(" defined HSA_LITTLE_ENDIAN"), 0, 1, get_else(), 1, 0, get_endif() + "[2mm]"])
+,
+(["hsa_\-kernel_\-dispatch_\-packet_\-t.kernarg_\-address", "hsa_\-kernel_\-dispatch_\-packet_\-t.reserved1", ],
+ ["\\\\[-2mm]" + get_ifdef("HSA_LARGE_MODEL"), 0, get_elif(" defined HSA_LITTLE_ENDIAN"), 0, 1, get_else(), 1, 0, get_endif() + "[2mm]"])
+,
+(["hsa_\-agent_\-dispatch_\-packet_\-t.return_\-address","hsa_\-agent_\-dispatch_\-packet_\-t.reserved1",  ],
+ ["\\\\[-2mm]" + get_ifdef("HSA_LARGE_MODEL"), 0, get_elif(" defined HSA_LITTLE_ENDIAN"), 0, 1, get_else(), 1, 0, get_endif() + "[2mm]"])
+]
+
 # map from a type name to its unique ID. This is necessary because Doxygen does
 # not generate enough information for 'typedefs' such that we can build internal
 # links. For instance, if there is a pointer to a function defined as
@@ -13,7 +56,6 @@ import os
 # of them follow the hsa_XXX_t naming convention, we store a pair (name, ID)
 # when they are declared, and use it when processing 'typedefs'.
 typename_id = {}
-
 
 def text2tex(text):
   # add hyphenation break hints at underscores, avoids overfull boxes
@@ -30,7 +72,7 @@ def myitertext(self):
       yield '\\textit{' + mytex + '}'
     elif tag == 'ref':
       # brutal hardcoding in order to find out if it is a function name
-      if mytex.startswith("hsa_\-") and not mytex.endswith("_\-t"):
+      if mytex.startswith("hsa_\-") and not (mytex.endswith("_\-t") or mytex.endswith("_\-s")):
         mytex = "\\reffun{" + mytex + "}"
       yield '\\hyperlink{' + self.get('refid') + '}{' + mytex + '}'
     else:
@@ -155,6 +197,24 @@ def check_field_refs(fields, typename):
   if (refs-fields):
     sys.exit("\nError: found reference(s) to non-existing field(s): " + repr(refs-fields) + "in " + typename)
 
+# Find the index of the replacement directive for the specified fldname
+# returns -1 if not found
+def replacement_index(fldname):
+  for index,value in enumerate(replacement_directives):
+    if fldname in value[0]:
+      return index
+  return -1
+
+# Perform a replacement using the pattern at the specified index and the list value
+def apply_replacement_directive(replacement_index, txts):
+  ret = []
+  for x in replacement_directives[replacement_index][1]:
+    # if the element is an integer, replace
+    if isinstance(x, (int,long)):
+      x = txts[x]
+    ret.append(x)
+  return ''.join(ret)
+
 def process_struct_or_union(typedef, tex, defs):
   typename = node2tex(typedef.find('name'))
   tex.write('\\subsubsection{' + typename + '}\n')
@@ -174,8 +234,10 @@ def process_struct_or_union(typedef, tex, defs):
 
   vals = []
   fields = []
+  replace_txts = []
   for member in members:
     name = node2tex(member.find('name'))
+    fldname = typename + "." + name
     # type + field name
     txt = "\\hspace{1.7em}"
     txt += node2tex(member.find('type'))
@@ -184,9 +246,20 @@ def process_struct_or_union(typedef, tex, defs):
     bitfield = member.find('bitfield')
     if bitfield is not None:
       txt += " : " + node2tex(bitfield)
-    vals.append(txt + ";\\\\\n")
+    txt += ";\\\\\n"
+
+    # if the field name is in the replacement list, perform replacement
+    replace_idx = replacement_index(fldname)
+    if replace_idx >=0:
+      replace_txts.append(txt)
+      if len(replace_txts) == len(replacement_directives[replace_idx][0]):
+        # replace all field texts at once
+        vals.append(apply_replacement_directive(replace_idx, replace_txts))
+        replace_txts = []
+    else:
+      vals.append(txt)
+
     # field name + description
-    fldname = typename + "." + name
     defs.append(('reffld', fldname))
     typename_id[fldname] = fldname
 

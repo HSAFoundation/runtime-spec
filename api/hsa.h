@@ -1,3 +1,35 @@
+/**
+ * Copyright (c) 2014, HSA Foundation, Inc
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * with the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ *   * Redistributions of source code must retain the above copyright notice,
+ *     this list of conditions and the following disclaimers.
+ *
+ *   * Redistributions in binary form must reproduce the above copyright notice,
+ *     this list of conditions and the following disclaimers in the
+ *     documentation and/or other materials provided with the distribution.
+ *
+ *   * Neither the names of the HSA Team, HSA Foundation,  University of
+ *     Illinois at Urbana-Champaign, nor the names of its contributors may be
+ *     used to endorse or promote products derived from this Software without
+ *     specific prior written permission.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+ * THE SOFTWARE.
+ *
+ */
 #ifndef HSA_H
 #define HSA_H
 
@@ -8,6 +40,7 @@
 /* placeholder for calling convention - check macro naming convention */
 #define HSA_API
 
+#define HSA_LITTLE_ENDIAN
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,23 +127,71 @@ typedef enum {
      * The maximum reference count for the object has been reached.
      */
     HSA_STATUS_ERROR_REFCOUNT_OVERFLOW = 0x1000C,
+
+
+    /* /\** */
+    /*  * The arguments passed to a functions are not compatible. */
+    /*  *\/ */
+    /* HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS = 0x1000D, */
+    /* /\** */
+    /*  * The index is invalid. */
+    /*  *\/ */
+    /* HSA_STATUS_ERROR_INVALID_INDEX = 0x1000E, */
+
+
     /**
      * Mismatch between a directive in the control directive structure and in
      * the HSAIL kernel.
      */
     HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH = 0x14000,
     /**
-     * The program is invalid.
+     * The HSAIL program is invalid.
      */
     HSA_EXT_STATUS_ERROR_INVALID_PROGRAM = 0x14001,
+
+
+    /* /\** */
+    /*  * The HSAIL program module is invalid. */
+    /*  *\/ */
+    /* HSA_EXT_STATUS_ERROR_INVALID_PROGRAM_MODULE = 0x14002, */
+
+
     /**
-     * The module is invalid.
+     * The HSAIL module is invalid.
      */
-    HSA_EXT_STATUS_ERROR_INVALID_MODULE = 0x14002,
-    /**
-     * The BRIG module is invalid.
-     */
-    HSA_EXT_STATUS_ERROR_INVALID_BRIG_MODULE = 0x14003,
+    HSA_EXT_STATUS_ERROR_INVALID_MODULE = 0x14003,
+
+    /* /\** */
+    /*  * The HSAIL module is already part of the HSAIL program. */
+    /*  *\/ */
+    /* HSA_ALT_STATUS_ERROR_MODULE_ALREADY_INCLUDED = 0x14004, */
+    /* /\** */
+    /*  * There is no symbol at the specified offset. */
+    /*  *\/ */
+    /* HSA_ALT_STATUS_ERROR_INVALID_SYMBOL_OFFSET = 0x14005, */
+    /* /\** */
+    /*  * There is no variable with the given name. */
+    /*  *\/ */
+    /* HSA_ALT_STATUS_ERROR_INVALID_SYMBOL_NAME = 0x14006, */
+    /* /\** */
+    /*  * The finalization request is invalid. */
+    /*  *\/ */
+    /* HSA_ALT_STATUS_ERROR_INVALID_FINALIZATION_REQUEST = 0x14007, */
+    /* /\** */
+    /*  * The finalization encountered an error while finalizing a kernel or */
+    /*  * indirect function. */
+    /*  *\/ */
+    /* HSA_ALT_STATUS_ERROR_FINALIZATION_FAILED = 0x14008, */
+    /* /\** */
+    /*  * The variable is already defined. */
+    /*  *\/ */
+    /* HSA_ALT_STATUS_ERROR_VARIABLE_ALREADY_DEFINED = 0x14008, */
+    /* /\** */
+    /*  * The variable is undefined. */
+    /*  *\/ */
+    /* HSA_ALT_STATUS_ERROR_VARIABLE_UNDEFINED = 0x14009, */
+
+
     /**
      * Image format is not supported.
      */
@@ -302,8 +383,8 @@ typedef enum {
    */
   HSA_SYSTEM_INFO_TIMESTAMP,
   /**
-   * Timestamp value increase rate, in MHz. The timestamp (clock) frequency is
-   * in the range 1-400MHz. The type of this attribute is uint16_t.
+   * Timestamp value increase rate, in Hz. The timestamp (clock) frequency is
+   * in the range 1-400MHz. The type of this attribute is uint64_t.
    */
   HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY,
   /**
@@ -364,6 +445,48 @@ typedef enum {
 } hsa_agent_feature_t;
 
 /**
+ * @brief Profile. A profile indicates a particular level of feature
+ * support. For example, in the base profile the application must use the HSA
+ * runtime allocator to reserve Shared Virtual Memory, while in the full profile
+ * any host pointer can be shared across all the HSA agents.
+ */
+typedef enum {
+    /**
+     * Base profile.
+     */
+    HSA_PROFILE_BASE = 0,
+    /**
+     * Full profile.
+     */
+    HSA_PROFILE_FULL = 1,
+} hsa_profile_t;
+
+/**
+ * @brief A fixed-width type used to represent values in ::hsa_profile_t.
+ */
+typedef uint8_t hsa_profile8_t;
+
+/**
+ * @brief Machine model. A machine model determines the size of certain data
+ * types in a HSA agent.
+ */
+typedef enum {
+    /**
+     * Small machine model. Addresses use 32 bits.
+     */
+    HSA_MACHINE_MODEL_SMALL = 0,
+    /**
+     * Large machine model. Addresses use 64 bits.
+     */
+    HSA_MACHINE_MODEL_LARGE = 1,
+} hsa_machine_model_t;
+
+/**
+ * @brief A fixed-width type used to represent values in ::hsa_machine_model_t.
+ */
+typedef uint8_t hsa_machine_model8_t;
+
+/**
  * @brief Hardware device type.
  */
 typedef enum {
@@ -402,8 +525,18 @@ typedef enum {
    */
   HSA_AGENT_INFO_FEATURE,
   /**
+   * Machine model supported by the HSA agent. The type of this attribute is
+   * ::hsa_machine_model8_t.
+   */
+  HSA_AGENT_INFO_MACHINE_MODEL,
+  /**
+   * Profile supported by the HSA agent. The type of this attribute is
+   * ::hsa_profile8_t.
+   */
+  HSA_AGENT_INFO_PROFILE,
+  /**
    * Number of work-items in a wavefront. Must be a power of 2 in the range
-   * [1,256]. The value of this attribute is undefined if the HSA agent is not
+   * [1,64]. The value of this attribute is undefined if the HSA agent is not
    * an HSA component. The type of this attribute is uint32_t.
    */
   HSA_AGENT_INFO_WAVEFRONT_SIZE,
@@ -474,6 +607,11 @@ typedef enum {
    * for that level. The type of this attribute is uint32_t[4].
    */
   HSA_AGENT_INFO_CACHE_SIZE,
+  /**
+   * Number of call conventions supported by the HSA agent. The type of this
+   * attribute is uint32_t.
+   */
+  HSA_EXT_AGENT_INFO_NUM_CALL_CONVENTIONS,
   /**
    * Maximum dimensions (width, height, depth) of one-dimensional images, in
    * image elements. The Y and Z dimensions maximums must be 0. The X maximum
@@ -613,10 +751,10 @@ typedef uint64_t hsa_signal_t;
  * @brief Signal value. The value occupies 32 bits in small machine mode, and 64
  * bits in large machine mode.
  */
-#ifdef HSA_SMALL_MODEL
-  typedef int32_t hsa_signal_value_t;
-#else
+#ifdef HSA_LARGE_MODEL
   typedef int64_t hsa_signal_value_t;
+#else
+  typedef int32_t hsa_signal_value_t;
 #endif
 
 /**
@@ -645,8 +783,9 @@ typedef uint64_t hsa_signal_t;
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is failure to allocate the
  * resources required by the implementation.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p signal is NULL or @p
- * num_consumers is greater than 0 but @p consumers is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p signal is NULL, @p
+ * num_consumers is greater than 0 but @p consumers is NULL, or @p consumers
+ * contains duplicates.
  */
 hsa_status_t HSA_API hsa_signal_create(
     hsa_signal_value_t initial_value,
@@ -1132,11 +1271,22 @@ typedef struct hsa_queue_s {
    */
   uint32_t features;
 
+#ifdef HSA_LARGE_MODEL
+  void* base_address;
+#elif defined HSA_LITTLE_ENDIAN
   /**
    * Starting address of the runtime-allocated buffer used to store the AQL
    * packets. Must be aligned to the size of an AQL packet.
    */
-  uint64_t base_address;
+  void* base_address;
+  /**
+   * Reserved. Must be 0.
+   */
+  uint32_t reserved0;
+#else
+  uint32_t reserved0;
+  void* base_address;
+#endif
 
   /**
    * Signal object used by the application to indicate the ID of a packet that
@@ -1161,11 +1311,22 @@ typedef struct hsa_queue_s {
    */
   uint32_t id;
 
+#ifdef HSA_LARGE_MODEL
+  struct hsa_queue_s* service_queue;
+#elif defined HSA_LITTLE_ENDIAN
   /**
    * A pointer to another user mode queue that can be used by an HSAIL kernel
    * to request runtime or application-defined services.
    */
-  uint64_t service_queue;
+  struct hsa_queue_s* service_queue;
+  /**
+   * Reserved. Must be 0.
+   */
+  uint32_t reserved1;
+#else
+  uint32_t reserved1;
+  struct hsa_queue_s* service_queue;
+#endif
 
 } hsa_queue_t;
 
@@ -1492,59 +1653,90 @@ typedef enum {
 } hsa_fence_scope_t;
 
 /**
- * @brief AQL packet header.
+ * @brief Sub-fields of the @a header field that is present in any AQL
+ * packet. The offset (with respect to the address of @a header) of a sub-field
+ * is identical to its enumeration constant. The width of each sub-field is
+ * determined by the corresponding value in ::hsa_packet_header_width_t. The
+ * offset and the width are expressed in bits.
  */
-typedef struct hsa_packet_header_s {
+ typedef enum {
   /**
-   * Packet type.
+   * Packet type. The value of this sub-field must be one of
+   * ::hsa_packet_type_t.
    */
-  hsa_packet_type_t type:8;
-
+   HSA_PACKET_HEADER_TYPE = 0,
   /**
-   * If set, the processing of the current packet only launches when all
-   * preceding packets (within the same queue) are complete.
+   * Barrier bit. If the barrier bit is set, the processing of the current
+   * packet only launches when all preceding packets (within the same queue) are
+   * complete.
    */
-  uint16_t barrier:1;
-
+   HSA_PACKET_HEADER_BARRIER = 8,
   /**
-   * Determines the scope and type of the memory fence operation applied before
-   * the packet enters the active phase. Must be ::HSA_FENCE_SCOPE_NONE for
-   * Barrier-AND and Barrier-OR packets.
+   * Acquire fence scope. The value of this sub-field determines the scope and
+   * type of the memory fence operation applied before the packet enters the
+   * active phase. Must be ::HSA_FENCE_SCOPE_NONE for Barrier-AND and Barrier-OR
+   * packets. For all the other packets, the value of this sub-field must be one
+   * of ::hsa_fence_scope_t.
    */
-  hsa_fence_scope_t acquire_fence_scope:2;
-
+   HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE = 9,
   /**
-   * Determines the scope and type of the memory fence operation applied after
-   * kernel completion but before the packet is completed.
+   * Release fence scope, The value of this sub-field determines the scope and
+   * type of the memory fence operation applied after kernel completion but
+   * before the packet is completed. The value of this sub-field must be one of
+   * ::hsa_fence_scope_t.
    */
-  hsa_fence_scope_t release_fence_scope:2;
+   HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE = 11,
+ } hsa_packet_header_t;
 
+/**
+ * @brief Width (in bits) of the sub-fields in ::hsa_packet_header_t.
+ */
+ typedef enum {
+   HSA_PACKET_HEADER_WIDTH_TYPE = 8,
+   HSA_PACKET_HEADER_WIDTH_BARRIER = 1,
+   HSA_PACKET_HEADER_WIDTH_ACQUIRE_FENCE_SCOPE = 2,
+   HSA_PACKET_HEADER_WIDTH_RELEASE_FENCE_SCOPE = 2
+ } hsa_packet_header_width_t;
+
+/**
+ * @brief Sub-fields of the Kernel Dispatch packet @a setup field. The offset
+ * (with respect to the address of @a setup) of a sub-field is identical to its
+ * enumeration constant. The width of each sub-field is determined by the
+ * corresponding value in ::hsa_kernel_dispatch_packet_setup_width_t. The
+ * offset and the width are expressed in bits.
+ */
+ typedef enum {
   /**
-   * Must be 0.
+   * Number of dimensions of the grid. Valid values are 1, 2, or 3.
+   *
    */
-  uint16_t reserved:3;
+   HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS = 0,
+ } hsa_kernel_dispatch_packet_setup_t;
 
-} hsa_packet_header_t;
+/**
+ * @brief Width (in bits) of the sub-fields in
+ * ::hsa_kernel_dispatch_packet_setup_t.
+ */
+ typedef enum {
+   HSA_KERNEL_DISPATCH_PACKET_SETUP_WIDTH_DIMENSIONS = 2
+ } hsa_kernel_dispatch_packet_setup_width_t;
 
 /**
  * @brief AQL Kernel Dispatch packet
  */
 typedef struct hsa_kernel_dispatch_packet_s {
   /**
-   *  Packet header.
+   * Packet header. Used to configure multiple packet parameters such as the
+   * packet type. The parameters are described by ::hsa_packet_header_t.
    */
-  hsa_packet_header_t header;
+  uint16_t header;
 
   /**
-   * Number of dimensions specified in the grid size. Valid values are 1, 2, or
-   * 3.
+   * Dispatch setup parameters. Used to configure kernel dispatch parameters
+   * such as the number of dimensions in the grid. The parameters are described
+   * by ::hsa_kernel_dispatch_packet_setup_t.
    */
-  uint16_t dimensions:2;
-
-  /**
-   * Reserved, must be 0.
-   */
-  uint16_t reserved:14;
+  uint16_t setup;
 
   /**
    * X dimension of work-group, in work-items. Must be greater than 0.
@@ -1553,20 +1745,20 @@ typedef struct hsa_kernel_dispatch_packet_s {
 
   /**
    * Y dimension of work-group, in work-items. Must be greater than
-   * 0. If @a dimensions is 1, the only valid value is 1.
+   * 0. If the grid has 1 dimension, the only valid value is 1.
    */
   uint16_t workgroup_size_y;
 
   /**
    * Z dimension of work-group, in work-items. Must be greater than
-   * 0. If @a dimensions is 1 or 2, the only valid value is 1.
+   * 0. If the grid has 1 or 2 dimensions, the only valid value is 1.
    */
   uint16_t workgroup_size_z;
 
   /**
    * Reserved. Must be 0.
    */
-  uint16_t reserved2;
+  uint16_t reserved0;
 
   /**
    * X dimension of grid, in work-items. Must be greater than 0. Must
@@ -1575,16 +1767,16 @@ typedef struct hsa_kernel_dispatch_packet_s {
   uint32_t grid_size_x;
 
   /**
-   * Y dimension of grid, in work-items. Must be greater than 0. If @a
-   * dimensions is 1, the only valid value is 1. Must not be smaller than @a
+   * Y dimension of grid, in work-items. Must be greater than 0. If the grid has
+   * 1 dimension, the only valid value is 1. Must not be smaller than @a
    * workgroup_size_y.
    */
   uint32_t grid_size_y;
 
   /**
-   * Z dimension of grid, in work-items. Must be greater than 0. If @a
-   * dimensions is 1 or 2, the only valid value is 1. Must not be smaller than
-   * @a workgroup_size_z.
+   * Z dimension of grid, in work-items. Must be greater than 0. If the grid has
+   * 1 or 2 dimensions, the only valid value is 1. Must not be smaller than @a
+   * workgroup_size_z.
    */
   uint32_t grid_size_z;
 
@@ -1602,24 +1794,35 @@ typedef struct hsa_kernel_dispatch_packet_s {
   uint32_t group_segment_size;
 
   /**
-   * Address of an object in memory that includes an implementation-defined
+   * Opaque handle to a code object that includes an implementation-defined
    * executable code for the kernel.
    */
-  uint64_t kernel_object_address;
+  uint64_t kernel_object;
 
+#ifdef HSA_LARGE_MODEL
+  void* kernarg_address;
+#elif defined HSA_LITTLE_ENDIAN
   /**
-   * Pointer to a buffer containing the kernel arguments. Might be 0.
+   * Pointer to a buffer containing the kernel arguments. Might be NULL.
    *
    * The buffer must be allocated using ::hsa_memory_allocate, and must not be
    * modified once the Kernel Dispatch packet is enqueued until the dispatch has
    * completed execution.
    */
-  uint64_t kernarg_address;
+  void* kernarg_address;
+  /**
+   * Reserved. Must be 0.
+   */
+  uint32_t reserved1;
+#else
+  uint32_t reserved1;
+  void* kernarg_address;
+#endif
 
   /**
    * Reserved. Must be 0.
    */
-  uint64_t reserved3;
+  uint64_t reserved2;
 
   /**
    * Signal used to indicate completion of the job. Might be 0 (no signal).
@@ -1655,9 +1858,10 @@ typedef enum {
  */
 typedef struct hsa_agent_dispatch_packet_s {
   /**
-   * Packet header.
+   * Packet header. Used to configure multiple packet parameters such as the
+   * packet type. The parameters are described by ::hsa_packet_header_t.
    */
-  hsa_packet_header_t header;
+  uint16_t header;
 
   /**
    * The function to be performed by the destination HSA agent. The limits in
@@ -1669,12 +1873,23 @@ typedef struct hsa_agent_dispatch_packet_s {
   /**
    * Reserved. Must be 0.
    */
-  uint32_t reserved2;
+  uint32_t reserved0;
 
+#ifdef HSA_LARGE_MODEL
+  void* return_address;
+#elif defined HSA_LITTLE_ENDIAN
   /**
    * Address where to store the function return values, if any.
    */
-  uint64_t return_address;
+  void* return_address;
+  /**
+   * Reserved. Must be 0.
+   */
+  uint32_t reserved1;
+#else
+  uint32_t reserved1;
+  void* return_address;
+#endif
 
   /**
    * Function arguments.
@@ -1684,7 +1899,7 @@ typedef struct hsa_agent_dispatch_packet_s {
   /**
    * Reserved. Must be 0.
    */
-  uint64_t reserved3;
+  uint64_t reserved2;
 
   /**
    * Signal used to indicate completion of the job. Might be 0 (no signal).
@@ -1698,19 +1913,20 @@ typedef struct hsa_agent_dispatch_packet_s {
  */
 typedef struct hsa_barrier_and_packet_s {
   /**
-   * Packet header.
+   * Packet header. Used to configure multiple packet parameters such as the
+   * packet type. The parameters are described by ::hsa_packet_header_t.
    */
-  hsa_packet_header_t header;
+  uint16_t header;
 
   /**
    * Reserved. Must be 0.
    */
-  uint16_t reserved2;
+  uint16_t reserved0;
 
   /**
    * Reserved. Must be 0.
    */
-  uint32_t reserved3;
+  uint32_t reserved1;
 
   /**
    * Array of dependent signal objects. Entries with value 0 are valid and are
@@ -1721,7 +1937,7 @@ typedef struct hsa_barrier_and_packet_s {
   /**
    * Reserved. Must be 0.
    */
-  uint64_t reserved4;
+  uint64_t reserved2;
 
   /**
    * Signal used to indicate completion of the job. Might be 0 (no signal).
@@ -1735,19 +1951,20 @@ typedef struct hsa_barrier_and_packet_s {
  */
 typedef struct hsa_barrier_or_packet_s {
   /**
-   * Packet header.
+   * Packet header. Used to configure multiple packet parameters such as the
+   * packet type. The parameters are described by ::hsa_packet_header_t.
    */
-  hsa_packet_header_t header;
+  uint16_t header;
 
   /**
    * Reserved. Must be 0.
    */
-  uint16_t reserved2;
+  uint16_t reserved0;
 
   /**
    * Reserved. Must be 0.
    */
-  uint32_t reserved3;
+  uint32_t reserved1;
 
   /**
    * Array of dependent signal objects. Entries with value 0 are valid and are
@@ -1758,7 +1975,7 @@ typedef struct hsa_barrier_or_packet_s {
   /**
    * Reserved. Must be 0.
    */
-  uint64_t reserved4;
+  uint64_t reserved2;
 
   /**
    * Signal used to indicate completion of the job. Might be 0 (no signal).
@@ -2014,42 +2231,44 @@ hsa_status_t HSA_API hsa_memory_allocate(hsa_region_t region,
  */
 hsa_status_t HSA_API hsa_memory_free(void* ptr);
 
-/* /\** */
-/*  * @brief Copy block of memory. */
-/*  * */
-/*  * @details Copying a number of bytes larger than the size of the memory regions */
-/*  * pointed by @p dst or @p src results in undefined behavior. */
-/*  * */
-/*  * @param[out] dst A valid pointer to the destination array where the content is */
-/*  * to be copied. */
-/*  * */
-/*  * @param[in] src A valid pointer to the source of data to be copied. */
-/*  * */
-/*  * @param[in] size Number of bytes to copy. If @p size is 0, no copy is */
-/*  * performed and the function returns success. */
-/*  * */
-/*  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully. */
-/*  * */
-/*  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been */
-/*  * initialized. */
-/*  * */
-/*  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT If the source or destination */
-/*  * pointers is NULL. */
-/*  *\/ */
-/* hsa_status_t HSA_API hsa_memory_copy( */
-/*     void *dst, */
-/*     const void *src, */
-/*     size_t size); */
+/**
+ * @brief Copy block of memory.
+ *
+ * @details Copying a number of bytes larger than the size of the memory regions
+ * pointed by @p dst or @p src results in undefined behavior.
+ *
+ * @param[out] dst A valid pointer to the destination array where the content is
+ * to be copied.
+ *
+ * @param[in] src A valid pointer to the source of data to be copied.
+ *
+ * @param[in] size Number of bytes to copy. If @p size is 0, no copy is
+ * performed and the function returns success.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT The source or destination
+ * pointers are NULL.
+ */
+hsa_status_t HSA_API hsa_memory_copy(
+    void *dst,
+    const void *src,
+    size_t size);
 
 /**
  *
  * @brief Register memory.
  *
  * @details Registering a buffer serves as an indication to the runtime that the
- * passed buffer might be accessed from an HSA component other than the
- * host. Registration is a performance hint that allows the runtime
- * implementation to know which buffers will be accessed by some of the
- * HSA components ahead of time.
+ * passed buffer might be accessed from an HSA component other than the host. If
+ * any HSA component with no Full profile support accesses a host buffer, the
+ * application must register the buffer beforehand. If all the HSA components
+ * accessing the host buffer support the Full profile, registration is a
+ * performance hint that allows the runtime implementation to know which buffers
+ * will be accessed by some of the HSA components ahead of time.
  *
  * Registrations should not overlap.
  *
