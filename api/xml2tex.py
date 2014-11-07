@@ -186,8 +186,11 @@ def process_typedef(typedef, tex, defs):
   typename_id[name] = typedef.get('id')
   # brief
   tex.write('\\vspace{-5mm}')
-  paras = typedef.findall('briefdescription/para')
-  map(lambda para: tex.write(node2tex(para) + "\n\\\\"), paras)
+
+  # if there is more than one paragraph, it goes into detaileddescription
+  paras = typedef.findall('detaileddescription/para/parblock/para')
+  paras = typedef.findall('briefdescription/para') if not paras else paras
+  map(lambda para: tex.write(node2tex(para) + "\n\\\\[2mm]"), paras)
 
 # Check that any field reference matches a local field name
 def check_field_refs(fields, typename):
@@ -267,7 +270,7 @@ def process_struct_or_union(typedef, tex, defs):
     paras = member.findall('detaileddescription/para')
     paraslst = map(lambda para: "\\hspace{2em}" + node2tex(para), paras)
     if paraslst:
-      txt += "\\\\\n".join(paraslst)
+      txt += "\\\\[1.25mm]\n".join(paraslst)
     fields.append(txt)
 
   tex.write(''.join(vals) + "\} ")
@@ -279,10 +282,10 @@ def process_struct_or_union(typedef, tex, defs):
   typename_id[typename] = typedef.get('id')
 
   # brief
-  tex.write('\\vspace{-5mm}')
-  tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\n")
+  tex.write('\\vspace{-5.5mm}')
+  tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\\\\[3mm]")
   # data fields
-  tex.write("\\noindent\\textbf{Data Fields}\\\\[-6mm]" + "\n")
+  tex.write("\\noindent\\textbf{Data Fields}\\\\[-7mm]" + "\n")
   tex.write("\\begin{longtable}{@{}>{\\hangindent=2em}p{\\textwidth}}" + "\n")
   tex.write("\\\\[2mm]\n".join(fields))
   tex.write("\n\\end{longtable}" + "\n\n")
@@ -298,6 +301,8 @@ def process_struct_or_union(typedef, tex, defs):
 
 def process_enum(enum, tex, defs):
   typename = node2tex(enum.find('name'))
+  # anonymous enums start with @
+  typename = '' if typename.startswith("@") else typename
   tex.write('\\subsubsection{' + typename + '}\n')
 
   vals = []
@@ -324,24 +329,27 @@ def process_enum(enum, tex, defs):
   # enum box: name and values
   tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
   tex.write("\\rule{0pt}{3ex}")
-  tex.write('typedef enum \{\\\\')
+  if typename is '':
+    tex.write('enum \{\\\\')
+  else:
+    tex.write('typedef enum \{\\\\')
+    defs.append(('reftyp', typename))
+    typename_id[typename] = enum.get('id')
   tex.write(",\\\\\n".join(vals) + "\\\\\n")
   tex.write("\} \\hypertarget{" + enum.get('id') + "}")
   tex.write("{\\textbf{" + typename + "}};")
   tex.write("\\rule[-2ex]{0pt}{0pt}")
   tex.write("\\end{mylongtable}\n")
-  defs.append(('reftyp', typename))
-  typename_id[typename] = enum.get('id')
 
   # brief
-  tex.write('\\vspace{-5mm}')
+  tex.write('\\vspace{-5.5mm}')
   tex.write(node2tex(enum.find('briefdescription/para')) + "\n\n")
 
   # value descriptions
   if emptydescs == len(valnodes):
     print "\nWarning: Values section ommited in enum " + enum.find('name').text + " (all descriptions are empty).\n"
     return
-  tex.write("\\noindent\\textbf{Values}\\\\[-5mm]" + "\n")
+  tex.write("\\noindent\\textbf{Values}\\\\[-7mm]" + "\n")
   tex.write('\\begin{longtable}{@{\\hspace{2em}}p{\\linewidth-2em}}' + "\n")
   tex.write("\\\\[2mm]\n".join(valsdescs))
   tex.write("\n\\end{longtable}")
@@ -398,6 +406,8 @@ def print_signature(func, tex):
       if "(*)" in type:
         type = type.replace("(*)", " (*" + name + ")")
         argtxt += type
+      elif type.endswith("*"):
+        argtxt += type + name
       else:
         argtxt += type + " " + name
       argtxt += node2tex(arg.find('array')) # array length, if any
@@ -423,29 +433,36 @@ def process_function(func, tex, listings, commands, variants):
   tex.write("\\\\[4mm]\n".join(map(lambda f : print_signature(f, tex), variants)))
   tex.write("\\end{mylongtable}\n")
   # brief
-  tex.write('\\vspace{-5mm}')
-  tex.write(node2tex(func.find('briefdescription/para')) + "\n\n")
+  tex.write('\\vspace{-5.5mm}')
+  tex.write(node2tex(func.find('briefdescription/para')) + "\n\\\\[3mm]")
   # parameters
   args = func.findall(".//parameterlist[@kind='param']/parameteritem")
   if args:
-    tex.write("\\noindent\\textbf{Parameters}\\\\[-6mm]" + "\n")
+    tex.write("\\hspace*{-.3mm}\\textbf{Parameters}\\\\[-7mm]" + "\n")
     tex.write("\\noindent\\begin{longtable}{@{}>{\\hangindent=2em}p{\\textwidth}}" + "\n")
     arglst = []
     for arg in args:
       argnamenode = arg.find('./parameternamelist/parametername')
       argtxt = "\\refarg{" + node2tex(argnamenode) + "}" + "\\\\"
-      direction = argnamenode.get('direction')
-      argtxt += "\\hspace{2em}"
-      argtxt += '' if direction is None else "(" + direction + ") "
-      argtxt += node2tex(arg.find('parameterdescription/para'))
+      direction = argnamenode.get('direction').replace("inout", "in, out")
+      direction = '' if direction is None else "(" + direction + ") "
+
+      # if the description contains several paragraphs, they show up within a single
+      # parblock
+      paras = arg.findall('parameterdescription/para/parblock/para')
+      paras = arg.findall('parameterdescription/para') if not paras else paras
+      paraslst = map(lambda para: "\\hspace{2em}" + node2tex(para), paras)
+      argtxt += "\\\\[2mm]\n".join(paraslst)
+      argtxt = argtxt.replace("\\hspace{2em}", "\\hspace{2em}" + direction, 1)
       arglst.append(argtxt)
+
     tex.write("\\\\[2mm]\n".join(arglst))
-    tex.write("\n\\end{longtable}" + "\n\\vspace{-5mm}")
+    tex.write("\n\\end{longtable}" + "\n\\vspace{-2mm}")
 
   # return values
   rets = func.findall(".//parameterlist[@kind='retval']/parameteritem")
   if rets:
-    tex.write("\\noindent\\textbf{Return Values}\\\\[-6mm]" + "\n")
+    tex.write("\\textbf{Return Values}\\\\[-7mm]" + "\n")
     tex.write('\\noindent\\begin{longtable}{@{}>{\\hangindent=2em}p{\\linewidth}}' + "\n")
     arglst = []
     for ret in rets:
@@ -456,7 +473,7 @@ def process_function(func, tex, listings, commands, variants):
         argtxt +=  "\\\\" + "\\hspace{2em}" + retdesc
       arglst.append(argtxt)
     tex.write("\\\\[2mm]\n".join(arglst))
-    tex.write("\n\\end{longtable}" + "\n\\vspace{-5mm}")
+    tex.write("\n\\end{longtable}" + "\n\\vspace{-2mm}")
 
   # returns/return description
   ret = func.find("detaileddescription/para/simplesect[@kind='return']")
@@ -472,7 +489,7 @@ def process_function(func, tex, listings, commands, variants):
     if para.find('parameterlist') is None and para.find("simplesect[@kind='return']") is None:
       paraslst.append(node2tex(para))
   if paraslst:
-    tex.write("\\noindent\\textbf{Description}\\\\[1mm]"+ "\n")
+    tex.write("\\noindent\\textbf{Description}\\\\"+ "\n")
     tex.write("\\\\[2mm]\n".join(paraslst))
   tex.write(" \n")
 

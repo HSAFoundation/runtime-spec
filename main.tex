@@ -38,7 +38,13 @@
 % allow usage of underscore w/o resorting to underscore package
 % the underscore package imposes more restrictions on where underscores still
 % cannot be used (e.g.: labels)
-\catcode`\_=12
+\catcode`_=12 % we need this line, even when it is repeated afterwards
+\AtBeginDocument{
+   \catcode`_=12
+   \begingroup\lccode`~=`_
+   \lowercase{\endgroup\let~}\sb
+   \mathcode`_="8000
+ }
 
 \usepackage{ifthen}
 \usepackage{textcomp}
@@ -1120,9 +1126,9 @@ The application must rely on information provided by the finalizer to retrieve
 the amount of kernarg, group, and private memory used by a kernel. The kernel's
 code descriptor (explained in Section~\ref{sec:finalizer}) returned by the
 finalizer contains the kernarg
-(\hsaref{hsa_ext_code_descriptor_t.kernarg_segment_byte_size}), group
-(\hsaref{hsa_ext_code_descriptor_t.workgroup_group_segment_byte_size}) and
-private (\hsaref{hsa_ext_code_descriptor_t.workitem_private_segment_byte_size})
+(\hsaref{hsa_ext_code_descriptor_t.kernarg_segment_size}), group
+(\hsaref{hsa_ext_code_descriptor_t.group_segment_size}) and
+private (\hsaref{hsa_ext_code_descriptor_t.private_segment_size})
 static storage requirements.
 
 \subsubsection{Example: populating the Kernel Dispatch packet}
@@ -1511,233 +1517,266 @@ interacts with the \hsaref{hsa_vendor_extension_query} API call.
 
 \chapter{HSA Extensions Programming Guide}
 
-\section{HSAIL Finalization}\label{sec:finalizer}
+\section{Finalization and Linking API}\label{sec:finalizer}
 
-The finalization API is used to finalize given kernels and/or indirect
-functions.  The finalization API is a vendor-specific low-level API. It can be
-used to generate code for kernels and indirect functions from a specific program
-for a specific HSA component using \hsaref{hsa_ext_finalize}. A kernel can only
-be finalized once per program per HSA agent. An indirect function can only be
-finalized once per program per HSA agent per call convention. Only code for the
-HSA components specified when the program was created can be requested.
+An application uses the Finalization and Linking API to compile, link and load a
+set of kernel or indirect functions that are part of a set of HSAIL modules. The
+rest of the Sections in this chapter explore the API in detail.
 
-The program must contain a definition for the requested kernels and indirect
-functions among the modules that have been added to the program. The modules
-of the program must collectively define all variables, fbarriers, kernels and
-functions referenced by operations in the code block of:
-\begin{itemize}
-\item{The kernel and indirect functions being finalized.}
-\item{The transitive closure of all functions specified by \refhsl{call} or
-    \refhsl{scall} operations starting with the kernel and indirect functions
-    being finalized.  Refer to the HSA Programmer's Reference Manual~\cite{prm},
-    Chapter 10 for Function Operations.}
+A common usage case scenario for the Finalization and Linking API happens when
+an application wishes to compile a kernel in HSAIL binary format
+(BRIG~\cite{prm}) down to the machine code used in a particular HSA agent. The
+resulting machine code is then used in a Kernel Dispatch packet. The steps
+involved in this basic workflow are:
+\begin{enumerate}
+\item The application is in possesion of one or more HSAIL modules that are the
+  result of compiling a high-level language such as OpenMP or OpenCL. One of the
+  HSAIL modules contains the kernel that needs to be finalized. Manipulation of
+  BRIG is out of the scope of the HSA runtime API, so the application must
+  resort to external libraries in order to locate a kernel in an HSAIL module.
+\item The application creates an HSAIL program for the HSA agent using
+  \hsaref{hsa_ext_program_create}, and then adds the HSAIL module containing the
+  kernel to the HSAIL program by invoking
+  \hsaref{hsa_ext_program_add_module}. Sections~\ref{hsail-program}
+  and~\ref{hsail-program-module} document these functions in more detail.
+\item The application allocates and populates a \textit{finalization request
+  list} specifying what needs to be finalized, and where to place the
+  finalization output. In this example, the kernel is the only element in the
+  list. The finalization request also contains a pointer to a \textit{code
+    descriptor} structure, which is filled by the HSA runtime upon finalization
+  (see below).
+\item The finalization request is passed to \hsaref{hsa_ext_finalize}, along
+  with the target HSA agent. Finalization is explained in
+  Section~\ref{hsail-finalization}.
+\item The finalization process populates a code descriptor structure
+  (\hsaref{hsa_ext_code_descriptor_t}) that contains a handle to the machine
+  code and finalization metadata. The code descriptor was allocated by the HSA
+  runtime upon module addition (step 2), but the descriptor's contents are
+  undefined until finalization ends. Code descriptors are described in
+  Section~\ref{hsail-code-descriptor}.
+\item The application can now access the code descriptor pointed by the
+  finalization request. The \hsaref{hsa_ext_code_descriptor_t.code_object} field
+  in the code descriptor is a handle to the machine code; the application
+  can use this handle to populate the
+  \hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field of a Kernel Dispatch
+  packet. The application may use some other finalization output (for example,
+  the kernel's memory usage reported in the descriptor) to fill other fields
+  of the Kernel Dispatch packet.
+\end{enumerate}
+
+\subsection{HSAIL program}\label{hsail-program}
+
+An \textit{HSAIL program} is one of the most relevant abstractions in the
+Finalization and Linking API. The application uses an HSAIL program to manage
+the linking across several HSAIL modules, finalize a set of kernels and indirect
+functions, and perform symbol loading.
+
+An HSAIL program is associated with a fixed set $S$ of HSA agents, which is
+passed by the application at program creation time. Each HSA agent associated
+with the HSAIL program corresponds to a \textit{program agent ID} in the range
+[0, $|S|$). The same HSA agent can be assigned different program agent IDs in
+  different HSAIL programs.
+
+\input{api/altlatex/group-ext-finalizer-program}
+\newpage
+
+\subsection{HSAIL program modules}\label{hsail-program-module}
+
+The application must add an HSAIL binary (BRIG~\cite{prm}) module to an HSAIL
+program before any kernel or indirect function contained in the HSAIL module can
+be finalized. In the most common scenario, the application obtained one or more
+HSAIL modules by compiling a program written in a high-level language. The HSA
+runtime specification does not provide any functionality relative to HSAIL
+modules other than allowing them to be added to an HSAIL program.
+
+Within a specific HSAIL program, an HSAIL module is denoted by an \textit{HSAIL
+  program module}. The HSA runtime automatically creates an HSAIL program module
+every time the application successfully adds
+(\hsaref{hsa_ext_program_add_module}) an HSAIL module to an HSAIL program. The
+Finalization and Linking API uses HSAIL program modules to uniquely identify a
+pair (HSAIL program, HSAIL module). It is important to note that, for
+performance reasons, neither the HSAIL program module nor the HSAIL program
+store a deep copy of the original HSAIL module, but simply store a reference to
+it instead. The application must not deallocate the HSAIL module before
+finalizing any of its associated kernels of indirect functions.
+
+Every HSA program returned by \hsaref{hsa_ext_program_create} contains a special
+HSAIL program module that refers to the host application, and not to an HSAIL
+module. Since the application HSAIL program module is present in every HSAIL
+program upon creation, it is listed as the first program module (see
+\hsaref{hsa_ext_program_get_program_module}) in the HSAIL program.
+
+Symbols (kernels, indirect functions, or variables) in an HSAIL program are
+identified by a pair consisting of the HSAIL program module where the symbol is
+defined, and an offset. The offset is computed differently depending on the type
+of HSAIL program module:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item The offset of a symbol within a non-application HSAIL program module is
+  identical to its offset within the code section of the original HSAIL
+  module. The application must use HSAIL manipulation routines outside the HSA
+  runtime API in order to compute that offset.
+\item The offset of an application-defined symbol (see
+  Section~\ref{hsail-app-defined-variables}) is determined by the value returned
+  by the definition function.
 \end{itemize}
 
-When invoking the finalizer, one or more kernels and indirect functions can be
-requested. Requested kernels and indirect functions are represented as an array
-of \hsaref{hsa_ext_finalization_request_t}. On some implementations, specifying
-multiple kernels and indirect functions can produce code with better performance
-than finalizing the kernels and indirect function individually. For example, it
-can allow the finalizer to generate common code for shared functions which can
-reduce code footprint and improve instruction cache performance.
+\input{api/altlatex/group-ext-finalizer-module}
+\newpage
 
-The finalization API allocates a kernel descriptor for every kernel definition
-in a program, and an indirect function descriptor for every indirect function
-definition in the program. Both kinds of descriptors are represented as an array
-of \hsaref{hsa_ext_code_descriptor_t} in global segment memory. Each code
-descriptor provides the information about a finalization of the kernel or
-indirect function for a specific HSA component, and for indirect functions, a
-specific call convention of that HSA component. An HSA runtime uses an array of
-finalization handles \hsaref{hsa_ext_finalization_handle_t} to access code
-descriptors.
+\subsection{Finalization of kernels and indirect
+  functions}\label{hsail-finalization}
 
-The kernel descriptor array is indexed by the HSA agent ID
-\hsaref{hsa_ext_program_agent_id_t} The kernel descriptor and HSA agent ID are
-available by the \refhsl{ldk} and \refhsl{agentid} operations respectively, or
-by the HSA runtime queries \hsaref{hsa_ext_query_kernel_descriptor_address} and
-\hsaref{hsa_ext_query_program_agent_id}. Refer to the HSA Programmer's Reference
-Manual~\cite{prm}, Chapter 4.2.1 for Agent ID and 11.3 for User Mode Queue
-Operations.
+In the runtime API, the application can finalize a subset of an HSAIL program by
+passing a list of kernels and indirect functions that are part of that
+program. This \textit{finalization request} list must be self-contained -- there
+must be a definition for every variable, fbarrier, kernel, and function
+referenced by operations in the code blocks being finalized.
 
-The indirect function descriptor is indexed by the call convention ID
-\hsaref{hsa_ext_program_call_convention_id32_t} which is performed implicitly by
-the \refhsl{icall} operation. The indirect function descriptor address is
-available by the \refhsl{ldi} operation or the HSA runtime query
-\hsaref{hsa_ext_query_indirect_function_descriptor_address}. Refer to the HSA
-Programmer's Reference Manual~\cite{prm}, Chapter 4.2.2 for Call Convention ID
-and 10.8 for Indirect Call (\refhsl{icall}, \refhsl{ldi}) Operations.
-
-The finalizer updates the code descriptor corresponding to the HSA agent or call
-convention for each kernel or indirect function that it finalizes.
-
-The layout of a \hsaref{hsa_ext_code_descriptor_t} is defined by the HSA runtime.
-It includes a kind field \hsaref{hsa_ext_code_kind32_t} that indicates whether
-the code descriptor contains finalized code. If it has been finalized, then for
-kernels the information needed to create a User Mode Queue Kernel Dispatch
-packet is available, including:
-\begin{itemize}
-\item{The byte size of the group segment for a single work-group:}
-  \subitem{Includes module scope and function scope group segment variables used
-    by the kernel or any functions it calls directly or indirectly.}
-  \subitem{Includes any finalizer allocated temporary space. For example, in the
-    implementation of exception operations or fbarriers.}  \subitem{Does not
-    include any dynamically allocated group segment space. Refer to the HSA
-    Programmer's Reference Manual~\cite{prm}, Chapter 4.20 Dynamic Group Memory
-    Allocation.}
-\item{The byte size of the private segment for a single work-item. This
-    includes:} \subitem{Module scope and function scope private segment
-    variables.}  \subitem{Space for function scope spill segment variables
-    allocated in memory.} \subitem{Space for argument scope arg segment
-    variables allocated in memory.}  \subitem{Any space needed for saved HSAIL
-    or ISA registers due to calls.}  \subitem{Any other finalizer introduced
-    temporaries including spilled ISA registers and space for function call
-    stack.}
-\item{The 64-bit opaque code handle to the finalized code that includes the
-    executable ISA for the HSA component. It can be used for the Kernel Dispatch
-    packet kernel object address field.}
+A finalization request (\hsaref{hsa_ext_finalization_request_t}) is composed of:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item A pair (program module, offset) that uniquely identifies the kernel or
+  indirect function to be finalized within the HSAIL program.
+\item Finalization options such as control directives and call convention to
+  use.
+\item A pointer to a \textit{code descriptor}. The application is not expected
+  to populate this value -- it is the HSA runtime that updates the field upon
+  finalization. The code descriptor contains the finalized machine code.
 \end{itemize}
 
-The code descriptor also includes other information that may be useful to a
-high-level language runtime to invoke and manage the kernel's execution. For
-example, the size and alignment of the kernarg segment and the call convention
-used by the code of the kernel.
+The application triggers the finalization process by calling
+\hsaref{hsa_ext_finalize}. A kernel in a HSAIL program can be finalized at most
+once for a given HSA agent. An indirect function in an HSAIL program can be
+finalized at most once for a given combination of HSA agent and calling
+convention.
 
-For an indirect function, a code descriptor includes:
-\begin{itemize}
-\item{The 64-bit opaque code handle to the finalized code that includes the
-    executable ISA for a single call convention of the HSA component.}
+On some implementations, finalizing multiple kernels and indirect functions at
+once can produce code with better performance than finalizing the kernels and
+indirect function individually. For example, it can allow the finalizer to
+generate common code for shared functions which can reduce code footprint and
+improve instruction cache performance.
+
+A finalization of $n$ requests targeting a specific HSA agent results on $n$
+updated code descriptors. The application can now use the machine code contained
+in the code descriptor to populate a Kernel Dispatch packet. Note that the
+finalization output (a list of code descriptors) is not part of the signature of
+\hsaref{hsa_ext_finalize}. The next section discusses the layout of a code
+descriptor, and how code descriptors are stored in memory.
+
+\input{api/altlatex/group-ext-finalizer-finalization}
+\newpage
+
+\subsection{Code descriptors}\label{hsail-code-descriptor}
+
+\subsubsection{Kernels}
+
+When the application adds an HSAIL module to an HSAIL program
+(\hsaref{hsa_ext_program_add_module}), the HSA runtime creates a separate kernel
+code descriptor (described by the \hsaref{hsa_ext_code_descriptor_t} type) for
+every combination of an HSA agent that is part of the HSAIL program, and a
+kernel that is defined in the HSAIL module. An HSAIL program with $m$ HSA agents
+and $n$ kernel definitions contains $m\times n$ kernel code descriptors.
+
+A code descriptor remains "empty" until the associated kernel is finalized for
+the corresponding HSA agent. In the empty state, the
+\hsaref{hsa_ext_code_descriptor_t.code_type} field is \hsaref{HSA_EXT_CODE_NONE}
+and the contents of any other field are undefined.
+
+The application can access a kernel code descriptor in two alternative ways:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item Reading the finalization request code descriptor pointer
+  (\hsaref{hsa_ext_finalization_request_t.descriptor} field). This is only
+  permitted after the finalization process (\hsaref{hsa_ext_finalize}) for that
+  request is complete.
+\item The code descriptors associated with the same kernel are stored
+  contiguously in memory~\cite{prm}. The application can retrieve a pointer to
+  the first kernel code descriptor in an HSAIL program using the
+  \hsaref{hsa_ext_kernel_get_descriptors} function. The index of the kernel
+  associated with a specific HSA agent is identical to the program agent ID,
+  which is itself determined by the \hsaref{hsa_ext_program_get_agent}
+  function. Note that the application can access a code descriptor using this
+  approach even before finalization.
 \end{itemize}
 
-Once code has been generated for a kernel for a specific HSA component, it can
-be executed by adding a Kernel Dispatch packet to a User Mode Queue associated
-with the HSA component. The information required to create the Kernel Dispatch
-packet is available in the code descriptor addressed by using the HSA agent ID
-to index the kernel descriptor.
+After finalization, a handle to the machine code is available in the
+\hsaref{hsa_ext_code_descriptor_t.code_object} field. The application can use
+this handle to populate the \hsaref{hsa_kernel_dispatch_packet_t.kernel_object}
+field in the Kernel Dispatch packet. The code descriptor also contains the
+statically determined private and group memory usage of the kernel
+(\hsaref{hsa_kernel_dispatch_packet_t.group_segment_size} and
+\hsaref{hsa_kernel_dispatch_packet_t.private_segment_size}, respectively), which
+can be used as a lower bound of the Kernel Dispatch packet fields with the same
+name. Finally, the code descriptor structure contains information about the
+finalized kernel such as HSAIL program module where it is located, code offset,
+associated HSA agent, and type (in this case, \hsaref{HSA_EXT_CODE_KERNEL}).
 
-For an indirect function, the code is only made available to kernel dispatches
-launched after the indirect function has been finalized. Therefore, prior to
-executing a kernel, all indirect functions that it will call must have been
-finalized for the HSA component with the call convention used by the kernel
-code. The \refhsl{icall} operation, used to call indirect functions, implicitly
-access the code descriptor addressed by using the call convention ID of the
-executing kernel to index the indirect function descriptor.  Refer to the HSA
-Programmer's Reference Manual~\cite{prm}, Chapter 4.2.2 for Call Convention ID
-and 10.8 for Indirect Call (\refhsl{icall}, \refhsl{ldi}) Operations.
+\subsubsection{Indirect functions}
 
-Appropriate memory synchronization is needed to access the code descriptor since
-it is updated concurrently by the HSA runtime. Memory synchronization may
-include using an acquire fence at system scope on the Kernel Dispatch packet if
-the code descriptor may have changed since the HSA component executed the last
-packet acquire fence at system scope, or using a load acquire at system scope on
-the code descriptor kind field if the code descriptor may change during the
-execution of the kernel dispatch. This applies both to accesses performed
-explicitly to create Kernel Dispatch packets, and implicitly by the
-\refhsl{icall} operation.
+When the application adds an HSAIL module to an HSAIL program
+(\hsaref{hsa_ext_program_add_module}), the HSA runtime creates a separate
+indirect function code descriptor (also described by the
+\hsaref{hsa_ext_code_descriptor_t} type) for every combination of an HSA agent
+that is part of the HSAIL program, call convention supported by that HSA agent,
+and indirect function defined in the HSAIL module. An HSAIL program with $m$ HSA
+agents and $n$ indirect function definitions contains $(c_{0} + ... +
+c_{m-1})\times n$ indirect function code descriptors, where $c_i$ represents the
+number of call conventions supported by the HSA agent with a program agent ID of
+$i$.
 
-The code will remain available to execute until the HSA runtime is used to
-destroy the HSAIL program with which the code is associated using
-\hsaref{hsa_ext_program_destroy}. All HSAIL programs created by the application
-are implicitly destroyed when the application terminates.
+As in the case of kernel descriptors, the application can access an indirect
+function code descriptor in two different ways:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item Reading the finalization request code descriptor pointer
+  (\hsaref{hsa_ext_finalization_request_t.descriptor} field). This is only
+  permitted after the finalization process (\hsaref{hsa_ext_finalize}) for that
+  request is complete.
+\item Code descriptors associated with the same indirect function are stored
+  contiguously in memory~\cite{prm}. Furthermore, all the descriptors associated
+  with the same HSA agent appear consecutively. The application can retrieve a
+  pointer to the first indirect function code descriptor in an HSAIL program
+  using the \hsaref{hsa_ext_indirect_function_get_descriptors} function. In
+  order to find the index associated with a given HSA agent and call convention,
+  the application needs to add the call convention to the value returned by
+  \hsaref{hsa_ext_agent_get_indirect_function_descriptor_index}.
+\end{itemize}
 
-\subsection{API}
-\input{api/altlatex/group-ext-finalizer}
+\input{api/altlatex/group-ext-finalizer-descriptors}
+\newpage
 
-\section{HSAIL Linking}\label{linking}
+\subsection{Queries on HSAIL programs}
+The application can use the functions documented in this Section to map a symbol
+declaration to its definition, or get the address of a variable in the global or
+readonly segments. Addresses returned by
+\hsaref{hsa_ext_global_variable_get_agent_address} and
+\hsaref{hsa_ext_readonly_variable_get_address} may not be directly accessible to
+the host, which must copy the buffer (\hsaref{hsa_memory_copy}) before reading
+the value of the variable.
 
-The HSAIL linking API is a vendor-neutral high level API that provides semantics
-for HSAIL inter-module linking. Linking between modules is done within the
-context of the HSAIL program.
+\input{api/altlatex/group-ext-finalizer-program-queries}
+\newpage
 
-An application can use the HSA runtime to create zero or more HSAIL programs
-using \hsaref{hsa_ext_program_create}. Created HSAIL programs can be accessed
-through \hsaref{hsa_ext_program_handle_t}, which is returned from the program
-creation call.  When the program is created, one or more HSA components
-\hsaref{hsa_agent_t} that are part of HSA platform must be specified, together
-with the machine model \hsaref{hsa_ext_brig_machine_model8_t} and profile
-\hsaref{hsa_ext_brig_profile8_t}.
+\subsection{Application-defined variables}\label{hsail-app-defined-variables}
+\input{api/altlatex/group-ext-host-linkage}
+\newpage
 
-The set of HSA agents associated with a program cannot be changed after it has
-been created. Within a program, each of these HSA component members has a unique
-identifier of type \hsaref{hsa_ext_program_agent_id_t} in the range 0 to the
-number of HSA agent members minus one. The same HSA component may have a
-different agent identifier in different HSAIL programs that it is a member. In
-addition, each HSA component can support one or more call conventions
-\hsaref{hsa_ext_program_call_convention_id32_t}. For example, an HSA component
-may have different call conventions that each use a different number of ISA
-registers to allow different numbers of wavefronts to execute on a compute unit.
-When the HSA runtime is used to create an HSAIL program, it determines a dense
-call convention ID ordering for the program. The first HSA agent is assigned
-call convention IDs 0 to the number of call conventions it supports minus one.
-The next HSA agent is assigned the next range of call conventions according to
-the number it supports, and so on. Note that the same HSA agent may have a
-different range of call convention IDs in different programs of which it is a
-member. An HSA runtime query \hsaref{hsa_ext_query_call_convention} is available
-to determine the range of call convention IDs used for a particular HSA agent of
-a particular program.
+\subsection{Serialization}
+\input{api/altlatex/group-ext-finalizer-serialization}
+\newpage
 
-The machine model address size for the global segment must match the size used
-by the application.
+\subsection{Enumeration constants added by this extension}
+\input{api/altlatex/group-ext-finalizer-extensions}
+\newpage
 
-An application can add zero or more HSAIL modules \hsaref{hsa_ext_brig_module_t}
-to the HSAIL program using \hsaref{hsa_ext_add_module}. An HSAIL module is the
-unit of HSAIL generation, and can contain multiple symbol declarations and
-definitions. Distinct instances of the symbols it defines are created within
-each program, and symbol declarations are only linked to the definitions
-provided by other modules in the same program. The same HSAIL module can be
-added to multiple HSAIL programs, which allows multiple instances of the same
-kernel and indirect functions that reference distinct allocations of global
-segment variables.  The same HSAIL module cannot be added to the same HSAIL
-program more than once. The machine model and profile of the HSAIL module that
-is being added has to match the machine model and profile of the HSAIL program
-it is added to. HSAIL modules and their handles can be queried from the program
-using several query operations, for example
-\hsaref{hsa_ext_query_program_modules} queries the specified number of module
-handles, \hsaref{hsa_ext_query_program_brig_module} queries the module with the
-specified module handle. HSAIL modules contained in the program can be accessed
-through the module handle \hsaref{hsa_ext_brig_module_handle_t}.
+\subsection{BRIG adapters}
+The Finalization and Linking API relies on the HSAIL binary format (BRIG)
+API~\cite{prm}, which defines the binary representation of HSAIL text. Since the
+naming convention currently used in the BRIG API does not match the convention
+used in this specification, the Finalization and Linking API provides a set of
+type aliases in order to maintain naming consistency. The intermediate types
+declared in this Section are expected to be removed once the BRIG API is updated
+and follows the same naming convention as the runtime API.
 
-The linking API manages linking of symbol declarations to symbol definitions
-between modules, therefore the low-level APIs can request certain definitions
-and addresses using \hsaref{hsa_ext_symbol_definition_callback_t} and
-\hsaref{hsa_ext_symbol_address_callback_t} respectively. In addition, the
-application can provide symbol definitions to an HSAIL program using
-\hsaref{hsa_ext_define_agent_allocation_global_variable_address} and
-\hsaref{hsa_ext_define_readonly_variable_address}, and request the address of
-symbols defined by the HSAIL program using
-\hsaref{hsa_ext_query_symbol_definition},
-\hsaref{hsa_ext_query_program_allocation_global_variable_address},
-\hsaref{hsa_ext_query_agent_global_variable_address},
-\hsaref{hsa_ext_query_readonly_variable_address}.
-
-Once the program is linked and finalized, it is the application's responsibility
-to destroy the program. Destroying the program will deallocate all code objects,
-so the code will become unavailable.
-
-\subsection{API}
-\input{api/altlatex/group-ext-linker}
-
-
-% \section{Proposed Finalization API}
-
-% \subsection{API - BRIG adapters}
-% \input{api/altlatex/group-alt-finalizer-brig-adapters}
-% \newpage
-
-% \subsection{API - HSAIL program}
-% \input{api/altlatex/group-alt-finalizer-program}
-% \newpage
-
-% \subsection{API - HSAIL modules}
-% \input{api/altlatex/group-alt-finalizer-module}
-% \newpage
-
-% \subsection{API - Finalization of kernels and indirect functions}
-% \input{api/altlatex/group-alt-finalizer-finalization}
-% \newpage
-
-% \subsection{Serialization}
-% \input{api/altlatex/group-alt-finalizer-miscellaneous}
-% \newpage
+\input{api/altlatex/group-ext-finalizer-brig-adapters}
+\newpage
 
 \section{Images and Samplers}\label{images}
 
@@ -1745,8 +1784,8 @@ An HSA runtime uses an image handle \hsaref{hsa_ext_image_handle_t} to access
 images. The image handle references the image data in memory and records
 information about resource layout and other properties. HSA decouples the
 storage of the image data and the description of how the device interprets that
-data. This allows the application developer to control the location of the
-image data storage and manage memory more efficiently.
+data. This allows the application developer to control the location of the image
+data storage and manage memory more efficiently.
 
 The HSA image format is specified using a format descriptor
 (\hsaref{hsa_ext_image_format_t}) that contains information about the image
@@ -1756,8 +1795,8 @@ describes the number and the order. Not all image channel types and channel
 order combinations are valid on an HSA agent. All HSA agents have to support a
 required minimum set of image formats. For more information, refer to the HSA
 Programmer's Reference Manual\cite{prm}. An application can use
-\hsaref{hsa_ext_image_get_format_capability} to query a runtime
-to obtain image format capabilities.
+\hsaref{hsa_ext_image_get_format_capability} to query a runtime to obtain image
+format capabilities.
 
 An implementation-independent image format descriptor
 (\hsaref{hsa_ext_image_descriptor_t}) is composed of geometry along with the

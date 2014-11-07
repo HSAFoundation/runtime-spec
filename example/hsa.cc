@@ -145,7 +145,7 @@ namespace hsa {
       q_.type = type;
       hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &(q_.features));
       q_.base_address = packets_;
-      q_.doorbell_signal = (hsa_signal_t)&doorbell_;
+      q_.doorbell_signal.handle = (uint64_t)&doorbell_;
 
       q_.size = size;
       q_.id = GetUniqueId();
@@ -178,8 +178,8 @@ namespace hsa {
     }
 
     void DecrementCompletionSignal(packet_t& packet) {
-      if (packet.completion_signal != 0) {
-        hsa::Signal* sig = (hsa::Signal*) packet.completion_signal;
+      if (packet.completion_signal.handle != 0) {
+        hsa::Signal* sig = (hsa::Signal*) packet.completion_signal.handle;
         sig->Subtract(1, std::memory_order_release);
       }
     }
@@ -206,7 +206,7 @@ namespace hsa {
 
     bool ProcessBarrier(hsa_barrier_and_packet_t& packet) {
       for (int i = 0; i < 5; i++) {
-        hsa_signal_t dep = packet.dep_signal[i];
+        uint64_t dep = packet.dep_signal[i].handle;
         if (dep != 0) {
           hsa::Signal* sig = (hsa::Signal*) dep;
           sig->Wait(std::memory_order_acquire, HSA_EQ, 0);
@@ -401,7 +401,7 @@ namespace hsa {
   public:
 
     HostAgent(bool agent_dispatch_enabled = false) {
-      region_.agent_ = (hsa_agent_t) this;
+      region_.agent_.handle = (uint64_t) this;
       region_.bandwidth_ = 0;
       region_.node_ = 0;
 
@@ -435,7 +435,8 @@ namespace hsa {
     }
 
     virtual hsa_status_t IterateRegions(hsa_status_t(*callback)(hsa_region_t region, void* data), void* data) {
-      hsa_region_t r = (hsa_region_t)&region_;
+      hsa_region_t r;
+      r.handle = (uint64_t)&region_;
       return callback(r, data);
     }
 
@@ -474,7 +475,8 @@ namespace hsa {
 
     virtual hsa_status_t IterateAgents(hsa_status_t(*callback)(hsa_agent_t agent, void* data), void* data) {
       for (unsigned int i = 0; i < agents_.get()->size(); i++) {
-        hsa_agent_t a = (hsa_agent_t)(agents_.get()->at(i));
+        hsa_agent_t a;
+        a.handle = (uint64_t)(agents_.get()->at(i));
         hsa_status_t stat = callback(a, data);
         if (stat != HSA_STATUS_SUCCESS) {
           return stat;
@@ -552,7 +554,7 @@ extern "C" {
   }
 
   hsa_status_t hsa_agent_get_info(hsa_agent_t agent, hsa_agent_info_t attribute, void* value) {
-    hsa::Agent* a = (hsa::Agent*) agent;
+    hsa::Agent* a = (hsa::Agent*) agent.handle;
     return a->Get(attribute, value);
   }
 
@@ -565,12 +567,12 @@ extern "C" {
   hsa_status_t hsa_signal_create(hsa_signal_value_t initial_value, uint32_t num_consumers, const hsa_agent_t *consumers, hsa_signal_t *signal) {
     // ignore consumers hint for now
     hsa::Signal* sig = new hsa::Signal(initial_value);
-    *signal = (hsa_signal_t)sig;
+    signal->handle = (uint64_t) sig;
     return HSA_STATUS_SUCCESS;
   }
 
   hsa_status_t hsa_signal_destroy(hsa_signal_t signal) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     delete sig;
     return HSA_STATUS_SUCCESS;
   }
@@ -581,155 +583,155 @@ extern "C" {
   }
 
   hsa_signal_value_t hsa_signal_load_acquire(hsa_signal_t signal) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Load(std::memory_order_acquire);
   }
 
   hsa_signal_value_t hsa_signal_load_relaxed(hsa_signal_t signal) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Load(std::memory_order_relaxed);
   }
 
   void hsa_signal_store_relaxed(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Store(value, std::memory_order_relaxed);
   }
 
   void hsa_signal_store_release(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Store(value, std::memory_order_release);
   }
 
   hsa_signal_value_t hsa_signal_exchange_acq_rel(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Exchange(value, std::memory_order_acq_rel);
   }
 
   hsa_signal_value_t hsa_signal_exchange_acquire(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Exchange(value, std::memory_order_acquire);
   }
 
   hsa_signal_value_t hsa_signal_exchange_relaxed(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Exchange(value, std::memory_order_relaxed);
   }
 
   hsa_signal_value_t hsa_signal_exchange_release(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Exchange(value, std::memory_order_release);
   }
 
   hsa_signal_value_t hsa_signal_cas_acq_rel(hsa_signal_t signal, hsa_signal_value_t expected,
     hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Cas(expected, value, std::memory_order_acq_rel);
   }
 
   hsa_signal_value_t HSA_API hsa_signal_cas_acquire(hsa_signal_t signal, hsa_signal_value_t expected,
     hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Cas(expected, value, std::memory_order_acquire);
   }
 
   hsa_signal_value_t HSA_API hsa_signal_cas_relaxed(hsa_signal_t signal, hsa_signal_value_t expected,
     hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Cas(expected, value, std::memory_order_relaxed);
   }
 
   hsa_signal_value_t HSA_API hsa_signal_cas_release(hsa_signal_t signal, hsa_signal_value_t expected, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Cas(expected, value, std::memory_order_release);
   }
 
   void hsa_signal_add_acq_rel(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Add(value, std::memory_order_acq_rel);
   }
 
   void hsa_signal_add_acquire(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Add(value, std::memory_order_acquire);
   }
 
   void hsa_signal_add_relaxed(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Add(value, std::memory_order_relaxed);
   }
 
   void hsa_signal_add_release(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Add(value, std::memory_order_release);
   }
 
   void hsa_signal_subtract_acq_rel(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Subtract(value, std::memory_order_acq_rel);
   }
 
   void hsa_signal_subtract_acquire(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Subtract(value, std::memory_order_acquire);
   }
 
   void hsa_signal_subtract_relaxed(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Subtract(value, std::memory_order_relaxed);
   }
 
   void hsa_signal_subtract_release(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Subtract(value, std::memory_order_release);
   }
 
   void hsa_signal_or_acq_rel(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Or(value, std::memory_order_acq_rel);
   }
 
   void hsa_signal_or_acquire(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Or(value, std::memory_order_acquire);
   }
 
   void hsa_signal_or_relaxed(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Or(value, std::memory_order_relaxed);
   }
 
   void hsa_signal_or_release(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Or(value, std::memory_order_release);
   }
 
   void hsa_signal_xor_acq_rel(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Xor(value, std::memory_order_acq_rel);
   }
 
   void hsa_signal_xor_acquire(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Xor(value, std::memory_order_acquire);
   }
 
   void hsa_signal_xor_relaxed(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Xor(value, std::memory_order_relaxed);
   }
 
   void hsa_signal_xor_release(hsa_signal_t signal, hsa_signal_value_t value) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     sig->Xor(value, std::memory_order_release);
   }
 
   hsa_signal_value_t hsa_signal_wait_acquire(hsa_signal_t signal, hsa_signal_condition_t condition, hsa_signal_value_t compare_value, uint64_t timeout_hint, hsa_wait_expectancy_t wait_expectancy_hint) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Wait(std::memory_order_acquire, condition, compare_value);
   }
 
   hsa_signal_value_t hsa_signal_wait_relaxed(hsa_signal_t signal, hsa_signal_condition_t condition, hsa_signal_value_t compare_value, uint64_t timeout_hint, hsa_wait_expectancy_t wait_expectancy_hint) {
-    hsa::Signal* sig = (hsa::Signal*) signal;
+    hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Wait(std::memory_order_relaxed, condition, compare_value);
   }
 
@@ -739,6 +741,8 @@ extern "C" {
     hsa_queue_type_t type,
     void(*callback)(hsa_status_t status, hsa_queue_t *queue),
     const hsa_queue_t* service_queue,
+    uint32_t private_segment_size,
+    uint32_t group_segment_size,
     hsa_queue_t **queue) {
     hsa::Queue* q = new hsa::Queue(agent, size, type, callback, service_queue);
     *queue = (hsa_queue_t*)q;
@@ -835,7 +839,7 @@ extern "C" {
     hsa_region_t region,
     hsa_region_info_t attribute,
     void* value) {
-    hsa::Region* r = (hsa::Region*) region;
+    hsa::Region* r = (hsa::Region*) region.handle;
     return r->Get(attribute, value);
   }
 
@@ -843,12 +847,12 @@ extern "C" {
     hsa_agent_t agent,
     hsa_status_t(*callback)(hsa_region_t region, void* data),
     void* data) {
-    hsa::Agent* a = (hsa::Agent*) agent;
+    hsa::Agent* a = (hsa::Agent*) agent.handle;
     return a->IterateRegions(callback, data);
   }
 
   hsa_status_t hsa_memory_allocate(hsa_region_t region, size_t size, void** ptr) {
-    hsa::Region* r = (hsa::Region*) region;
+    hsa::Region* r = (hsa::Region*) region.handle;
     *ptr = r->Alloc(size);
     return HSA_STATUS_SUCCESS;
   }

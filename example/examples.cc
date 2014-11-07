@@ -72,7 +72,7 @@ void simple_dispatch() {
 
     // Create a queue in the HSA component. The queue can hold 4 packets, and has no callback or service queue associated with it
     hsa_queue_t *queue;
-    hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
+    hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue);
 
     // Request a packet ID from the queue. Since no packets have been enqueued yet, the expected ID is zero
     uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
@@ -154,7 +154,7 @@ void multithread_dispatch() {
     hsa_iterate_agents(get_multi_component, &component);
     hsa_queue_t *queue;
     // Create a queue in the selected component.
-    hsa_queue_create(component, 4, HSA_QUEUE_TYPE_MULTI, NULL, NULL, &queue);
+    hsa_queue_create(component, 4, HSA_QUEUE_TYPE_MULTI, NULL, NULL, 0, 0, &queue);
 
     std::vector<std::thread*> threads;
     const int kNumThreads = 4;
@@ -176,7 +176,7 @@ void multithread_dispatch() {
 void callback(hsa_status_t status, hsa_queue_t* queue) {
   const char* message;
   hsa_status_string(status, &message);
-  printf("Error at queue %d: %s", queue->id, message);
+  printf("Error at queue %" PRIu64 ": %s", queue->id, message);
 }
 
 void error_callback() {
@@ -185,7 +185,7 @@ void error_callback() {
   hsa_iterate_agents(get_component, &component);
 
   hsa_queue_t *queue;
-  hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, callback, NULL, &queue);
+  hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, callback, NULL, 0, 0, &queue);
 
   uint64_t write_index = hsa_queue_add_write_index_relaxed(queue, 1);
   hsa_kernel_dispatch_packet_t* packet = (hsa_kernel_dispatch_packet_t*)queue->base_address + write_index;
@@ -249,7 +249,7 @@ int kernarg_usage() {
     // Create a queue in the selected HSA component. The queue can hold up to 4 packets, and has no callback or service queue
     // associated with it.
     hsa_queue_t *queue;
-    hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
+    hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue);
 
     // Request a packet ID from the queue. Since no packets have been enqueued yet, the expected ID is zero.
     uint64_t write_index = hsa_queue_add_write_index_relaxed(queue, 1);
@@ -327,7 +327,7 @@ void barrier(){
 
     // Create queue in HSA component A and prepare a Kernel Dispatch packet
     hsa_queue_t *queue_a;
-    hsa_queue_create(component[0], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue_a);
+    hsa_queue_create(component[0], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue_a);
     uint64_t packet_id_a = hsa_queue_add_write_index_relaxed(queue_a, 1);
 
     hsa_kernel_dispatch_packet_t* packet_a =  (hsa_kernel_dispatch_packet_t*) queue_a->base_address + packet_id_a;
@@ -344,7 +344,7 @@ void barrier(){
 
     // Create queue in HSA component B
     hsa_queue_t *queue_b;
-    hsa_queue_create(component[1], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue_b);
+    hsa_queue_create(component[1], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue_b);
     uint64_t packet_id_b = hsa_queue_add_write_index_relaxed(queue_b, 2);
 
     // Create Barrier-AND packet that is enqueued in a queue of B
@@ -416,7 +416,7 @@ void process_agent_dispatch(hsa_queue_t* service_queue) {
         } else {
             // Process other Agent Dispatch packet types...
         }
-        if (packet->completion_signal != 0) {
+        if (packet->completion_signal.handle != 0) {
             hsa_signal_subtract_release(packet->completion_signal, 1);
         }
         packet_type_store_release(&packet->header, HSA_PACKET_TYPE_INVALID);
@@ -463,7 +463,7 @@ void agent_dispatch(){
     hsa_agent_t agent_dispatch_agent;
     hsa_iterate_agents(get_agent_dispatch_agent, &agent_dispatch_agent);
     hsa_queue_t *service_queue;
-    hsa_queue_create(agent_dispatch_agent, 16, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &service_queue);
+    hsa_queue_create(agent_dispatch_agent, 16, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &service_queue);
 
     // Launch thread serving Agent Dispatch packets
     std::thread* agent_dispatch_thread = new std::thread(process_agent_dispatch, service_queue);
@@ -472,7 +472,7 @@ void agent_dispatch(){
     hsa_agent_t component;
     hsa_iterate_agents(get_component, &component);
     hsa_queue_t* queue;
-    hsa_queue_create(component, 16, HSA_QUEUE_TYPE_MULTI, callback, service_queue, &queue);
+    hsa_queue_create(component, 16, HSA_QUEUE_TYPE_MULTI, callback, service_queue, 0, 0,  &queue);
 
     // Dispatch kernel on HSA component that requests multiple allocation via Agent Dispatch packets
     uint64_t write_index = hsa_queue_add_write_index_relaxed(queue, 1);
@@ -498,23 +498,34 @@ void agent_dispatch(){
     hsa_shut_down();
 }
 
-int main() {
-   int test = 5;
+int main (int argc, char *argv[]) {
+  int test = 0;
+  if (argc == 1) {
+     printf("No test passed as argument, defaulting to 0\n");
+  } else {
+    test = atoi(argv[1]);
+  }
    if (test == 0) {
-      KERNEL_OBJECT = (uint64_t) hello_world;
-      simple_dispatch();
+     printf("Test: Simple Dispatch\n");
+     KERNEL_OBJECT = (uint64_t) hello_world;
+     simple_dispatch();
    } else if (test == 1) {
-      KERNEL_OBJECT = (uint64_t) increment;
-      multithread_dispatch();
+     printf("Test: Multithreaded Dispatch\n");
+     KERNEL_OBJECT = (uint64_t) increment;
+     multithread_dispatch();
    } else if (test == 2) {
-      error_callback();
+     printf("Test: Queue error callback\n");
+     error_callback();
    } else if (test == 3) {
-      KERNEL_OBJECT = (uint64_t) print_signal_value;
-      kernarg_usage();
+     printf("Test: Kernarg usage\n");
+     KERNEL_OBJECT = (uint64_t) print_signal_value;
+     kernarg_usage();
    } else if (test == 4) {
-      barrier();
+     printf("Test: Barrier packet\n");
+     barrier();
    } else if (test == 5) {
-      agent_dispatch();
+     printf("Test: Agent Dispatch\n");
+     agent_dispatch();
    }
    return 1;
 }

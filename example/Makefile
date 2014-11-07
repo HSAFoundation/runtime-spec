@@ -1,31 +1,39 @@
-# Makefile junk
+# 'make depend'   uses makedepend to automatically generate dependencies
+#                   (dependencies are added to end of Makefile)
+# 'make'          build executable file 'examples'
+# 'make headers'  compile only HSA headers
 
-CXX := clang++
+CC := clang
+CFLAGS :=  -Wall -pedantic -ansi
 
-CXXFLAGS := -Wall -g -std=c++11
+CPPC := clang++
+CPPFLAGS := -m64 -Wall -pedantic -std=c++11 -pthread
 
 INCLUDES := -I"../api"
 
-SRCS = simple_dispatch.c hsa.cc
+SRCS := hsa.cc examples.cc
 
-OBJS = $(SRCS:.c=.o)
-OBJS = $(SRCS:.cc=.o)
+HDRS := ../api/hsa.h ../api/hsa_ext.h
 
-# define the executable file
-MAIN := simple_dispatch
+OBJS := $(SRCS:.c=.o)
+
+MAIN := examples
 
 .PHONY: depend clean
 
-all:	$(MAIN)
+# Compile the CPU runtime and HSA examples
+all:    $(MAIN)
+	$(CPPC) $(CPPFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS) $(LFLAGS) $(LIBS)
 
 $(MAIN): $(OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS)
+	$(CPPC) $(CPPFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS) $(LFLAGS) $(LIBS)
+
+# Compile the HSA headers (C99)
+headers:  $(HDRS)
+	$(CC) $(CFLAGS) $(HDRS)
 
 .c.o:
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $<  -o $@
-
-.cc.o:
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $<  -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
 clean:
 	$(RM) *.o *~ $(MAIN)
