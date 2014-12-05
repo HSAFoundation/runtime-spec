@@ -91,7 +91,7 @@ void simple_dispatch() {
     hsa_signal_store_release(queue->doorbell_signal, packet_id);
 
     // Wait for the task to finish, which is the same as waiting for the value of the completion signal to be zero
-    while (hsa_signal_wait_acquire(packet->completion_signal, HSA_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+    while (hsa_signal_wait_acquire(packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
 
     // Done! The kernel has completed. Time to cleanup resources and leave
     hsa_signal_destroy(packet->completion_signal);
@@ -143,7 +143,7 @@ void enqueue(hsa_queue_t* queue) {
     }
 
     // Wait until all the kernels are complete
-    while (hsa_signal_wait_acquire(signal, HSA_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+    while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
     hsa_signal_destroy(signal);
 }
 
@@ -173,7 +173,7 @@ void multithread_dispatch() {
     hsa_shut_down();
 }
 
-void callback(hsa_status_t status, hsa_queue_t* queue) {
+void callback(hsa_status_t status, hsa_queue_t* queue, void* data) {
   const char* message;
   hsa_status_string(status, &message);
   printf("Error at queue %" PRIu64 ": %s", queue->id, message);
@@ -204,7 +204,7 @@ void error_callback() {
 
   // Wait for the task to finish, which is the same as waiting for the value of the
   // completion signal to be zero.
-  while (hsa_signal_wait_acquire(signal, HSA_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+  while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
 
   hsa_signal_destroy(signal);
   hsa_queue_destroy(queue);
@@ -228,14 +228,34 @@ size_t round_up(size_t numToRound, size_t multiple) {
 }
 
 hsa_status_t get_kernarg(hsa_region_t region, void* data) {
-    hsa_region_flag_t flags;
-    hsa_region_get_info(region, HSA_REGION_INFO_FLAGS, &flags);
-    if (flags & HSA_REGION_FLAG_KERNARG) {
+    hsa_region_segment_t segment;
+    hsa_region_get_info(region, HSA_REGION_INFO_SEGMENT, &segment);
+    if (segment != HSA_REGION_SEGMENT_GLOBAL) {
+        return HSA_STATUS_SUCCESS;
+    }
+    hsa_region_global_flag_t flags;
+    hsa_region_get_info(region, HSA_REGION_INFO_GLOBAL_FLAGS, &flags);
+    if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG) {
         hsa_region_t* ret = (hsa_region_t*) data;
         *ret = region;
         return HSA_STATUS_INFO_BREAK;
     }
     return HSA_STATUS_SUCCESS;
+}
+
+void populate_kernarg(hsa_agent_t component, hsa_kernel_dispatch_packet_t* packet) {
+hsa_region_t region;
+hsa_agent_iterate_regions(component, get_kernarg, &region);
+
+// Allocate a buffer where to place the kernel arguments.
+hsa_memory_allocate(region, sizeof(hsa_signal_t), (void**) &packet->kernarg_address);
+
+// Place the signal the argument buffer
+hsa_signal_t* buffer = (hsa_signal_t*) packet->kernarg_address;
+assert(buffer != NULL);
+hsa_signal_t signal;
+hsa_signal_create(128, 1, &component, &signal);
+*buffer = signal;
 }
 
 int kernarg_usage() {
@@ -246,8 +266,7 @@ int kernarg_usage() {
     hsa_agent_t component;
     hsa_iterate_agents(get_component, &component);
 
-    // Create a queue in the selected HSA component. The queue can hold up to 4 packets, and has no callback or service queue
-    // associated with it.
+    // Create a queue in the selected HSA component. The queue can hold up to 4 packets associated with it.
     hsa_queue_t *queue;
     hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue);
 
@@ -261,19 +280,7 @@ int kernarg_usage() {
     initialize_packet(packet);
 
     // Find region that serves as backing storage for the kernarg segment
-    hsa_region_t region;
-    hsa_agent_iterate_regions(component, get_kernarg, &region);
-
-    // Allocate a buffer where to place the kernel arguments. The size of the buffer is normally determined by the allocation
-    // requirements returned by the finalizer. We will assume that the size of the kernarg segment is 8 bytes.
-    hsa_memory_allocate(region, 8, (void**) &packet->kernarg_address);
-
-    // Place the argument the argument buffer
-    hsa_signal_t* buffer = (hsa_signal_t*) packet->kernarg_address;
-    assert(buffer != NULL);
-    hsa_signal_t signal;
-    hsa_signal_create(128, 1, &component, &signal);
-    *buffer = signal;
+    populate_kernarg(component, packet);
 
     // Create a signal with an initial value of one to monitor the task completion
     hsa_signal_t completion_signal;
@@ -285,11 +292,11 @@ int kernarg_usage() {
     hsa_signal_store_release(queue->doorbell_signal, write_index);
 
     // Wait for the task to finish, which is the same as waiting for the value of the completion signal to be zero.
-    while (hsa_signal_wait_acquire(completion_signal, HSA_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+    while (hsa_signal_wait_acquire(completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
 
     // Done! The kernel has completed. Time to cleanup resources and leave.
     hsa_signal_destroy(completion_signal);
-    hsa_signal_destroy(signal);
+    //hsa_signal_destroy(signal);
     hsa_queue_destroy(queue);
     hsa_shut_down();
     return 0;
@@ -368,7 +375,7 @@ void barrier(){
     packet_type_store_release(&packet_b->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
     hsa_signal_store_release(queue_b->doorbell_signal, packet_id_b + 1);
 
-    while (hsa_signal_wait_acquire(packet_b->completion_signal, HSA_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+    while (hsa_signal_wait_acquire(packet_b->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
 
     hsa_signal_destroy(packet_b->completion_signal);
     hsa_queue_destroy(queue_b);
@@ -401,12 +408,10 @@ void process_agent_dispatch(hsa_queue_t* service_queue) {
 
     while (read_index < 100) {
 
-        while (hsa_signal_wait_acquire(doorbell, HSA_GTE, read_index, UINT64_MAX, HSA_WAIT_EXPECTANCY_LONG) <
+        while (hsa_signal_wait_acquire(doorbell, HSA_SIGNAL_CONDITION_GTE, read_index, UINT64_MAX, HSA_WAIT_EXPECTANCY_LONG) <
             (hsa_signal_value_t) read_index);
 
         hsa_agent_dispatch_packet_t* packet = packets + read_index % service_queue->size;
-        // Agent Dispatch packet type must be an application defined function
-        assert(packet->type >= 0x8000);
 
         if (packet->type == 0x8000) {
             // HSA component requests memory
@@ -450,10 +455,19 @@ void allocate(void* kernarg) {
         packet_type_store_release(&packet->header, HSA_PACKET_TYPE_AGENT_DISPATCH);
         hsa_signal_store_release(service_queue->doorbell_signal, write_index);
 
-        while (hsa_signal_wait_acquire(signal, HSA_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN));
+        while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN));
         // print result
         printf("%p,", ret);
     }
+}
+
+
+// THIS FUNCTION IS NOT USED IN THE CODE BUT FROM LATEX
+void create_service_queue() {
+hsa_agent_t agent_dispatch_agent;
+hsa_iterate_agents(get_agent_dispatch_agent, &agent_dispatch_agent);
+hsa_queue_t *service_queue;
+hsa_queue_create(agent_dispatch_agent, 16, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &service_queue);
 }
 
 void agent_dispatch(){
@@ -490,7 +504,7 @@ void agent_dispatch(){
 
     // Wait for the task to finish, which is the same as waiting for the value of the
     // completion signal to be zero.
-    while (hsa_signal_wait_acquire(packet->completion_signal, HSA_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+    while (hsa_signal_wait_acquire(packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
 
     agent_dispatch_thread->join();
     hsa_signal_destroy(packet->completion_signal);

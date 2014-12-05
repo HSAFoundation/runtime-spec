@@ -23,12 +23,29 @@ def main():
       print('OK')
       continue
     output.write('\\makeatletter')
-    output.write('\\newcommand{\\lstinputfunlisting}[1]{\\ifnum\\pdf@strcmp{#1}{blablablablabla}=0 blablablablabla')
+    output.write('\\newcommand{\\lstinputfunlisting}[2][0]{\\ifnum\\pdf@strcmp{#2}{blablablablabla}=0 blablablablabla')
     for fun in funs:
       name = fun.find('name')
-      output.write('\else\ifnum\pdf@strcmp{#1}{' + name.text + '}=0')
       location = fun.find('location')
-      output.write('{\\lstinputlisting[firstline=' + location.get('bodystart') + ', lastline=' + location.get('bodyend') + ']{example/examples.cc}}\n')
+      start = int(location.get('bodystart'))
+      end = int(location.get('bodyend'))
+
+      output.write('\else\ifnum\pdf@strcmp{#2}{' + name.text + '}=0')
+
+      output.write('\\ifnum #1=0')
+      output.write('\\lstinputlisting[firstline=' + str(start))
+      output.write(', lastline=' + str(end))
+      output.write(']{example/examples.cc}\n')
+
+      # exclude first and last line of function (normally, signature and closing brace)
+      output.write('\\else\n')
+      output.write('\\lstinputlisting[firstline=' + str(start + 1))
+      output.write(', lastline=' + str(end - 1))
+      output.write(']{example/examples.cc}\n')
+
+      output.write('\\fi\n')
+
+    output.write('\\else\\errmessage{Unknown function: #2. There is no function with that name in the examples}\n')
     output.write('\\fi' * (1 + len(funs)) + "}")
     output.write('\\makeatother')
     print('OK')

@@ -27,7 +27,7 @@
 
 % Use Tikz for simple diagrams
 \usepackage{tikz}
-\usetikzlibrary{arrows,automata,positioning,chains}
+\usetikzlibrary{arrows,automata,positioning,chains,shapes.geometric}
 \tikzset{
     % define global arrow tip format
     >=angle 45}
@@ -318,6 +318,7 @@ represented at the time of their contribution:
 \sortitem{Qualcomm}{Howes, Lee}
 \sortitem{Qualcomm}{Gaster, Ben}
 \sortitem{Qualcomm}{Bourd, Alex}
+\sortitem{Qualcomm}{Bellows, Greg}
 \sortitem{Qualcomm}{Bin, Lihan}
 \sortitem{Qualcomm}{Rychlik, Bob}
 \sortitem{Qualcomm}{Simpson, Robert J.}
@@ -682,7 +683,7 @@ prior to main in several operating systems). Whether or not the HSA runtime
 functions are allowed to be invoked in such fashion may be
 implementation-specific and is outside the scope of this specification.
 
-Any header files distributed by the HSA foundation for this specification may
+Any header files distributed by the HSA Foundation for this specification may
 contain calling-convention specific prefixes such as __cdecl or __stdcall, which
 are outside the scope of the API definition.
 
@@ -1034,13 +1035,7 @@ hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, callback, NULL, &queue);
 
 The callback prints the ID of the problematic queue, and the string associated
 with the asynchronous event:
-\begin{lstlisting}
-void callback(hsa_status_t status, hsa_queue_t* queue) {
-  const char* message;
-  hsa_status_string(status, &message);
-  printf("Error at queue %d: %s", queue->id, message);
-}
-\end{lstlisting}
+\lstinputfunlisting{callback}
 Let's now assume that the application makes a mistake and submits an invalid
 packet to the queue. For example, the AQL packet type is set to an invalid
 value. When the packet processor encounters this packet, it will trigger an
@@ -1123,13 +1118,13 @@ component. The packet contains the following bits of information:
 \end{itemize}
 
 The application must rely on information provided by the finalizer to retrieve
-the amount of kernarg, group, and private memory used by a kernel. The kernel's
-code descriptor (explained in Section~\ref{sec:finalizer}) returned by the
-finalizer contains the kernarg
-(\hsaref{hsa_ext_code_descriptor_t.kernarg_segment_size}), group
-(\hsaref{hsa_ext_code_descriptor_t.group_segment_size}) and
-private (\hsaref{hsa_ext_code_descriptor_t.private_segment_size})
-static storage requirements.
+the amount of kernarg, group, and private memory used by a kernel. Each
+executable symbol (\hsaref{hsa_executable_symbol_t}) associated with a kernel
+exposes the kernarg
+(\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE}), group
+(\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE}) and private
+(\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE}) static storage
+requirements.
 
 \subsubsection{Example: populating the Kernel Dispatch packet}
 Examples of kernel dispatches in previous sections have omitted the setup of the
@@ -1142,10 +1137,10 @@ dispatch uses 256 work-items, all in the same work-group along the X dimension.
 
 \subsection{Agent Dispatch packet}\label{agent-packet}
 
-Applications use Agent Dispatch packets to launch built-in functions in HSA agents. In
-Agent Dispatch packets there is no need to indicate the address of the function
-to run, the launch dimensions, or memory requirements. Instead, the application
-or kernel simply specifies the type of function to be performed
+Applications use Agent Dispatch packets to launch built-in functions in HSA
+agents. In Agent Dispatch packets there is no need to indicate the address of
+the function to run, the launch dimensions, or memory requirements. Instead, the
+application or kernel simply specifies the type of function to be performed
 (\hsaref{hsa_agent_dispatch_packet_t.type} field), the arguments
 (\hsaref{hsa_agent_dispatch_packet_t.arg}), and when applicable, the memory
 location where to store the return value of the function
@@ -1163,19 +1158,12 @@ the destination HSA agent:
   \hsaref{HSA_AGENT_FEATURE_AGENT_DISPATCH} is present in an HSA agent.
 \item (Application) Create a so-called "service'' queue on the destination HSA
   agent using \hsaref{hsa_queue_create}.
-\item (Application) Create a queue on the HSA component using
-  \hsaref{hsa_queue_create}, passing a pointer to the service queue obtained in
-  the previous step.  Any service request to the destination HSA agent must use
-  this queue. It is not possible for a work-item to request services from more
-  than one destination HSA agent, or submit Agent Dispatch packets to more than
-  one service queue.
-\item (Kernel) The work-item locates the service queue by accessing the
-  \hsaref{hsa_queue_t.service_queue} field of the current queue. For more
-  information on how to retrieve the address of the current pointer, please
-  check the documentation of the \refhsl{queueptr} HSAIL instruction
-  in~\cite{prm}.
-\item (Kernel) The work-item submits an Agent Dispatch packet to the service
-  queue following the steps described in Section~\ref{sec:queues}.
+\item (Application) Launch a kernel in an HSA component. The work-items
+  executing the kernel have access to the service queue -- for example, it has
+  been passed as an argument in a Kernel Dispatch packet.
+\item (Kernel) When a work-item needs to execute a given built-in (service), it
+  submits an Agent Dispatch packet to the service queue following the steps
+  described in Section~\ref{sec:queues}.
 \item (Destination Agent) The HSA agent parses the packet, executes the
   indicated service, stores the result in the memory location pointed to by
   \hsaref{hsa_agent_dispatch_packet_t.return_address}, and decrements the
@@ -1194,38 +1182,18 @@ allocation.
 
 The application starts by finding a CPU HSA agent where it can create a queue
 that supports Agent Dispatch packets:
-\begin{lstlisting}
-hsa_status_t get_agent_dispatch_agent(hsa_agent_t agent, void* data) {
-    uint32_t features = 0;
-    hsa_device_type_t device;
-    hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
-    if (features & HSA_AGENT_FEATURE_AGENT_DISPATCH) {
-        hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device);
-        if (device == HSA_DEVICE_TYPE_CPU) {
-            hsa_agent_t* ret = (hsa_agent_t*) data;
-            *ret = agent;
-            return HSA_STATUS_INFO_BREAK;
-        }
-    }
-    return HSA_STATUS_SUCCESS;
-}
-\end{lstlisting}
+\lstinputfunlisting{get_agent_dispatch_agent}
+
 An application creates a service queue on the CPU HSA agent:
-\begin{lstlisting}
-hsa_agent_t agent_dispatch_agent;
-hsa_iterate_agents(get_agent_dispatch_agent, &agent_dispatch_agent);
-hsa_queue_t *service_queue;
-hsa_queue_create(agent_dispatch_agent, 16, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &service_queue);
-\end{lstlisting}
-The application can use the service queue to create a regular queue on the HSA
-component (the callback definition is omitted in this example for readability):
-\begin{lstlisting}
-hsa_agent_t component;
-hsa_iterate_agents(get_component, &component);
-hsa_queue_t* queue;
-hsa_queue_create(component, 16, HSA_QUEUE_TYPE_MULTI, callback, service_queue, &queue);
-\end{lstlisting}
-The application is now ready to launch a kernel in the HSA component queue.
+\lstinputfunlisting[1]{create_service_queue}
+
+The application now creates a regular queue on an HSA component and launches a
+kernel in that queue. A pointer to the service queue is passed as an argument to
+the Kernel Dispatch packet by placing it into the buffer stored in the
+\hsaref{hsa_kernel_dispatch_packet_t.kernarg_address}
+field. Section~\ref{sec:memory:global} describes the HSA runtime elements needed
+for allocating memory that can be used to pass kernel arguments.
+
 Every time a work-item needs more virtual memory, it will submit an Agent
 Dispatch packet to the service queue. The allocation size is stored in the first
 element of \hsaref{hsa_agent_dispatch_packet_t.arg}, and
@@ -1364,46 +1332,22 @@ diagram.
 
 \section{Memory}\label{sec:memory}
 
-One of the key features of HSA is its ability to share global pointers between
-the host application and code executing on certain HSA components in a coherent
-fashion. An application can directly pass a buffer allocated on the host (for
-example, using malloc) to a kernel dispatched in an HSA component, assuming the
-HSA component supports the Full profile. Kernels may also access memory that is
-not in the coherent, global segment.
-
 The HSA runtime API provides a compact set of functions for inspecting the
 memory \emph{regions} that are accessible from an HSA agent, and (if applicable)
-allocating memory on those regions from the host.
+allocating memory on those regions.
 
-A memory region represents a block of contiguous memory that is directly
-accessible by an HSA agent, and exposes properties about the block of memory and
-how it is accessed from that particular HSA agent. The same block of memory
-(virtual or physical) can be accessible from multiple HSA agents, but the
-runtime creates a unique region on every HSA agent to represent the memory
-block. The characteristics of a memory region include its size, addressability,
-access speed, and corresponding memory segment. One HSA agent might be able to
-access multiple regions within the same segment.
+A memory region represents a block of virtual memory with certain
+characteristics that is accessible by one or more HSA agents. The region object
+\hsaref{hsa_region_t} exposes properties about the block of memory such as the
+associated memory segment, size, and in some cases allocation characteristics.
 
 The function \hsaref{hsa_agent_iterate_regions} can be used to inspect the set
-of regions associated with an HSA agent. Implementations of
-\hsaref{hsa_agent_iterate_regions} are required to report the following
-regions on every HSA agent:
-\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item A region that starts at address 0, and is located in the global
-  segment. This corresponds to the coherent, primary HSA memory type. All the
-  regions with these characteristics should have identical sizes.
-\item A region that is located in the global segment and can be used to allocate
-  backing storage for the kernarg segment: \hsaref{HSA_REGION_FLAG_KERNARG} is
-  true, and \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} is not 0. All the regions
-  with these characteristics should have identical sizes.
-\end{itemize}
-
-If the application can allocate memory in a region using the function
-\hsaref{hsa_memory_allocate}, the value of the attribute
-\hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} is different from zero. The runtime
-allocator can only be used to allocate memory in the global segment. Memory in
-the private, group and kernarg segments is automatically allocated when a
-Kernel Dispatch packet is launched.
+of regions associated with an HSA agent.  If the application can allocate memory
+in a region using the function \hsaref{hsa_memory_allocate}, the flag
+\hsaref{HSA_REGION_INFO_RUNTIME_ALLOC_ALLOWED} is set for that region. The HSA
+runtime allocator can only be used to allocate memory in the global and readonly
+segments. Memory in the private, group and kernarg segments is automatically
+allocated when a Kernel Dispatch packet is launched.
 
 When the application no longer needs a buffer that was allocated with the
 function \hsaref{hsa_memory_allocate}, it invokes \hsaref{hsa_memory_free} to
@@ -1412,27 +1356,80 @@ using standard libraries (such as the function free). Conversely, the runtime
 deallocator cannot be used to release memory allocated using standard libraries
 (such as the function malloc).
 
-If a buffer created in the host is also accessed by an HSA component that
-supports the Full profile, applications are encouraged to \emph{register} the
-corresponding address range beforehand using the \hsaref{hsa_memory_register}
-function. While kernels running on HSA components with Full profile support can
-access any regular host pointer, a registered buffer can result on improved
-access performance.  When the application no longer needs to access a registered
-buffer, it should deregister that virtual address range by invoking
-\hsaref{hsa_memory_deregister}. If the HSA component only supports the Base
-profile, the application must register any host buffer that is accessed from
-that component.
+\subsection{Global memory}\label{sec:memory:global}
 
-\subsection{Example: passing arguments to a kernel}\label{ex:kernarg_dispatch}
+Regions associated with the global segment are divided into two broad
+categories: fine-grained and coarse-grained. The main difference between these
+memory types is that fine-grained memory is directly accessible by all the HSA
+agents in the system at the same time (under the terms of the HSA memory model),
+while coarse-grained memory may be accessible to multiple HSA agents, but never
+at the same time: the application is responsible for explicitly assigning
+ownership of a buffer to a specific HSA agent. In addition to this, the
+application can only use memory allocated from a fine-grained region in order to
+pass arguments to a kernel, but not all fine-grained regions can be used for
+this purpose.
+
+Implementations of the HSA runtime are required to report at least the following
+fine-grained regions on every HSA system:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item A fine-grained region that is located in the global segment and
+  corresponds to the coherent, primary HSA memory type~\cite{sar}. The value of
+  the attribute \hsaref{HSA_REGION_INFO_SEGMENT} in this region is
+  \hsaref{HSA_REGION_SEGMENT_GLOBAL}, and the
+  \hsaref{HSA_REGION_GLOBAL_FLAG_FINE_GRAINED} flag must be set.
+\item If the HSA system exposes at least one HSA component, a fine-grained
+  region that is located in the global segment and can be used to allocate
+  backing storage for the kernarg segment:
+  \hsaref{HSA_REGION_GLOBAL_FLAG_KERNARG} is true, and
+  \hsaref{HSA_REGION_INFO_RUNTIME_ALLOC_ALLOWED} is true.
+\end{itemize}
+
+Memory allocated outside of the HSA API (for example, using malloc) is
+considered fine-grained only for those HSA agents in the system that support the
+Full profile, but cannot be used to pass arguments to a kernel. In HSA agents
+that only support the Base profile, fine-grained semantics are constrained to
+buffers allocated using \hsaref{hsa_memory_allocate}.
+
+If a buffer allocated outside of the HSA API is accessed by an HSA component
+that supports the Full profile, the application is encouraged to \emph{register}
+the corresponding address range beforehand using the
+\hsaref{hsa_memory_register} function. While kernels running on HSA components
+with Full profile support can access any regular host pointer, a registered
+buffer can result on improved access performance.  When the application no
+longer needs to access a registered buffer, it should deregister that virtual
+address range by invoking \hsaref{hsa_memory_deregister}.
+
+Coarse-grained regions are visible to one or more HSA agents. The application
+can determine that a region supports coarse-grained semantics because the value
+of the attribute \hsaref{HSA_REGION_INFO_SEGMENT} is
+\hsaref{HSA_REGION_SEGMENT_GLOBAL}, and the
+\hsaref{HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED} flag is set. If the same region
+handle is accessible to several HSA agents, the application can explicitly
+transfer the ownership of buffers allocated in that region to any of those HSA
+agents, but only one owner is allowed at a time. The HSA runtime exposes the
+function \hsaref{hsa_memory_assign_agent} to assign ownership of a buffer to an
+HSA agent. It is important to note that:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item The ownership change affects a buffer within a region, and not the entire
+  region. Different buffers within the same coarse-grained region can have
+  different owners.
+\item If the new owner cannot access the region associated with the buffer, the
+  behavior is undefined.
+\item Ownership change is only applicable to coarse-grained buffers.
+\end{itemize}
+
+When a coarse-grained region is visible to a unique HSA agent (i.e., the region
+is only reported by \hsaref{hsa_agent_iterate_regions} for that agent), the
+application can only assign ownership of memory within the region to that same
+HSA agent. This particular case of coarse-grained memory is also know as agent
+allocation~\cite{prm}. An application can still access the contents of an agent
+allocation buffer by invoking the synchronous copy function
+(\hsaref{hsa_memory_copy}).
+
+\subsubsection{Example: passing arguments to a kernel}\label{ex:kernarg_dispatch}
 In the kernel setup example listed in Section~\ref{dispatch-packet}, the kernel
 receives no arguments:
 \begin{lstlisting}
-// Indicate which executable code to run.
-// The application is expected to have finalized a kernel (for example, using the finalization API).
-// We will assume that the kernel object containing the executable code is stored in KERNEL_OBJECT
-packet->kernel_object = KERNEL_OBJECT;
-
-// Assume our kernel receives no arguments.
 dispatch_packet->kernarg_address = NULL;
 \end{lstlisting}
 Let's assume now that the kernel expects a single argument, a signal handle. The
@@ -1444,343 +1441,340 @@ The application searches for a memory region that can be used to allocate
 backing storage for the kernarg segment. Once found, it reserves enough space to
 hold the signal argument. While the actual amount of memory to be allocated is
 determined by the finalizer, for simplicity we will assume that it matches the
-size of a signal handle (8 bytes).
-\begin{lstlisting}
-// Indicate which executable code to run.
-// The application is expected to have finalized a kernel (for example, using the finalization API).
-// We will assume that the kernel object containing the executable code is stored in KERNEL_OBJECT
-packet->kernel_object = KERNEL_OBJECT;
-
-hsa_region_t region;
-hsa_agent_iterate_regions(component, get_kernarg, &region);
-hsa_memory_allocate(region, 8, (void**) &dispatch_packet->kernarg_address);
-\end{lstlisting}
-where the definition of \textit{get_kernarg} is:
+size of a signal handle.
+\lstinputfunlisting[1]{populate_kernarg}
+The definition of \textit{get_kernarg} is:
 \lstinputfunlisting{get_kernarg}
-
-Finally, the application stores a signal handle in the buffer.
-\begin{lstlisting}
-hsa_signal_t* buffer = (hsa_signal_t*) dispatch_packet->kernarg_address;
-assert(buffer != NULL);
-hsa_signal_t signal;
-hsa_signal_create(1, 1, &component, &signal);
-*buffer = signal;
-\end{lstlisting}
 The rest of the dispatch process remains the same.
+
+\subsection{Readonly memory}
+The application can allocate memory in a readonly region in order to store
+information that remains constant during the execution of a kernel. HSA
+components are only permitted to perform read operations on the addresses of
+variables that reside in readonly memory.  The contents of a readonly buffer can
+be initialized or changed from one kernel dispatch execution to another by the
+application using the copy function (\hsaref{hsa_memory_copy}).
+
+Each HSA component exposes one or more readonly regions, which are private to
+that HSA component. Passing a readonly buffer associated with one HSA agent in a
+Kernel Dispatch packet that is executed to a different HSA agent results in
+undefined behavior.
+
+Accesses to readonly buffers might perform better than accesses to global
+buffers on some HSA implementations. All readonly memory is persistent across
+the lifetime of an application.
+
+\subsection{Group and Private memory}
+Memory in the group segment is used to store information that is shared by all
+the work-items in a work-group. Group memory is associated with a given kernel
+execution: the contents of group memory are undefined if the kernel has not
+started, or if it has finished.
+
+Memory in the private segment is used to store information local to a single
+work-item. Private memory is persistent across the execution of the work-item
+with which it is associated.
+
+Memory in the group and private segments is represented in the HSA runtime API
+in a similar fashion to memory in the global and readonly segments: using
+regions. Each HSA component exposes a group and a private regions. However, the
+application is not allowed to explicitly allocate memory in these regions using
+\hsaref{hsa_memory_allocate}, nor it can copy any contents into them using
+\hsaref{hsa_memory_copy}. On the other hand, the application must specify the
+amount of group and private memory that needs to be allocated for a particular
+execution of a kernel, by populating the
+\hsaref{hsa_kernel_dispatch_packet_t.group_segment_size} and
+\hsaref{hsa_kernel_dispatch_packet_t.private_segment_size} fields of the Kernel
+Dispatch packet.
+
+The actual allocation of group and private memory happens automatically, before
+a kernel starts execution. The application must ensure that the request amount
+of group memory per work-group does not exceed the maximum allocation size
+declared by the HSA component where the Kernel Dispatch packet is enqueued,
+which is the value of the \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} attribute in
+the group region associated with that component. Similarly, the private memory
+usage of a Kernel Dispatch packet must not exceed the value of
+\hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} for the corresponding private region.
 
 \subsection{API}
 \input{api/altlatex/group-memory}
 
 
-\section{Extensions to the Core Runtime API}\label{extensions}
-Extensions to the Core API can be optional (multi-vendor) or
-vendor-specific. The difference is in the naming scheme used for the symbols
-(defines, structures, functions, etc.) associated with the function:
+\section{Code objects and Executables}\label{sec:codeobjects}
 
-\begin{itemize}
-\item Symbols for multi-vendor extensions defined in the global namespace must
-  use the \emph{hsa_ext_} prefix in their identifiers.
-\item Symbols for single vendor extensions defined in the global namespace must
-  use the \emph{hsa_svext_VENDOR_} prefix in their identifiers. Company names
-  must be registered with the HSA Foundation, must be unique, and may be
-  abbreviated to improve the readability of the symbols.
-\end{itemize}
+When the application populates a Kernel Dispatch packet, it must specify a
+kernel object, a handle to the machine code to be executed. Kernel object
+handles are created by first compiling the kernel source down to an HSA runtime,
+ISA-specific representation called \textit{code object}, and then loading the
+code object into another HSA runtime object, the \textit{executable}. The
+application can performs queries on the executable object using the HSA runtime
+API in order to obtain the kernel object.
 
-Any constant definitions in the extension (\#define or enumeration values) use
-the same naming convention, except using all capital letters.
+\begin{figure}[b]
+  \centering
+  \tikzstyle{obj}=[rectangle,draw,fill=black!15,align=center,minimum width=3cm,minimum height=.75cm]
+  \tikzstyle{emptyobj}=[circle,fill=black,align=center,minimum width=.1cm]
+  \tikzstyle{outobj}=[rectangle,draw,fill=black!5,align=center,minimum width=3cm,minimum height=.75cm]
+  \tikzstyle{storage}=[cylinder,draw, fill=black!5,shape border rotate=90,aspect=0.7, minimum height=1.7cm,minimum width=1.5cm,]
+  \begin{tikzpicture}[thick,auto, node distance=1.5cm]
+    \scriptsize
+    \node[emptyobj] (finalization) {};
+    \node[obj,below=2cm of finalization] (codeobject) {\hsaref{hsa_code_object_t}};
+    \node[outobj,right=4cm of codeobject] (blob) {memory blob};
+    \node[storage,right=2cm of blob] (disk) {disk};
+    \node[obj,below=2.5cm of codeobject] (executable) {hsa_executable_t};
+    \node[emptyobj,right=5cm of executable] (empty) {};
+    \node[obj,below=1.5cm of executable] (executable_symbol) {hsa_executable_symbol_t};
+    \node[obj,right=5cm of executable_symbol] (kernel) {kernel object};
+    \path[->]
 
-The symbols for all vendor extensions (both single-vendor and multi-vendor) are
-captured in the file {\bf hsa/vendor_extensions.h}. This file is maintained by
-the HSA Foundation. This file includes the enumeration \hsaref{hsa_extension_t}
-which defines a unique code for each vendor extension and multi-vendor
-extension. Vendors can reserve enumeration encodings through the HSA
-Foundation. Multi-vendor enumerations begin at the value of
-\hsaref{HSA_EXT_START}, while single-vendor enumerations begin at
-\hsaref{HSA_SVEXT_START}.
+       (finalization) edge node[anchor=center,fill=white,opacity=1]{(1) compilation process} (codeobject)
+
+       (codeobject.east) edge[bend left] node[align=center,above] {(2) \hsaref{hsa_code_object_serialize}} (blob.west)
+       (blob.west) edge[bend left] node[align=center,below] {(2) \hsaref{hsa_code_object_deserialize}} (codeobject.east)
+
+       (blob.east) edge[bend left] node[align=center,above] {write} (disk.west)
+       (disk.west) edge[bend left] node[align=center,below] {read} (blob.east)
+
+       (codeobject) edge node[anchor=center,fill=white,opacity=1]{(4) \hsaref{hsa_executable_load_code_object}}(executable)
+       (empty) edge node[anchor=center,fill=white,opacity=1]{(3) \hsaref{hsa_executable_create}}(executable)
+       (executable) edge node[anchor=center,fill=white,opacity=1]{(5) \hsaref{hsa_executable_get_symbol}}(executable_symbol)
+       (executable_symbol) edge node[anchor=center,fill=white,opacity=1]{(6) \hsaref{hsa_executable_symbol_get_info}}(kernel)
+    ;
+  \end{tikzpicture}
+  \caption{Retrieving a kernel object handle from a code object. The functions
+    \textit{write} and \textit{read} represent operating system calls to write
+    and read a number of bytes to a file.}
+  \label{fig:codeobject_workflow}
+\end{figure}
+
+The following algorithm describes the HSA runtime data structures and functions
+involved in this basic workflow in more detail:
+\begin{enumerate}
+\item The application is in possesion of one or more HSAIL modules that are the
+  result of compiling a high-level language such as OpenMP or OpenCL. One of the
+  HSAIL modules contains the kernel to be executed. Manipulation of BRIG is out
+  of the scope of the HSA runtime API, so the application must resort to
+  external libraries in order to locate a kernel in an HSAIL module. Using the
+  HSA runtime extension described in Section~\ref{sec:finalizer}, the
+  application finalizes the HSAIL program, which results on a code descriptor
+  handle of type \hsaref{hsa_code_object_t}.
+\item Code object handles are ISA-specific representations that contain the code
+  for a set of kernels and indirect functions. The application can obtain a code
+  object not only by finalizing an HSAIL program, but also by compiling a
+  vendor-specific intermediate representation. Code objects can be serialized
+  (\hsaref{hsa_code_object_serialize}) and deserialized
+  (\hsaref{hsa_code_object_deserialize}), which enables the application to
+  perform offline compilation. Each code object is associated with multiple
+  symbols (\hsaref{hsa_code_symbol_t}), which are the representation of a
+  variable, kernel, or indirect function in the original source program. The
+  application cannot use the kernel symbols contained in a code object to
+  populate the \hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field in the
+  Kernel Dispatch packet. Instead, the application must use an
+  \textit{executable kernel symbol}, which is part of an executable.
+
+\item The application creates an executable handle using
+  \hsaref{hsa_executable_create}. The HSA runtime uses the executable handle
+  \hsaref{hsa_executable_t} to load a set of code object handles, possibly
+  associated with different instruction set architectures.
+\item The code object is added (and loaded) to the executable by invoking
+  \hsaref{hsa_executable_load_code_object}.
+\item The application queries the executable in order to retrieve the executable
+  symbol corresponding to the given kernel and HSA agent. This can be achieved
+  by passing the kernel's name, the kernel's module name, and the HSA agent to
+  \hsaref{hsa_executable_get_symbol}.
+\item Executable symbols that represent kernels expose the attribute
+  \hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT}, which is a handle to the
+  machine code that is ultimately used to launch a kernel. The application uses
+  the getter function \hsaref{hsa_executable_symbol_get_info} to retrieve the
+  value of executable symbol attributes.
+\item The application uses the kernel object value to populate the
+  \hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field of a Kernel Dispatch
+  packet. The application may use some other information in the symbol (for
+  example, the kernel's memory usage) to fill other fields of the Kernel
+  Dispatch packet.
+\end{enumerate}
+
+This basic workflow is represented in Figure \ref{fig:codeobject_workflow}.
 
 \subsection{API}
-\input{api/altlatex/group-extensions}
-
-\subsection{Example}
-An example that shows a hypothetical single-vendor extension ``Foo'' registered
-by company ``ACME''. The example includes four defines and two API functions.
-Note the use of the structure \reftyp{hsa_svext_acme_foo_t} and how this
-interacts with the \hsaref{hsa_vendor_extension_query} API call.
-
-\lstinputlisting{example/extension.c}
+\input{api/altlatex/group-symbol-attributes}
+\input{api/altlatex/group-code-object}
+\input{api/altlatex/group-executable}
+\newpage
 
 \section{Common Definitions}\label{sec:other}
 \subsection{API}
 \input{api/altlatex/group-common}
-%\input{api/altlatex/group-clock}
 
 
 \chapter{HSA Extensions Programming Guide}
 
-\section{Finalization and Linking API}\label{sec:finalizer}
+\section{Extensions in HSA}
+Extensions to the HSA core runtime API can be HSA-approved, or vendor-specific.
+HSA-approved extensions are not required to be supported by a conforming HSA
+implementation, but are expected to be widely available; they define
+functionality that is likely to move into the core API in a future version of
+the HSA specification. Currently, there are two HSA-approved extensions:
+Finalization (discussed in Section~\ref{sec:finalizer}), and Images
+(discussed in Section~\ref{sec:images}).
 
-An application uses the Finalization and Linking API to compile, link and load a
-set of kernel or indirect functions that are part of a set of HSAIL modules. The
-rest of the Sections in this chapter explore the API in detail.
+Extensions approved by the HSA Foundation can be promoted to the core API in
+later versions. When this occurs, the extension specification is added to the
+core specification. Functions, types, and enumeration constants that are part of
+a promoted extension will have the extension prefix removed. HSA implementations
+of such later revisions must also declare support for the original extensions,
+and expose the original versions of functions, types, and enumeration constants
+as a transition aid.
 
-A common usage case scenario for the Finalization and Linking API happens when
-an application wishes to compile a kernel in HSAIL binary format
-(BRIG~\cite{prm}) down to the machine code used in a particular HSA agent. The
-resulting machine code is then used in a Kernel Dispatch packet. The steps
-involved in this basic workflow are:
+\subsection{Extension requirements}
+
+Each extension must be assigned a name of the form:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item \textit{hsa_ext_} (HSA-approved extension)
+\item \textit{hsa_}<\textit{vendor(s) name}>_<\textit{label}> (other)
+\end{itemize}
+The label is one or more words separated by underscores, providing a short name
+for the extension. A label must be short, meaningful, and should not collide
+with the vendor name, the \textit{hsa} token, or the \textit{ext} token. Vendor
+names must be registered with the HSA Foundation, must be unique, and may be
+abbreviated to improve the readability of the symbols. An extension name must
+not contain upper case characters. For instance, if vendor \textit{HAL} wants to
+create an extension related to label \textit{foo}, the resulting extension name
+is \textit{hsa_hal_foo}.
+
+All the functions and types declared in the extension must be prefixed by the
+extension name, and follow HSA naming conventions. For example, a
+vendor-specific extension \textit{hsa_hal_foo} could declare the following
+identifiers:
+\begin{lstlisting}
+hsa_status_t hsa_hal_foo_do_something();
+
+typedef enum {
+    HSA_HAL_FOO_CATEGORY_VALUE = 1,
+} hsa_hal_foo_category_t;
+\end{lstlisting}
+
+An extension can add new enumeration constants to an existing core
+enumeration. For example, an extension may add HSA agent attributes to
+\hsaref{hsa_agent_info_t}. In order to avoid enumeration value collisions in
+core enumerations, the enumeration constants used by an extension must be
+assigned by the HSA Foundation.
+
+Every extension must create a preprocessor definition that matches the extension
+name. The value associated with the identifier encodes the version number. For
+example, the \textit{hsa_hal_foo} extension (version 1.1) would include the
+following preprocessing directive in the header:
+\begin{lstlisting}
+#define hsa_hal_foo 001001
+\end{lstlisting}
+
+If the extension API exposes any functions, the extension interface must declare
+a function table (structure) in which each field is a pointer to a
+function exported by the extension. The function pointer table must have as many
+entries as functions are exported by the extension API. For example, the header
+associated with the extension \textit{hsa_hal_foo} would contain the following
+declaration:
+\begin{lstlisting}
+typedef struct hsa_hal_foo_pfn_s {
+  hsa_status_t (*hsa_hal_foo_pfn_do_something)();
+} hsa_hal_foo_pfn_t;
+\end{lstlisting}
+
+The HSA Foundation assigns a unique integer ID in the [0, 0x400) interval to
+each extension. The identifier remains the same throughout all the versions of
+the same extension. In the HSA runtime API, the application uses the identifier
+to refer to a specific extension. Identifiers are listed in the
+\hsaref{hsa_extension_t} enumeration. For example, the extension
+\textit{hsa_hal_foo} would add the enumeration constant HSA_EXTENSION_HAL_FOO
+associated with a unique constant expression (the identifier).
+
+\subsection{Extension support: HSA runtime and HSA agents}
+
+The HSA runtime indicates which extensions it supports in the
+\hsaref{HSA_SYSTEM_INFO_EXTENSIONS} bit-mask attribute. If bit $i$ is set in the
+bit-mask, then the extension with an ID of $i$ is supported by the
+implementation. Because the bit-mask does not expose any information about which
+revision of the extension is supported, the application must query the function
+\hsaref{hsa_system_get_extension_info} when needed.
+
+A portable application must use the function pointers exported by an extension
+to invoke its API. The application can retrieve a copy of the extension function
+pointer table by calling \hsaref{hsa_system_get_extension_table}. Some HSA
+implementations may choose to also export its functions statically from the
+object libraries implementing those functions. However, portable applications
+cannot rely on this behavior. In the following code snippet, the application
+invokes the function \reffun{hsa_agent_get_extension_info} once the HSA runtime
+has populated the function pointer table corresponding to the version 1.0 of the
+\textit{hsa_hal_foo} extension.
+
+\begin{lstlisting}
+hsa_hal_foo_pfn_t pfns;
+hsa_system_get_extension_table(HSA_EXTENSION_HAL_FOO, 1, 0, &pfns);
+pfns.hsa_hal_foo_do_something();
+\end{lstlisting}
+
+An HSA agent indicates which extensions it supports in the
+\hsaref{HSA_AGENT_INFO_EXTENSIONS} bit-mask attribute. The HSA agent may support
+an extension even if the implementation does not support it (see
+\hsaref{HSA_SYSTEM_INFO_EXTENSIONS}), and vice versa. The application can query
+the version of the extension supported by an HSA agent using
+\hsaref{hsa_agent_get_extension_info}.
+
+\section{HSAIL Finalization}\label{sec:finalizer}
+
+The finalization API allows the application to compile a set of HSAIL modules in
+binary format (BRIG), and retrieve the corresponding code object (see
+Section~\ref{sec:codeobjects}). In the most basic usage scenario, the
+application wishes to obtain the code object for a given kernel of interest (a
+kernel that is to be executed). Using the HSA runtime data structures and
+functions, the basic workflow is:
 \begin{enumerate}
 \item The application is in possesion of one or more HSAIL modules that are the
   result of compiling a high-level language such as OpenMP or OpenCL. One of the
-  HSAIL modules contains the kernel that needs to be finalized. Manipulation of
-  BRIG is out of the scope of the HSA runtime API, so the application must
-  resort to external libraries in order to locate a kernel in an HSAIL module.
-\item The application creates an HSAIL program for the HSA agent using
-  \hsaref{hsa_ext_program_create}, and then adds the HSAIL module containing the
-  kernel to the HSAIL program by invoking
-  \hsaref{hsa_ext_program_add_module}. Sections~\ref{hsail-program}
-  and~\ref{hsail-program-module} document these functions in more detail.
-\item The application allocates and populates a \textit{finalization request
-  list} specifying what needs to be finalized, and where to place the
-  finalization output. In this example, the kernel is the only element in the
-  list. The finalization request also contains a pointer to a \textit{code
-    descriptor} structure, which is filled by the HSA runtime upon finalization
-  (see below).
-\item The finalization request is passed to \hsaref{hsa_ext_finalize}, along
-  with the target HSA agent. Finalization is explained in
-  Section~\ref{hsail-finalization}.
-\item The finalization process populates a code descriptor structure
-  (\hsaref{hsa_ext_code_descriptor_t}) that contains a handle to the machine
-  code and finalization metadata. The code descriptor was allocated by the HSA
-  runtime upon module addition (step 2), but the descriptor's contents are
-  undefined until finalization ends. Code descriptors are described in
-  Section~\ref{hsail-code-descriptor}.
-\item The application can now access the code descriptor pointed by the
-  finalization request. The \hsaref{hsa_ext_code_descriptor_t.code_object} field
-  in the code descriptor is a handle to the machine code; the application
-  can use this handle to populate the
-  \hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field of a Kernel Dispatch
-  packet. The application may use some other finalization output (for example,
-  the kernel's memory usage reported in the descriptor) to fill other fields
-  of the Kernel Dispatch packet.
+  HSAIL modules contains the kernel of interest. This step is performed
+  outside of the HSA runtime API.
+\item The application creates an HSAIL program by invoking
+  \hsaref{hsa_ext_program_create}.
+\item The HSAIL module containing the kernel is added to the HSAIL program by
+  using \hsaref{hsa_ext_program_add_module}.
+\item The application finalizes the HSAIL program
+  (\hsaref{hsa_ext_program_finalize}), which creates a code object handle.
+\item The code object handle can be serialized to disk or further processed in
+  order to launch a kernel.
 \end{enumerate}
+This basic workflow is represented in Figure \ref{fig:finalization}.
+\vspace{1cm}
+\begin{figure}[h]
+  \centering
+  \tikzstyle{obj}=[rectangle,draw,fill=black!15,align=center,minimum width=2.5cm,minimum height=.75cm]
+  \tikzstyle{emptyobj}=[circle,fill=black,align=center,minimum width=.1cm]
+  \begin{tikzpicture}[thick,auto, node distance=1.5cm]
+    \scriptsize
+    \node[obj] (brig) {\hsaref{hsa_ext_module_t}};
+    \node[emptyobj,above=2.5cm of brig] (src) {};
+    \node[obj,right=4.75cm of brig] (program) {\hsaref{hsa_ext_program_t}};
+    \node[emptyobj,above=2.5cm of program] (app) {};
+    \node[obj,right=4.5cm of program] (codeobject) {\hsaref{hsa_code_object_t}};
+    \path[->]
+       (src) edge node[anchor=center,fill=white,opacity=1]{(1) source compilation} (brig)
+       (brig) edge node[anchor=center,fill=white,opacity=1]{(3) \hsaref{hsa_ext_program_add_module}} (program)
+       (app) edge node[anchor=center,fill=white,opacity=1]{(2) \hsaref{hsa_ext_program_create}} (program)
+       (program) edge node[anchor=center,fill=white,opacity=1]{(4) \hsaref{hsa_ext_program_finalize}} (codeobject)
+    ;
+  \end{tikzpicture}
+  \caption{From source to code descriptor.}
+  \label{fig:finalization}
+\end{figure}
 
-\subsection{HSAIL program}\label{hsail-program}
-
-An \textit{HSAIL program} is one of the most relevant abstractions in the
-Finalization and Linking API. The application uses an HSAIL program to manage
-the linking across several HSAIL modules, finalize a set of kernels and indirect
-functions, and perform symbol loading.
-
-An HSAIL program is associated with a fixed set $S$ of HSA agents, which is
-passed by the application at program creation time. Each HSA agent associated
-with the HSAIL program corresponds to a \textit{program agent ID} in the range
-[0, $|S|$). The same HSA agent can be assigned different program agent IDs in
-  different HSAIL programs.
-
-\input{api/altlatex/group-ext-finalizer-program}
+\newpage
+\subsection{API}
+\input{api/altlatex/group-ext-alt-finalizer-extensions}
+\input{api/altlatex/group-ext-alt-finalizer-program}
 \newpage
 
-\subsection{HSAIL program modules}\label{hsail-program-module}
+\section{Images and Samplers}\label{sec:images}
 
-The application must add an HSAIL binary (BRIG~\cite{prm}) module to an HSAIL
-program before any kernel or indirect function contained in the HSAIL module can
-be finalized. In the most common scenario, the application obtained one or more
-HSAIL modules by compiling a program written in a high-level language. The HSA
-runtime specification does not provide any functionality relative to HSAIL
-modules other than allowing them to be added to an HSAIL program.
-
-Within a specific HSAIL program, an HSAIL module is denoted by an \textit{HSAIL
-  program module}. The HSA runtime automatically creates an HSAIL program module
-every time the application successfully adds
-(\hsaref{hsa_ext_program_add_module}) an HSAIL module to an HSAIL program. The
-Finalization and Linking API uses HSAIL program modules to uniquely identify a
-pair (HSAIL program, HSAIL module). It is important to note that, for
-performance reasons, neither the HSAIL program module nor the HSAIL program
-store a deep copy of the original HSAIL module, but simply store a reference to
-it instead. The application must not deallocate the HSAIL module before
-finalizing any of its associated kernels of indirect functions.
-
-Every HSA program returned by \hsaref{hsa_ext_program_create} contains a special
-HSAIL program module that refers to the host application, and not to an HSAIL
-module. Since the application HSAIL program module is present in every HSAIL
-program upon creation, it is listed as the first program module (see
-\hsaref{hsa_ext_program_get_program_module}) in the HSAIL program.
-
-Symbols (kernels, indirect functions, or variables) in an HSAIL program are
-identified by a pair consisting of the HSAIL program module where the symbol is
-defined, and an offset. The offset is computed differently depending on the type
-of HSAIL program module:
-\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item The offset of a symbol within a non-application HSAIL program module is
-  identical to its offset within the code section of the original HSAIL
-  module. The application must use HSAIL manipulation routines outside the HSA
-  runtime API in order to compute that offset.
-\item The offset of an application-defined symbol (see
-  Section~\ref{hsail-app-defined-variables}) is determined by the value returned
-  by the definition function.
-\end{itemize}
-
-\input{api/altlatex/group-ext-finalizer-module}
-\newpage
-
-\subsection{Finalization of kernels and indirect
-  functions}\label{hsail-finalization}
-
-In the runtime API, the application can finalize a subset of an HSAIL program by
-passing a list of kernels and indirect functions that are part of that
-program. This \textit{finalization request} list must be self-contained -- there
-must be a definition for every variable, fbarrier, kernel, and function
-referenced by operations in the code blocks being finalized.
-
-A finalization request (\hsaref{hsa_ext_finalization_request_t}) is composed of:
-\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item A pair (program module, offset) that uniquely identifies the kernel or
-  indirect function to be finalized within the HSAIL program.
-\item Finalization options such as control directives and call convention to
-  use.
-\item A pointer to a \textit{code descriptor}. The application is not expected
-  to populate this value -- it is the HSA runtime that updates the field upon
-  finalization. The code descriptor contains the finalized machine code.
-\end{itemize}
-
-The application triggers the finalization process by calling
-\hsaref{hsa_ext_finalize}. A kernel in a HSAIL program can be finalized at most
-once for a given HSA agent. An indirect function in an HSAIL program can be
-finalized at most once for a given combination of HSA agent and calling
-convention.
-
-On some implementations, finalizing multiple kernels and indirect functions at
-once can produce code with better performance than finalizing the kernels and
-indirect function individually. For example, it can allow the finalizer to
-generate common code for shared functions which can reduce code footprint and
-improve instruction cache performance.
-
-A finalization of $n$ requests targeting a specific HSA agent results on $n$
-updated code descriptors. The application can now use the machine code contained
-in the code descriptor to populate a Kernel Dispatch packet. Note that the
-finalization output (a list of code descriptors) is not part of the signature of
-\hsaref{hsa_ext_finalize}. The next section discusses the layout of a code
-descriptor, and how code descriptors are stored in memory.
-
-\input{api/altlatex/group-ext-finalizer-finalization}
-\newpage
-
-\subsection{Code descriptors}\label{hsail-code-descriptor}
-
-\subsubsection{Kernels}
-
-When the application adds an HSAIL module to an HSAIL program
-(\hsaref{hsa_ext_program_add_module}), the HSA runtime creates a separate kernel
-code descriptor (described by the \hsaref{hsa_ext_code_descriptor_t} type) for
-every combination of an HSA agent that is part of the HSAIL program, and a
-kernel that is defined in the HSAIL module. An HSAIL program with $m$ HSA agents
-and $n$ kernel definitions contains $m\times n$ kernel code descriptors.
-
-A code descriptor remains "empty" until the associated kernel is finalized for
-the corresponding HSA agent. In the empty state, the
-\hsaref{hsa_ext_code_descriptor_t.code_type} field is \hsaref{HSA_EXT_CODE_NONE}
-and the contents of any other field are undefined.
-
-The application can access a kernel code descriptor in two alternative ways:
-\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item Reading the finalization request code descriptor pointer
-  (\hsaref{hsa_ext_finalization_request_t.descriptor} field). This is only
-  permitted after the finalization process (\hsaref{hsa_ext_finalize}) for that
-  request is complete.
-\item The code descriptors associated with the same kernel are stored
-  contiguously in memory~\cite{prm}. The application can retrieve a pointer to
-  the first kernel code descriptor in an HSAIL program using the
-  \hsaref{hsa_ext_kernel_get_descriptors} function. The index of the kernel
-  associated with a specific HSA agent is identical to the program agent ID,
-  which is itself determined by the \hsaref{hsa_ext_program_get_agent}
-  function. Note that the application can access a code descriptor using this
-  approach even before finalization.
-\end{itemize}
-
-After finalization, a handle to the machine code is available in the
-\hsaref{hsa_ext_code_descriptor_t.code_object} field. The application can use
-this handle to populate the \hsaref{hsa_kernel_dispatch_packet_t.kernel_object}
-field in the Kernel Dispatch packet. The code descriptor also contains the
-statically determined private and group memory usage of the kernel
-(\hsaref{hsa_kernel_dispatch_packet_t.group_segment_size} and
-\hsaref{hsa_kernel_dispatch_packet_t.private_segment_size}, respectively), which
-can be used as a lower bound of the Kernel Dispatch packet fields with the same
-name. Finally, the code descriptor structure contains information about the
-finalized kernel such as HSAIL program module where it is located, code offset,
-associated HSA agent, and type (in this case, \hsaref{HSA_EXT_CODE_KERNEL}).
-
-\subsubsection{Indirect functions}
-
-When the application adds an HSAIL module to an HSAIL program
-(\hsaref{hsa_ext_program_add_module}), the HSA runtime creates a separate
-indirect function code descriptor (also described by the
-\hsaref{hsa_ext_code_descriptor_t} type) for every combination of an HSA agent
-that is part of the HSAIL program, call convention supported by that HSA agent,
-and indirect function defined in the HSAIL module. An HSAIL program with $m$ HSA
-agents and $n$ indirect function definitions contains $(c_{0} + ... +
-c_{m-1})\times n$ indirect function code descriptors, where $c_i$ represents the
-number of call conventions supported by the HSA agent with a program agent ID of
-$i$.
-
-As in the case of kernel descriptors, the application can access an indirect
-function code descriptor in two different ways:
-\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item Reading the finalization request code descriptor pointer
-  (\hsaref{hsa_ext_finalization_request_t.descriptor} field). This is only
-  permitted after the finalization process (\hsaref{hsa_ext_finalize}) for that
-  request is complete.
-\item Code descriptors associated with the same indirect function are stored
-  contiguously in memory~\cite{prm}. Furthermore, all the descriptors associated
-  with the same HSA agent appear consecutively. The application can retrieve a
-  pointer to the first indirect function code descriptor in an HSAIL program
-  using the \hsaref{hsa_ext_indirect_function_get_descriptors} function. In
-  order to find the index associated with a given HSA agent and call convention,
-  the application needs to add the call convention to the value returned by
-  \hsaref{hsa_ext_agent_get_indirect_function_descriptor_index}.
-\end{itemize}
-
-\input{api/altlatex/group-ext-finalizer-descriptors}
-\newpage
-
-\subsection{Queries on HSAIL programs}
-The application can use the functions documented in this Section to map a symbol
-declaration to its definition, or get the address of a variable in the global or
-readonly segments. Addresses returned by
-\hsaref{hsa_ext_global_variable_get_agent_address} and
-\hsaref{hsa_ext_readonly_variable_get_address} may not be directly accessible to
-the host, which must copy the buffer (\hsaref{hsa_memory_copy}) before reading
-the value of the variable.
-
-\input{api/altlatex/group-ext-finalizer-program-queries}
-\newpage
-
-\subsection{Application-defined variables}\label{hsail-app-defined-variables}
-\input{api/altlatex/group-ext-host-linkage}
-\newpage
-
-\subsection{Serialization}
-\input{api/altlatex/group-ext-finalizer-serialization}
-\newpage
-
-\subsection{Enumeration constants added by this extension}
-\input{api/altlatex/group-ext-finalizer-extensions}
-\newpage
-
-\subsection{BRIG adapters}
-The Finalization and Linking API relies on the HSAIL binary format (BRIG)
-API~\cite{prm}, which defines the binary representation of HSAIL text. Since the
-naming convention currently used in the BRIG API does not match the convention
-used in this specification, the Finalization and Linking API provides a set of
-type aliases in order to maintain naming consistency. The intermediate types
-declared in this Section are expected to be removed once the BRIG API is updated
-and follows the same naming convention as the runtime API.
-
-\input{api/altlatex/group-ext-finalizer-brig-adapters}
-\newpage
-
-\section{Images and Samplers}\label{images}
-
-An HSA runtime uses an image handle \hsaref{hsa_ext_image_handle_t} to access
+An HSA runtime uses an image handle \hsaref{hsa_ext_image_t} to access
 images. The image handle references the image data in memory and records
 information about resource layout and other properties. HSA decouples the
 storage of the image data and the description of how the device interprets that
@@ -1812,10 +1806,10 @@ existing memory if the memory size allows. Before the image data is used, an HSA
 agent-specific image handle must be created using it and if necessary, cleared
 and prepared according to the intended use.
 
-An HSA agent-specific image handle (\hsaref{hsa_ext_image_handle_t}) is used by
+An HSA agent-specific image handle (\hsaref{hsa_ext_image_t}) is used by
 the HSAIL language for reading or writing using HSAIL \refhsl{rdimage},
 \refhsl{ldimage} and \refhsl{stimage} operations. The function
-\hsaref{hsa_ext_image_create_handle} creates an image handle from two things.
+\hsaref{hsa_ext_image_create} creates an image handle from two things.
 One is an implementation-independent image format descriptor. The other is
 independently allocated image data that conforms to the requirements provided
 by \hsaref{hsa_ext_image_get_info}.
@@ -1840,9 +1834,9 @@ proper synchronization and preparation of images on accesses from other image
 operations. See HSA System Architecture spec 2.13 for the HSA Image memory
 model.
 
-An HSA agent-specific sampler handle (\hsaref{hsa_ext_sampler_handle_t}) is used
+An HSA agent-specific sampler handle (\hsaref{hsa_ext_sampler_t}) is used
 by the HSAIL language to describe how images are processed by the
-\refhsl{rdimage} HSAIL operation. \hsaref{hsa_ext_sampler_create_handle} creates
+\refhsl{rdimage} HSAIL operation. \hsaref{hsa_ext_sampler_create} creates
 a sampler handle from an HSA agent-independent sampler descriptor
 (\hsaref{hsa_ext_sampler_descriptor_t}).
 

@@ -31,7 +31,8 @@ LISTINGS:=api/altlatex/listings.tex
 EXAMPLES:=examples/altlatex/lstinputfunlisting.tex
 
 # Temporary directory where to copy intermediate files before distribution
-TMPDIST:=public/tmp$(HSA_VERSION)
+DISTNAME:=hsa_runtime_$(HSA_VERSION)
+TMPDIST:=public/$(DISTNAME)
 
 all : $(EXAMPLES) $(LISTINGS) main.pdf
 
@@ -46,13 +47,14 @@ checkversion :
 # Generate the public files
 # Ex: make HSA_VERSION=1_01 dist
 dist : checkversion diff
-	$(MKDIR) $(TMPDIST)
-	$(CP) main.pdf $(TMPDIST)/hsa_runtime_$(HSA_VERSION).pdf
-	$(CP) main-diff.pdf $(TMPDIST)/hsa_runtime_$(HSA_VERSION)_diff.pdf
-	$(CP) main-all.tex $(TMPDIST)/hsa_runtime_$(HSA_VERSION).tex
-	$(CP) api/hsa.h $(TMPDIST)
-	$(CP) api/hsa_ext.h $(TMPDIST)
-	cd $(TMPDIST) && tar cfz ../hsa_runtime_$(HSA_VERSION).tgz *
+	$(MKDIR) $(TMPDIST)/include/hsa
+	$(CP) main.pdf $(TMPDIST)/$(DISTNAME).pdf
+	$(CP) main-diff.pdf $(TMPDIST)/$(DISTNAME)_diff.pdf
+	$(CP) main-all.tex $(TMPDIST)/$(DISTNAME).tex
+	$(CP) ChangeLog $(TMPDIST)
+	$(CP) api/hsa.h $(TMPDIST)/include/hsa
+	$(CP) api/hsa_ext.h $(TMPDIST)/include/hsa
+	cd public && zip -r -9 $(DISTNAME) $(DISTNAME)
 	$(RM) $(TMPDIST)
 
 %.pdf: $(DOXYLATEX) %.tex
@@ -70,7 +72,7 @@ $(LISTINGS): api/hsa.h api/hsa_ext.h api/xml2tex.py
 # Diff previous and current version of the document. The result is another Latex
 # file. The previous version is expected to be named main-all-prev.tex
 main-diff.tex: main-all.tex main-all-prev.tex
-	./latexdiff-1.0.4.pl -t UNDERLINE --append-safecmd="hypertarget,hyperlink,reffun,refarg,reffld,reftyp,refenu,refhsl" --exclude-textcmd="section,subsection,subsubsection" --config="PICTUREENV=(?:picture|DIFnomarkup|tikzpicture|lstlisting)[\w\d*@]*" main-all-prev.tex main-all.tex > main-diff.tex
+	./latexdiff-1.0.4.pl -t UNDERLINE --append-safecmd="hypertarget,hyperlink,reffun,refarg,reffld,reftyp,refenu,refhsl" --exclude-textcmd="chapter,section,subsection,subsubsection" --config="PICTUREENV=(?:picture|DIFnomarkup|tikzpicture|lstlisting|figure)[\w\d*@]*" main-all-prev.tex main-all.tex > main-diff.tex
 
 # Generate one Latex file out of resolving all \include tags in a given main
 # file. This is is needed because `latexdiff --flatten` requires all included

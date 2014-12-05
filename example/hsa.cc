@@ -16,7 +16,7 @@
 
 namespace hsa {
 
-  typedef void(*queue_callback_t)(hsa_status_t status, hsa_queue_t *queue);
+  typedef void(*queue_callback_t)(hsa_status_t status, hsa_queue_t *queue, void* data);
   typedef void(*dispatch_t)(void* args);
 
   typedef struct packet_s {
@@ -98,16 +98,16 @@ namespace hsa {
 
     // precondition: the caller holds a lock on mutex_
     bool Satisfies(std::memory_order order, hsa_signal_condition_t condition, hsa_signal_value_t comp) {
-      if (condition == HSA_EQ) {
+      if (condition == HSA_SIGNAL_CONDITION_EQ) {
         return val_.load(order) == comp;
       }
-      if (condition == HSA_NE) {
+      if (condition == HSA_SIGNAL_CONDITION_NE) {
         return val_.load(order) != comp;
       }
-      if (condition == HSA_LT) {
+      if (condition == HSA_SIGNAL_CONDITION_LT) {
         return val_.load(order) < comp;
       }
-      if (condition == HSA_GTE) {
+      if (condition == HSA_SIGNAL_CONDITION_GTE) {
         return val_.load(order) >= comp;
       }
       std::abort();
@@ -134,13 +134,14 @@ namespace hsa {
       uint32_t size,
       hsa_queue_type_t type,
       queue_callback_t callback,
-      const hsa_queue_t* service_queue) {
+      void *data) {
       packets_ = new packet_t[size];
       memset(packets_, 0, size * sizeof(packet_t));
       read_index_ = 0;
       write_index_ = 0;
       agent_ = agent;
       callback_ = callback;
+      callback_data_ = data;
 
       q_.type = type;
       hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &(q_.features));
@@ -152,9 +153,7 @@ namespace hsa {
 
       if (!AgentDispatchQueue()) {
         packet_processor_ = new std::thread(&Queue::Go, this);
-        q_.service_queue = (hsa_queue_t*) service_queue;
       } else {
-        assert(service_queue == NULL);
         // we need to set the initial value to some negative number
         // otherwise, the application code waiting for the signal to become zero will get confused between
         // unitialized doorbells and doorbells rang with ID zero
@@ -187,7 +186,7 @@ namespace hsa {
     bool ProcessDispatch(hsa_kernel_dispatch_packet_t& packet) {
       if (packet.setup == 0) { // dimensions
         if (callback_) {
-          callback_(HSA_STATUS_ERROR_INVALID_PACKET_FORMAT, &q_);
+          callback_(HSA_STATUS_ERROR_INVALID_PACKET_FORMAT, &q_, callback_data_);
         }
         return false;
       }
@@ -209,7 +208,7 @@ namespace hsa {
         uint64_t dep = packet.dep_signal[i].handle;
         if (dep != 0) {
           hsa::Signal* sig = (hsa::Signal*) dep;
-          sig->Wait(std::memory_order_acquire, HSA_EQ, 0);
+          sig->Wait(std::memory_order_acquire, HSA_SIGNAL_CONDITION_EQ, 0);
         }
       }
       std::atomic_thread_fence(std::memory_order_release);
@@ -294,6 +293,7 @@ namespace hsa {
     std::atomic<uint64_t> write_index_;
     Signal doorbell_;
     queue_callback_t callback_;
+    void* callback_data_;
     std::thread* packet_processor_;
     hsa_agent_t agent_;
   };
@@ -327,29 +327,14 @@ namespace hsa {
 
     virtual hsa_status_t Get(hsa_region_info_t attribute, void* value) const {
       switch (attribute) {
-      case HSA_REGION_INFO_BASE: {
-        void** dst = (void**)value;
-        *dst = (void*)0;
-        return HSA_STATUS_SUCCESS;
-      }
-      case HSA_REGION_INFO_SIZE: {
-        size_t* dst = (size_t*)value;
-        *dst = SIZE_MAX;
-        return HSA_STATUS_SUCCESS;
-      }
-      case HSA_REGION_INFO_AGENT: {
-        hsa_agent_t* dst = (hsa_agent_t*)value;
-        *dst = agent_;
-        return HSA_STATUS_SUCCESS;
-      }
-      case HSA_REGION_INFO_FLAGS: {
-        uint32_t* dst = (uint32_t*)value;
-        *dst = (uint32_t)HSA_REGION_FLAG_KERNARG;
-        return HSA_STATUS_SUCCESS;
-      }
       case HSA_REGION_INFO_SEGMENT: {
-        hsa_segment_t* dst = (hsa_segment_t*)value;
-        *dst = HSA_SEGMENT_GLOBAL;
+        hsa_region_segment_t* dst = (hsa_region_segment_t*)value;
+        *dst = HSA_REGION_SEGMENT_GLOBAL;
+        return HSA_STATUS_SUCCESS;
+      }
+      case HSA_REGION_INFO_GLOBAL_FLAGS: {
+        uint32_t* dst = (uint32_t*)value;
+        *dst = (uint32_t)HSA_REGION_GLOBAL_FLAG_KERNARG | HSA_REGION_GLOBAL_FLAG_FINE_GRAINED;
         return HSA_STATUS_SUCCESS;
       }
       case HSA_REGION_INFO_ALLOC_MAX_SIZE: {
@@ -357,24 +342,14 @@ namespace hsa {
         *dst = SIZE_MAX;
         return HSA_STATUS_SUCCESS;
       }
-      case HSA_REGION_INFO_ALLOC_GRANULE: {
+      case HSA_REGION_INFO_RUNTIME_ALLOC_GRANULE: {
         size_t* dst = (size_t*)value;
         *dst = 1;
         return HSA_STATUS_SUCCESS;
       }
-      case HSA_REGION_INFO_ALLOC_ALIGNMENT: {
+      case HSA_REGION_INFO_RUNTIME_ALLOC_ALIGNMENT: {
         size_t* dst = (size_t*)value;
         *dst = 1;
-        return HSA_STATUS_SUCCESS;
-      }
-      case HSA_REGION_INFO_BANDWIDTH: {
-        uint32_t* dst = (uint32_t*)value;
-        *dst = bandwidth_;
-        return HSA_STATUS_SUCCESS;
-      }
-      case HSA_REGION_INFO_NODE: {
-        uint32_t* dst = (uint32_t*)value;
-        *dst = node_;
         return HSA_STATUS_SUCCESS;
       }
       default: return HSA_STATUS_ERROR_INVALID_ARGUMENT;
@@ -739,12 +714,12 @@ extern "C" {
     hsa_agent_t agent,
     uint32_t size,
     hsa_queue_type_t type,
-    void(*callback)(hsa_status_t status, hsa_queue_t *queue),
-    const hsa_queue_t* service_queue,
+    void(*callback)(hsa_status_t status, hsa_queue_t *queue, void* data),
+    void *data,
     uint32_t private_segment_size,
     uint32_t group_segment_size,
     hsa_queue_t **queue) {
-    hsa::Queue* q = new hsa::Queue(agent, size, type, callback, service_queue);
+    hsa::Queue* q = new hsa::Queue(agent, size, type, callback, data);
     *queue = (hsa_queue_t*)q;
     return HSA_STATUS_SUCCESS;
   }

@@ -1,0 +1,81 @@
+2014-12-05  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Added ChangeLog
+	* Several enumeration constants have been renamed to follow the
+	naming conventions
+	* Updated examples to reflect API changes
+	* Bug 285 - Query to determine if BREAK and DETECT exception
+	policy is enabled for the base or full profile
+	* removed service queue from queue definition
+	* The queue callback receives the data passed by the application
+	at queue creation time (this was removed from the spec by mistake)
+	* Removed references to HSA_PACKET_TYPE_ALWAYS_RESERVED
+	* Acquire and release fences are applicable to all packets
+	* Agent Dispatch packet type is always application-defined
+	* Improved text in Memory section
+	* Removed starting virtual address from region definition. Also
+	removed references to physical memory (or interconnect)
+	attributes.
+	* Added support for coarse-grained, global memory
+	* Bug 336 - Access to readonly segment and agent allocation global
+	segment
+	* Bug 240 - Agent allocation
+	* Bug 272 - Memory registration to register memory as
+	coarse-grained
+	* Bug 137 - map/unmap?
+	* Memory allocation does not allow a size of zero (which used to
+	return NULL). The previous scenario is confusing when allocating
+	in non-global regions.
+	* Bug 306 - Extension proposal
+	* Finalization API v3.0 has been incorporated into the
+	specification
+	* Image and sampler handles renamed for consistency with the rest
+	of the API
+
+2014-11-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 241 - Header file with spec?
+	* Bug 251 - Inconsistent definition of handles: they are uint64_t
+	in Core API, but structs wrapping the uint64_t in the Finalization
+	API
+	* Moved extension-specific enumeration constants to extension
+	itself.
+	* Bug 270 - Add HSA_AGENT_INFO_QUEUE_MIN_SIZE attribute to
+	hsa_agent_t
+	* Bug 271 - Create queue creation hint: max private & group memory
+	usage per work-item
+	* Bug 286 - Add query to get 64 bit queue id
+	* Unified Finalizer and Linking APIs
+	* Added explanation about each subset of the API
+	* Finalization request includes a pointer to the resulting code
+	descriptor
+	* Bug 261 - Add query for an agent to determine if f16 operations
+	are slower than equivalent f32 operation
+	* Bug 242 - Cleanup of Finalization and Linking API
+
+2014-10-19  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 250 - Pointers are no longer represented with uint64_t
+	fields, but with void*
+	* Bug 251 - Bit-fields are removed from the API
+	* The kernel_object field of the Kernel Dispatch packet is a
+	handle, not necessarily an address
+	* Updated examples
+        * Added profile (base/full) and machine model (small/large)
+	support attribute
+	* HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY is expressed in Hz, which
+	allows better resolution than the previous unit (Mhz)
+	* List of consumers passed on signal creation should not contain
+	duplicates
+	* Bug 232 - Specify that runtime memory allocator is required for
+	HSA base profile to support fine grain coherency
+	* Memory registration is mandatory in the base profile (assuming
+	the pointer does not come from hsa_memory_allocate)
+	* Restore (synchronous) memcpy, under the assumption that a
+	pointer address is enough to determine the destination memory (the
+	readonly memory allocator returns "unique" addresses)
+	* Added number of call conventions supported by an HSA agent
+
+2014-09-09  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Adapted to new naming scheme (Barrier-AND and so on)

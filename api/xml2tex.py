@@ -37,9 +37,6 @@ replacement_directives=[
 (["hsa_\-queue_\-t.base_\-address", "hsa_\-queue_\-t.reserved0", ],
  ["\\\\[-2mm]" + get_ifdef("HSA_LARGE_MODEL"), 0, get_elif(" defined HSA_LITTLE_ENDIAN"), 0, 1, get_else(), 1, 0, get_endif() + "[2mm]"])
 ,
-(["hsa_\-queue_\-t.service_\-queue", "hsa_\-queue_\-t.reserved1", ],
- ["\\\\[-2mm]" + get_ifdef("HSA_LARGE_MODEL"), 0, get_elif(" defined HSA_LITTLE_ENDIAN"), 0, 1, get_else(), 1, 0, get_endif() + "[2mm]"])
-,
 (["hsa_\-kernel_\-dispatch_\-packet_\-t.kernarg_\-address", "hsa_\-kernel_\-dispatch_\-packet_\-t.reserved1", ],
  ["\\\\[-2mm]" + get_ifdef("HSA_LARGE_MODEL"), 0, get_elif(" defined HSA_LITTLE_ENDIAN"), 0, 1, get_else(), 1, 0, get_endif() + "[2mm]"])
 ,
@@ -283,7 +280,7 @@ def process_struct_or_union(typedef, tex, defs):
 
   # brief
   tex.write('\\vspace{-5.5mm}')
-  tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\\\\[3mm]")
+  tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\n")
   # data fields
   tex.write("\\noindent\\textbf{Data Fields}\\\\[-7mm]" + "\n")
   tex.write("\\begin{longtable}{@{}>{\\hangindent=2em}p{\\textwidth}}" + "\n")
@@ -299,6 +296,10 @@ def process_struct_or_union(typedef, tex, defs):
     tex.write("\\\\[2mm]\n".join(paraslst))
     tex.write(" \n")
 
+def check_name(enumname,valname):
+  if not valname.startswith(enumname[: len(enumname) - 4].upper()):
+    sys.exit("\nError: enumeration constant  " + valname + " is declared within " + enumname + ", but there is a naming mismatch.")
+
 def process_enum(enum, tex, defs):
   typename = node2tex(enum.find('name'))
   # anonymous enums start with @
@@ -311,6 +312,7 @@ def process_enum(enum, tex, defs):
   emptydescs = 0 # number of values with empty descriptions
   for val in enum.findall("enumvalue"):
     valname = node2tex(val.find('name'))
+    check_name(typename, valname)
     typename_id[valname] = val.get('id')
     defs.append(('refenu', valname))
     valtxt = "\\hspace{1.7em}\\hypertarget{" + val.get('id') + "}{"
@@ -434,7 +436,7 @@ def process_function(func, tex, listings, commands, variants):
   tex.write("\\end{mylongtable}\n")
   # brief
   tex.write('\\vspace{-5.5mm}')
-  tex.write(node2tex(func.find('briefdescription/para')) + "\n\\\\[3mm]")
+  tex.write(node2tex(func.find('briefdescription/para')) + "\n\n")
   # parameters
   args = func.findall(".//parameterlist[@kind='param']/parameteritem")
   if args:
