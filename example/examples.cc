@@ -91,7 +91,7 @@ void simple_dispatch() {
     hsa_signal_store_release(queue->doorbell_signal, packet_id);
 
     // Wait for the task to finish, which is the same as waiting for the value of the completion signal to be zero
-    while (hsa_signal_wait_acquire(packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+    while (hsa_signal_wait_acquire(packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE) != 0);
 
     // Done! The kernel has completed. Time to cleanup resources and leave
     hsa_signal_destroy(packet->completion_signal);
@@ -143,7 +143,7 @@ void enqueue(hsa_queue_t* queue) {
     }
 
     // Wait until all the kernels are complete
-    while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+    while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE) != 0);
     hsa_signal_destroy(signal);
 }
 
@@ -204,7 +204,7 @@ void error_callback() {
 
   // Wait for the task to finish, which is the same as waiting for the value of the
   // completion signal to be zero.
-  while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+  while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE) != 0);
 
   hsa_signal_destroy(signal);
   hsa_queue_destroy(queue);
@@ -292,7 +292,7 @@ int kernarg_usage() {
     hsa_signal_store_release(queue->doorbell_signal, write_index);
 
     // Wait for the task to finish, which is the same as waiting for the value of the completion signal to be zero.
-    while (hsa_signal_wait_acquire(completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+    while (hsa_signal_wait_acquire(completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE) != 0);
 
     // Done! The kernel has completed. Time to cleanup resources and leave.
     hsa_signal_destroy(completion_signal);
@@ -375,7 +375,7 @@ void barrier(){
     packet_type_store_release(&packet_b->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
     hsa_signal_store_release(queue_b->doorbell_signal, packet_id_b + 1);
 
-    while (hsa_signal_wait_acquire(packet_b->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+    while (hsa_signal_wait_acquire(packet_b->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE) != 0);
 
     hsa_signal_destroy(packet_b->completion_signal);
     hsa_queue_destroy(queue_b);
@@ -408,7 +408,7 @@ void process_agent_dispatch(hsa_queue_t* service_queue) {
 
     while (read_index < 100) {
 
-        while (hsa_signal_wait_acquire(doorbell, HSA_SIGNAL_CONDITION_GTE, read_index, UINT64_MAX, HSA_WAIT_EXPECTANCY_LONG) <
+        while (hsa_signal_wait_acquire(doorbell, HSA_SIGNAL_CONDITION_GTE, read_index, UINT64_MAX, HSA_WAIT_STATE_BLOCKED) <
             (hsa_signal_value_t) read_index);
 
         hsa_agent_dispatch_packet_t* packet = packets + read_index % service_queue->size;
@@ -455,7 +455,7 @@ void allocate(void* kernarg) {
         packet_type_store_release(&packet->header, HSA_PACKET_TYPE_AGENT_DISPATCH);
         hsa_signal_store_release(service_queue->doorbell_signal, write_index);
 
-        while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN));
+        while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE));
         // print result
         printf("%p,", ret);
     }
@@ -504,7 +504,7 @@ void agent_dispatch(){
 
     // Wait for the task to finish, which is the same as waiting for the value of the
     // completion signal to be zero.
-    while (hsa_signal_wait_acquire(packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_EXPECTANCY_UNKNOWN) != 0);
+    while (hsa_signal_wait_acquire(packet->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE) != 0);
 
     agent_dispatch_thread->join();
     hsa_signal_destroy(packet->completion_signal);

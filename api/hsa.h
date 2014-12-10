@@ -130,7 +130,7 @@ typedef enum {
      */
     HSA_STATUS_ERROR_INVALID_INDEX = 0x100E,
     /**
-     * The instruction set architecture is invalid
+     * The instruction set architecture is invalid.
      */
     HSA_STATUS_ERROR_INVALID_ISA = 0x100F,
     /**
@@ -518,20 +518,19 @@ typedef enum {
 } hsa_device_type_t;
 
 /**
- * @brief Default float rounding mode. Default float rounding mode determines
- * the default float rounding mode of an HSA agent.
+ * @brief Default floating-point rounding mode.
  */
 typedef enum {
   /**
    * Operations are rounded to zero by default.
    */
-  HSA_DEFAULT_FLOAT_ROUNDING_MODE_ZERO = 0,
+  HSA_DEFAULT_FLOAT_ROUNDING_MODE_ZERO = 1,
   /**
    * Operations are rounded to the nearest representable number and that ties
    * should be broken by selecting the value with an even least significant
    * bit.
    */
-  HSA_DEFAULT_FLOAT_ROUNDING_MODE_NEAR = 1
+  HSA_DEFAULT_FLOAT_ROUNDING_MODE_NEAR = 2
 } hsa_default_float_rounding_mode_t;
 
 /**
@@ -565,13 +564,20 @@ typedef enum {
    */
   HSA_AGENT_INFO_PROFILE = 4,
   /**
-   * Default float rounding mode of an HSA agent. The type of this attribute
-   * is ::hsa_default_float_rounding_mode_t.
+   * Default floating-point rounding mode. The type of this attribute is
+   * ::hsa_default_float_rounding_mode_t.
    */
   HSA_AGENT_INFO_DEFAULT_FLOAT_ROUNDING_MODE = 5,
   /**
+   * Default floating-point rounding modes supported by the HSA agent in the
+   * Base profile. The type of this attribute is a mask of
+   * ::hsa_default_float_rounding_mode_t. The default rounding mode
+   * (::HSA_AGENT_INFO_DEFAULT_FLOAT_ROUNDING_MODE) bit must be set.
+   */
+  HSA_AGENT_INFO_BASE_PROFILE_DEFAULT_FLOAT_ROUNDING_MODES = 23,
+  /**
    * Number of work-items in a wavefront. Must be a power of 2 in the range
-   * [1,64]. The value of this attribute is undefined if the HSA agent is not
+   * [1,256]. The value of this attribute is undefined if the HSA agent is not
    * an HSA component. The type of this attribute is uint32_t.
    */
   HSA_AGENT_INFO_WAVEFRONT_SIZE = 6,
@@ -659,7 +665,18 @@ typedef enum {
    * extension with an ID of @p i is supported if the bit at position @p i is
    * set. The type of this attribute is uint8_t[128].
    */
-  HSA_AGENT_INFO_EXTENSIONS = 20
+  HSA_AGENT_INFO_EXTENSIONS = 20,
+  /**
+   * Major version of the HSA runtime specification supported by the
+   * HSA agent. The type of this attribute is uint16_t.
+   */
+  HSA_AGENT_INFO_VERSION_MAJOR = 21,
+  /**
+   * Minor version of the HSA runtime specification supported by the
+   * HSA agent. The type of this attribute is uint16_t.
+   */
+  HSA_AGENT_INFO_VERSION_MINOR = 22
+
 } hsa_agent_info_t;
 
 /**
@@ -741,7 +758,7 @@ typedef enum {
     /**
      * If a hardware exception is detected, a hardware status bit is set.
      */
-    HSA_EXCEPTION_POLICY_DETECT = 2,
+    HSA_EXCEPTION_POLICY_DETECT = 2
 } hsa_exception_policy_t;
 
 /**
@@ -1260,24 +1277,18 @@ typedef enum {
 } hsa_signal_condition_t;
 
 /**
- * @brief Expected duration of a wait call.
+ * @brief State of the application thread during a signal wait.
  */
 typedef enum {
     /**
-     * The signal value is expected to meet the specified condition in a short
-     * period of time.
+     * The application thread may be rescheduled while waiting on the signal.
      */
-    HSA_WAIT_EXPECTANCY_SHORT = 0,
+    HSA_WAIT_STATE_BLOCKED = 0,
     /**
-     * The signal value is expected to meet the specified condition after a
-     * longer period of time.
+     * The application thread stays active while waiting on a signal.
      */
-    HSA_WAIT_EXPECTANCY_LONG = 1,
-    /**
-     * The expected duration of the wait call is not known.
-     */
-    HSA_WAIT_EXPECTANCY_UNKNOWN = 2
-} hsa_wait_expectancy_t;
+    HSA_WAIT_STATE_ACTIVE = 1
+} hsa_wait_state_t;
 
 /**
  * @brief Wait until a signal value satisfies a specified condition, or a
@@ -1289,13 +1300,12 @@ typedef enum {
  *
  * The function is guaranteed to return if the signal value satisfies the
  * condition at some point in time during the wait, but the value returned to
- * the application might not satisfy the condition. When the wait operation
- * internally loads the value of the passed signal, it uses the memory order
- * indicated in the function name.
+ * the application might not satisfy the condition. The application must ensure
+ * that signals are used in such way that wait wakeup conditions are not
+ * invalidated before dependent threads have woken up.
  *
- * The application might indicate a preference about the maximum wait duration.
- * The operation might block for a shorter or longer time even if the condition
- * is not met.
+ * When the wait operation internally loads the value of the passed signal, it
+ * uses the memory order indicated in the function name.
  *
  * @param[in] signal Signal.
  *
@@ -1305,11 +1315,15 @@ typedef enum {
  * @param[in] compare_value Value to compare with.
  *
  * @param[in] timeout_hint Maximum duration of the wait.  Specified in the same
- * unit as the system timestamp. A value of UINT64_MAX indicates no maximum.
+ * unit as the system timestamp. The operation might block for a shorter or
+ * longer time even if the condition is not met. A value of UINT64_MAX indicates
+ * no maximum.
  *
- * @param[in] wait_expectancy_hint Hint indicating whether the signal value is
- * expected to meet the given condition in a short period of time or not. The
- * HSA runtime may use this hint to optimize the wait implementation.
+ * @param[in] wait_state_hint Hint used by the application to indicate the
+ * preferred waiting state. The actual waiting state is ultimately decided by
+ * HSA runtime and may not match the provided hint. A value of
+ * ::HSA_WAIT_STATE_ACTIVE may improve the latency of response to a signal
+ * update by avoiding rescheduling overhead.
  *
  * @return Observed value of the signal, which might not satisfy the specified
  * condition.
@@ -1320,7 +1334,7 @@ hsa_signal_value_t HSA_API hsa_signal_wait_acquire(
     hsa_signal_condition_t condition,
     hsa_signal_value_t compare_value,
     uint64_t timeout_hint,
-    hsa_wait_expectancy_t wait_expectancy_hint);
+    hsa_wait_state_t wait_state_hint);
 
 /**
  * @copydoc hsa_signal_wait_acquire
@@ -1330,7 +1344,7 @@ hsa_signal_value_t HSA_API hsa_signal_wait_relaxed(
     hsa_signal_condition_t condition,
     hsa_signal_value_t compare_value,
     uint64_t timeout_hint,
-    hsa_wait_expectancy_t wait_expectancy_hint);
+    hsa_wait_state_t wait_state_hint);
 
 /** @} */
 
@@ -2185,11 +2199,11 @@ typedef enum {
    */
   HSA_REGION_INFO_SIZE = 2,
   /**
-   * Null pointer value. The type of this attribute is void*.
+   * Null pointer value. The type of this attribute is uint64_t.
    *
    * The value of this attribute for all the regions associated with the global
-   * segment should be NULL (the host null pointer). Regions associated with the
-   * same, non-global, segment may have different null pointer values.
+   * segment should be NULL (the host null pointer). If the region is not in the
+   * global or readonly segments, the value of this attribute is undefined.
    */
   HSA_REGION_INFO_NULLPTR = 3,
   /**
@@ -2383,15 +2397,18 @@ typedef enum {
  * operation completes, the previous owner cannot longer access the data in the
  * buffer.
  *
- * An implementation of the HSA runtime may not change the physical location of
- * the buffer when ownership is transferred to an HSA agent, but in general the
- * application must not assume this behavior. The virtual location (address) of
- * the passed buffer is never modified.
+ * An implementation of the HSA runtime is allowed, but not required, to change
+ * the physical location of the buffer when ownership is transferred to a
+ * different HSA agent. In general the application must not assume this
+ * behavior. The virtual location (address) of the passed buffer is never
+ * modified.
  *
- * @param[in] ptr Base address of a coarse-grained buffer. The pointer should
- * match an address previously returned by ::hsa_memory_allocate. The size of
- * the buffer affected by the ownership change is identical to the size of that
- * previous allocation.
+ * @param[in] ptr Base address of a global buffer. The pointer should match an
+ * address previously returned by ::hsa_memory_allocate. The size of the buffer
+ * affected by the ownership change is identical to the size of that previous
+ * allocation. If @p ptr points to a fine-grained global buffer, no operation is
+ * performed and the function returns success. If @p ptr does not point to
+ * global memory, the behavior is undefined.
  *
  * @param[in] agent HSA agent that becomes the owner of the buffer. The
  * application is responsible for ensuring that @p agent has access to the
@@ -2589,20 +2606,15 @@ typedef enum {
    */
   HSA_ISA_INFO_CALL_CONVENTION_COUNT = 2,
   /**
-   * Number of work-items in a wavefront. Must be a power of 2 in the range
-   * [1,64]. index is used to specify for which call convention id to return
-   * information. index must have a value between 0 (inclusive) and the value
-   * of the attribute ::HSA_ISA_INFO_CALL_CONVENTION_COUNT (not inclusive). The
-   * type of this attribute is uint32_t.
+   * Number of work-items in a wavefront for a given call convention. Must be a
+   * power of 2 in the range [1,256]. The type of this attribute is uint32_t.
    */
   HSA_ISA_INFO_CALL_CONVENTION_INFO_WAVEFRONT_SIZE = 3,
   /**
-   * Number of wavefronts per compute unit. Note that there may be other
-   * factors that can limit the number of wavefronts per compute unit, for
-   * example amount of group segment memory used by a work-group. index must
-   * have a value between 0 (inclusive) and the value of the attribute
-   * ::HSA_ISA_INFO_CALL_CONVENTION_COUNT (not inclusive). The type of this
-   * attribute is uint32_t.
+   * Number of wavefronts per compute unit for a given call convention. In
+   * practice, other factors (for example, the amount of group memory used by a
+   * work-group) may further limit the number of wavefronts per compute
+   * unit. The type of this attribute is uint32_t.
    */
   HSA_ISA_INFO_CALL_CONVENTION_INFO_WAVEFRONTS_PER_COMPUTE_UNIT = 4
 } hsa_isa_info_t;
@@ -2618,7 +2630,7 @@ typedef enum {
  * @param[in] index Call convention index. Used only for call convention
  * attributes, otherwise ignored. Must have a value between
  * 0 (inclusive) and the value of the attribute
- * ::HSA_ISA_INFO_CALL_CONVENTION_COUNT (not inclusive).
+ * ::HSA_ISA_INFO_CALL_CONVENTION_COUNT (not inclusive) in @p isa.
  *
  * @param[out] value Pointer to an application-allocated buffer where to store
  * the value of the attribute. If the buffer passed by the application is not
@@ -2885,53 +2897,53 @@ typedef enum {
   /**
    * The type of the symbol. The type of this attribute is ::hsa_symbol_t.
    */
-  HSA_CODE_SYMBOL_INFO_TYPE = 11,
+  HSA_CODE_SYMBOL_INFO_TYPE = 0,
   /**
    * The length of the symbol name. The type of this attribute is uint32_t.
    */
-  HSA_CODE_SYMBOL_INFO_NAME_LENGTH = 9,
+  HSA_CODE_SYMBOL_INFO_NAME_LENGTH = 1,
   /**
    * The name of the symbol. The type of this attribute is character array with
    * the length equal to the value of ::HSA_CODE_SYMBOL_INFO_NAME_LENGTH
    * attribute
    */
-  HSA_CODE_SYMBOL_INFO_NAME = 10,
+  HSA_CODE_SYMBOL_INFO_NAME = 2,
   /**
    * The length of the module name to which this symbol belongs if this symbol
    * has module linkage, otherwise 0 is returned. The type of this attribute is
    * uint32_t.
    */
-  HSA_CODE_SYMBOL_INFO_MODULE_NAME_LENGTH = 7,
+  HSA_CODE_SYMBOL_INFO_MODULE_NAME_LENGTH = 3,
   /**
    * The module name to which this symbol belongs if this symbol has module
    * linkage, otherwise empty string is returned. The type of this attribute is
    * character array with the length equal to the value of
    * ::HSA_CODE_SYMBOL_INFO_MODULE_NAME_LENGTH attribute.
    */
-  HSA_CODE_SYMBOL_INFO_MODULE_NAME = 8,
+  HSA_CODE_SYMBOL_INFO_MODULE_NAME = 4,
   /**
    * The allocation kind of the variable. The value of this attribute is
    * undefined if the symbol is not a variable. The type of this attribute is
    * ::hsa_variable_allocation_t.
    */
-  HSA_CODE_SYMBOL_INFO_VARIABLE_ALLOCATION = 12,
+  HSA_CODE_SYMBOL_INFO_VARIABLE_ALLOCATION = 5,
   /**
    * The linkage kind of the variable. The value of this attribute is
    * undefined if the symbol is not a variable. The type of this attribute is
    * ::hsa_variable_linkage_t.
    */
-  HSA_CODE_SYMBOL_INFO_VARIABLE_LINKAGE = 13,
+  HSA_CODE_SYMBOL_INFO_VARIABLE_LINKAGE = 6,
   /**
    * The segment kind of the variable. The value of this attribute is
    * undefined if the symbol is not a variable. The type of this attribute is
    * ::hsa_variable_segment_t.
    */
-  HSA_CODE_SYMBOL_INFO_VARIABLE_SEGMENT = 14,
+  HSA_CODE_SYMBOL_INFO_VARIABLE_SEGMENT = 7,
   /**
    * Alignment of the variable. The value of this attribute is undefined if the
    * symbol is not a variable. The type of this attribute is uint32_t.
    */
-  HSA_CODE_SYMBOL_INFO_VARIABLE_ALIGNMENT = 15,
+  HSA_CODE_SYMBOL_INFO_VARIABLE_ALIGNMENT = 8,
   /**
    * Size of the variable. The value of this attribute is undefined if the
    * symbol is not a variable. The type of this attribute is uint32_t.
@@ -2939,36 +2951,63 @@ typedef enum {
    * A size of 0 is returned if the variable is an external variable and has an
    * unknown dimension.
    */
-  HSA_CODE_SYMBOL_INFO_VARIABLE_SIZE = 16,
+  HSA_CODE_SYMBOL_INFO_VARIABLE_SIZE = 9,
   /**
    * Indicates whether the variable is constant. The value of this attribute is
    * undefined if the symbol is not a variable. The type of this attribute is
    * bool.
    */
-  HSA_CODE_SYMBOL_INFO_VARIABLE_IS_CONST = 17,
+  HSA_CODE_SYMBOL_INFO_VARIABLE_IS_CONST = 10,
   /**
-   * Kernarg segment size of the kernel. The value of this attribute is
-   * undefined if the symbol is not a kernel. The type of this attribute is
-   * uint32_t.
+   * Size of kernarg segment memory that is required to hold the values of the
+   * kernel arguments, in bytes. The value of this attribute is undefined if the
+   * symbol is not a kernel. The type of this attribute is uint32_t.
    */
-  HSA_CODE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE = 18,
+  HSA_CODE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE = 11,
   /**
-   * Group segment size of the kernel. The value of this attribute is undefined
+   * Alignment (in bytes) of the buffer used to pass arguments to the kernel,
+   * which is the maximum of 16 and the maximum alignment of any of the kernel
+   * arguments. The value of this attribute is undefined if the symbol is not a
+   * kernel. The type of this attribute is uint32_t.
+   */
+  HSA_CODE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_ALIGNMENT = 12,
+  /**
+   * Size of static group segment memory required by the kernel (per
+   * work-group), in bytes. The value of this attribute is undefined
    * if the symbol is not a kernel. The type of this attribute is uint32_t.
+   *
+   * The reported amount does not include any dynamically allocated group
+   * segment memory that may be requested by the application when a kernel is
+   * dispatched.
    */
-  HSA_CODE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE = 19,
+  HSA_CODE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE = 13,
   /**
-   * Private segment size of the kernel. The value of this attribute is
+   * Size of static private, spill, and arg segment memory required by
+   * this kernel (per work-item), in bytes. The value of this attribute is
    * undefined if the symbol is not a kernel. The type of this attribute is
    * uint32_t.
+   *
+   * If the value of ::HSA_CODE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK is true,
+   * the kernel may use more private memory than the reported value, and the
+   * application must add the dynamic call stack usage to @a
+   * private_segment_size when populating a Kernel Dispatch packet.
    */
-  HSA_CODE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE = 20,
+  HSA_CODE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE = 14,
+  /**
+   * Dynamic callstack flag. The value of this attribute is undefined if the
+   * symbol is not a kernel. The type of this attribute is bool.
+   *
+   * If this flag is set (the value is true), the kernel uses a dynamically
+   * sized call stack. This can happen if recursive calls, calls to indirect
+   * functions, or the HSAIL alloca instruction are present in the kernel.
+   */
+  HSA_CODE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK = 15,
   /**
    * Call convention of the indirect function. The value of this attribute is
    * undefined if the symbol is not an indirect function. The type of this
    * attribute is uint32_t.
    */
-  HSA_CODE_SYMBOL_INFO_INDIRECT_FUNCTION_CALL_CONVENTION = 21
+  HSA_CODE_SYMBOL_INFO_INDIRECT_FUNCTION_CALL_CONVENTION = 16
 } hsa_code_symbol_info_t;
 
 /**
@@ -3495,7 +3534,7 @@ typedef enum {
    * ::HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ALLOCATION is
    * ::HSA_VARIABLE_ALLOCATION_AGENT. The type of this attribute is hsa_agent_t.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_AGENT = 5,
+  HSA_EXECUTABLE_SYMBOL_INFO_AGENT = 20,
   /**
    * The address of the variable. The value of this attribute is undefined if
    * the symbol is not a variable. The type of this attribute is uint64_t.
@@ -3503,30 +3542,30 @@ typedef enum {
    * If executable's state is ::HSA_EXECUTABLE_STATE_UNFROZEN, then 0 is
    * returned.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS = 6,
+  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS = 21,
   /**
    * The allocation kind of the variable. The value of this attribute is
    * undefined if the symbol is not a variable.  The type of this attribute is
    * ::hsa_variable_allocation_t.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ALLOCATION = 7,
+  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ALLOCATION = 5,
   /**
    * The linkage kind of the variable. The value of this attribute is undefined
    * if the symbol is not a variable. The type of this attribute is
    * ::hsa_variable_linkage_t.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_LINKAGE = 8,
+  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_LINKAGE = 6,
   /**
    * The segment kind of the variable. The value of this attribute is undefined
    * if the symbol is not a variable. The type of this attribute is
    * ::hsa_variable_segment_t.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_SEGMENT = 9,
+  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_SEGMENT = 7,
   /**
    * Alignment of the variable. The value of this attribute is undefined if
    * the symbol is not a variable. The type of this attribute is uint32_t.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ALIGNMENT = 10,
+  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ALIGNMENT = 8,
   /**
    * Size of the variable. The value of this attribute is undefined if
    * the symbol is not a variable. The type of this attribute is uint32_t.
@@ -3534,13 +3573,13 @@ typedef enum {
    * A value of 0 is returned if the variable is an external variable and has an
    * unknown dimension.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_SIZE = 11,
+  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_SIZE = 9,
   /**
-   * Indicates whether the variable is constant. The value of this attribute is undefined if
-   * the symbol is not a variable. The type of this attribute is
+   * Indicates whether the variable is constant. The value of this attribute is
+   * undefined if the symbol is not a variable. The type of this attribute is
    * bool.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_IS_CONST = 12,
+  HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_IS_CONST = 10,
   /**
    * Kernel object handle, used in the Kernel Dispatch packet. The value of this
    * attribute is undefined if the symbol is not a kernel. The type of this
@@ -3549,23 +3588,51 @@ typedef enum {
    * If the state of the executable is ::HSA_EXECUTABLE_STATE_UNFROZEN, then 0
    * is returned.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT = 13,
+  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT = 22,
   /**
-   * Kernarg segment size of the kernel. The value of this attribute is
+   * Size of kernarg segment memory that is required to hold the values of the
+   * kernel arguments, in bytes. The value of this attribute is undefined if the
+   * symbol is not a kernel. The type of this attribute is uint32_t.
+   */
+  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE = 11,
+  /**
+   * Alignment (in bytes) of the buffer used to pass arguments to the kernel,
+   * which is the maximum of 16 and the maximum alignment of any of the kernel
+   * arguments. The value of this attribute is undefined if the symbol is not a
+   * kernel. The type of this attribute is uint32_t.
+   */
+  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_ALIGNMENT = 12,
+  /**
+   * Size of static group segment memory required by the kernel (per
+   * work-group), in bytes. The value of this attribute is undefined
+   * if the symbol is not a kernel. The type of this attribute is uint32_t.
+   *
+   * The reported amount does not include any dynamically allocated group
+   * segment memory that may be requested by the application when a kernel is
+   * dispatched.
+   */
+  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE = 13,
+  /**
+   * Size of static private, spill, and arg segment memory required by
+   * this kernel (per work-item), in bytes. The value of this attribute is
    * undefined if the symbol is not a kernel. The type of this attribute is
    * uint32_t.
+   *
+   * If the value of ::HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK is
+   * true, the kernel may use more private memory than the reported value, and
+   * the application must add the dynamic call stack usage to @a
+   * private_segment_size when populating a Kernel Dispatch packet.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE = 14,
+  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE = 14,
   /**
-   * Group segment size of the kernel. The value of this attribute is undefined
-   * if the symbol is not a kernel. The type of this attribute is uint32_t.
+   * Dynamic callstack flag. The value of this attribute is undefined if the
+   * symbol is not a kernel. The type of this attribute is bool.
+   *
+   * If this flag is set (the value is true), the kernel uses a dynamically
+   * sized call stack. This can happen if recursive calls, calls to indirect
+   * functions, or the HSAIL alloca instruction are present in the kernel.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE = 15,
-  /**
-   * Private segment size of the kernel. The value of this attribute is undefined
-   * if the symbol is not a kernel. The type of this attribute is uint32_t.
-   */
-  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE = 16,
+  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK = 15,
   /**
    * Indirect function object handle. The value of this attribute is undefined
    * if the symbol is not an indirect function. The type of this attribute
@@ -3575,13 +3642,13 @@ typedef enum {
    * If the state of the executable is ::HSA_EXECUTABLE_STATE_UNFROZEN, then 0
    * is returned.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_INDIRECT_FUNCTION_OBJECT = 17,
+  HSA_EXECUTABLE_SYMBOL_INFO_INDIRECT_FUNCTION_OBJECT = 23,
   /**
    * Call convention of the indirect function. The value of this attribute is
    * undefined if the symbol is not an indirect function. The type of this
    * attribute is uint32_t.
    */
-  HSA_EXECUTABLE_SYMBOL_INFO_INDIRECT_FUNCTION_CALL_CONVENTION = 18
+  HSA_EXECUTABLE_SYMBOL_INFO_INDIRECT_FUNCTION_CALL_CONVENTION = 16
 } hsa_executable_symbol_info_t;
 
 /**

@@ -1360,7 +1360,7 @@ deallocator cannot be used to release memory allocated using standard libraries
 
 Regions associated with the global segment are divided into two broad
 categories: fine-grained and coarse-grained. The main difference between these
-memory types is that fine-grained memory is directly accessible by all the HSA
+memory types is that fine-grained memory is directly accessible to all the HSA
 agents in the system at the same time (under the terms of the HSA memory model),
 while coarse-grained memory may be accessible to multiple HSA agents, but never
 at the same time: the application is responsible for explicitly assigning
@@ -1415,7 +1415,7 @@ HSA agent. It is important to note that:
   different owners.
 \item If the new owner cannot access the region associated with the buffer, the
   behavior is undefined.
-\item Ownership change is only applicable to coarse-grained buffers.
+\item Ownership change is a no-op for fine-grained buffers.
 \end{itemize}
 
 When a coarse-grained region is visible to a unique HSA agent (i.e., the region
@@ -1466,13 +1466,21 @@ the lifetime of an application.
 
 \subsection{Group and Private memory}
 Memory in the group segment is used to store information that is shared by all
-the work-items in a work-group. Group memory is associated with a given kernel
-execution: the contents of group memory are undefined if the kernel has not
-started, or if it has finished.
+the work-items in a work-group. Group memory is visible to the work-items of a
+single work-group of a kernel dispatch. An address of a variable in group memory
+can be read and written by any work-item in the work-group with which it is
+associated, but not by work-items in other work-groups or by other agents. Group
+memory is persistent across the execution of the work-items in the work-group of
+the kernel dispatch with which it is associated, and it is uninitialized
+when the work-group starts execution.
 
 Memory in the private segment is used to store information local to a single
-work-item. Private memory is persistent across the execution of the work-item
-with which it is associated.
+work-item. Private memory is visible only to a single work-item of a kernel
+dispatch. An address of a variable in private memory can be read and written
+only by the work-item with which it is associated, but not by any other
+work-items or other agents.  Private memory is persistent across the execution
+of the work-item with which it is associated, and it is uninitialized
+when the work-item starts.
 
 Memory in the group and private segments is represented in the HSA runtime API
 in a similar fashion to memory in the global and readonly segments: using
@@ -1762,7 +1770,7 @@ This basic workflow is represented in Figure \ref{fig:finalization}.
        (program) edge node[anchor=center,fill=white,opacity=1]{(4) \hsaref{hsa_ext_program_finalize}} (codeobject)
     ;
   \end{tikzpicture}
-  \caption{From source to code descriptor.}
+  \caption{From source to code object.}
   \label{fig:finalization}
 \end{figure}
 
@@ -1971,11 +1979,11 @@ a sampler handle from an HSA agent-independent sampler descriptor
 
 \bibitem{prm}
 \newblock{HSA Programmer's Reference Manual.}
-\newblock{v1.0, HSA Foundation, 2014/06/05.}
+\newblock{v1.0, HSA Foundation, 2014/12/07.}
 
 \bibitem{sar}
 \newblock{HSA Platform System Architecture Specification.}
-\newblock{v1.0, HSA Foundation, 2014/08/29.}
+\newblock{v1.0, HSA Foundation, 2014/12/05.}
 
 \end{thebibliography}
 % add bibliography to Table of Contents

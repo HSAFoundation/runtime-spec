@@ -700,12 +700,12 @@ extern "C" {
     sig->Xor(value, std::memory_order_release);
   }
 
-  hsa_signal_value_t hsa_signal_wait_acquire(hsa_signal_t signal, hsa_signal_condition_t condition, hsa_signal_value_t compare_value, uint64_t timeout_hint, hsa_wait_expectancy_t wait_expectancy_hint) {
+  hsa_signal_value_t hsa_signal_wait_acquire(hsa_signal_t signal, hsa_signal_condition_t condition, hsa_signal_value_t compare_value, uint64_t timeout_hint, hsa_wait_state_t wait_expectancy_hint) {
     hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Wait(std::memory_order_acquire, condition, compare_value);
   }
 
-  hsa_signal_value_t hsa_signal_wait_relaxed(hsa_signal_t signal, hsa_signal_condition_t condition, hsa_signal_value_t compare_value, uint64_t timeout_hint, hsa_wait_expectancy_t wait_expectancy_hint) {
+  hsa_signal_value_t hsa_signal_wait_relaxed(hsa_signal_t signal, hsa_signal_condition_t condition, hsa_signal_value_t compare_value, uint64_t timeout_hint, hsa_wait_state_t wait_expectancy_hint) {
     hsa::Signal* sig = (hsa::Signal*) signal.handle;
     return sig->Wait(std::memory_order_relaxed, condition, compare_value);
   }
