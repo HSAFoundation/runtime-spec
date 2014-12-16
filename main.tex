@@ -1555,8 +1555,10 @@ API in order to obtain the kernel object.
   \label{fig:codeobject_workflow}
 \end{figure}
 
-The following algorithm describes the HSA runtime data structures and functions
-involved in this basic workflow in more detail:
+The following algorithm is one example of the stages that could be passed
+through to generate a kernel object and assumes use of the HSAIL finalization
+extension described in Section~\ref{sec:finalizer}. Other methods for producing
+a code object are valid but are not directly described in this document.
 \begin{enumerate}
 \item The application is in possesion of one or more HSAIL modules that are the
   result of compiling a high-level language such as OpenMP or OpenCL. One of the
@@ -1782,55 +1784,49 @@ This basic workflow is represented in Figure \ref{fig:finalization}.
 
 \section{Images and Samplers}\label{sec:images}
 
-An HSA runtime uses an image handle \hsaref{hsa_ext_image_t} to access
-images. The image handle references the image data in memory and records
-information about resource layout and other properties. HSA decouples the
-storage of the image data and the description of how the device interprets that
-data. This allows the application developer to control the location of the image
-data storage and manage memory more efficiently.
+The HSA runtime uses an opaque image handle (\hsaref{hsa_ext_image_t}) to
+represent images. The image handle references the image data in memory and
+stores information about resource layout and other properties. HSA decouples
+the storage of the image data and the description of how the HSA agent
+interprets that data. This allows the application to control the location of the
+image data storage and manage memory more efficiently.
 
-The HSA image format is specified using a format descriptor
-(\hsaref{hsa_ext_image_format_t}) that contains information about the image
-channel type and the channel order. The image channel type describes how the
-data is to be interpreted along with the bit size, and image channel order
-describes the number and the order. Not all image channel types and channel
-order combinations are valid on an HSA agent. All HSA agents have to support a
-required minimum set of image formats. For more information, refer to the HSA
-Programmer's Reference Manual\cite{prm}. An application can use
-\hsaref{hsa_ext_image_get_format_capability} to query a runtime to obtain image
-format capabilities.
+An image \textit{format} is specified using a channel type and a channel
+order. The channel type describes how the data is to be interpreted along with
+the bit size, and the channel order describes the number and the order of memory
+components. Not all image channel types and channel order combinations are valid
+on an HSA agent, but an HSA agent must support a minimum set of image
+formats. For more information, refer to the HSA Programmer's Reference
+Manual~\cite{prm}. An application can use \hsaref{hsa_ext_image_get_capability}
+to obtain the image format capabilities for a given combination of HSA agent,
+geometry, and image format.
 
 An implementation-independent image format descriptor
-(\hsaref{hsa_ext_image_descriptor_t}) is composed of geometry along with the
+(\hsaref{hsa_ext_image_descriptor_t}) is composed of a geometry along with the
 image format. The image descriptor is used to inquire the runtime for the HSA
 component-specific image data size and alignment details by calling
-\hsaref{hsa_ext_image_get_info} for the purpose of determining the
-implementation's storage requirements.
+\hsaref{hsa_ext_image_data_get_info} for the purpose of determining the
+implementation's storage requirements. The memory requirements
+(\hsaref{hsa_ext_image_data_info_t}) include the size of the memory needed as
+well as any alignment constraints. An application can either allocate new memory
+for storing the image data, or use an existing buffer. Before the image data is
+used, an HSA agent-specific image handle must be created using it and if
+necessary, cleared and prepared according to the intended use.
 
-The memory requirements (\hsaref{hsa_ext_image_info_t}) include the size of the
-memory needed as well as any alignment constraints. An application can either
-allocate new memory for the image data, or sub-allocate a memory block from an
-existing memory if the memory size allows. Before the image data is used, an HSA
-agent-specific image handle must be created using it and if necessary, cleared
-and prepared according to the intended use.
+The function \hsaref{hsa_ext_image_create} creates an HSA agent-specific image
+from an image format descriptor, an application-allocated buffer that conforms
+to the requirements provided by \hsaref{hsa_ext_image_data_get_info}, and access
+permissions. The returned handle can used by the HSAIL operations
+\refhsl{rdimage}, \refhsl{ldimage}, and \refhsl{stimage}.
 
-An HSA agent-specific image handle (\hsaref{hsa_ext_image_t}) is used by
-the HSAIL language for reading or writing using HSAIL \refhsl{rdimage},
-\refhsl{ldimage} and \refhsl{stimage} operations. The function
-\hsaref{hsa_ext_image_create} creates an image handle from two things.
-One is an implementation-independent image format descriptor. The other is
-independently allocated image data that conforms to the requirements provided
-by \hsaref{hsa_ext_image_get_info}.
-
-It must be noted that while the image data is technically accessible from its
-pointer in the raw form, the data layout and organization is HSA agent-specific
-and should be treated as opaque. The internal implementation of an optimal image
-data organization could vary depending on the attributes of the image format
-descriptor. As a result, there are no guarantees on the data layout when
-accessed from another HSA agent. The only reliable way to import or export image
-data from optimally organized images is to copy their data to and from a
-linearly organized data layout in memory, as specified by the image's format
-attributes.
+While the image data is technically accessible from its pointer in the raw form,
+the data layout and organization is HSA agent-specific and should be treated as
+opaque. The internal implementation of an optimal image data organization could
+vary depending on the attributes of the image format descriptor. As a result,
+there are no guarantees on the data layout when accessed from another HSA
+agent. The only reliable way to import or export image data from optimally
+organized images is to copy their data to and from a linearly organized data
+layout in memory, as specified by the image's format attributes.
 
 The HSA runtime provides interfaces to allow operations on images. Image data
 transfer to and from memory with a linear layout can be performed using
@@ -1839,13 +1835,13 @@ portion of an image could be copied to another image using
 \hsaref{hsa_ext_image_copy}. An image can be cleared using
 \hsaref{hsa_ext_image_clear}. It is the application's responsibility to ensure
 proper synchronization and preparation of images on accesses from other image
-operations. See HSA System Architecture spec 2.13 for the HSA Image memory
-model.
+operations. The HSA System Architecture~\cite{sar} details the HSA memory
+model for images.
 
-An HSA agent-specific sampler handle (\hsaref{hsa_ext_sampler_t}) is used
-by the HSAIL language to describe how images are processed by the
-\refhsl{rdimage} HSAIL operation. \hsaref{hsa_ext_sampler_create} creates
-a sampler handle from an HSA agent-independent sampler descriptor
+An HSA agent-specific sampler handle (\hsaref{hsa_ext_sampler_t}) is used by the
+HSAIL language to describe how images are processed by the \refhsl{rdimage}
+HSAIL operation. The function \hsaref{hsa_ext_sampler_create} creates a sampler
+handle from an HSA agent-independent sampler descriptor
 (\hsaref{hsa_ext_sampler_descriptor_t}).
 
 \subsection{API}

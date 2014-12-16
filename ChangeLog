@@ -1,3 +1,23 @@
+2014-12-15  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 327 - [Memory] Nullptr outside of global and readonly
+	segments
+	* Bug 331 - [Code objects & Executables] review feedback on
+	chapert 2.8 Code objects and Executables
+	* Bug 332 - [Images] Maximum number of elements per dimension is
+	missing for several geometries
+	* Bug 333 - [Images] Image copy - format and geometry conversion
+	* Bug 335 - [Images] asynchronous operations rely on a signal
+	argument
+	* [Agent information] Moved HSA_AGENT_INFO_FAST_F16_OPERATION to
+	core, since it has nothing to do with the finalization API
+	* [Images] hsa_ext_image_destroy should receive the image handle,
+	and not a pointer to it. Same applies to hsa_ext_sampler_destroy
+	* [Images] removed hsa_ext_image_range_t, since it is identical to
+	hsa_dim3_t
+	* [Images] access permission enumeration is shared with core API
+	* [Images] text is more consistent with rest of specification
+
 2014-12-10  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 299 - hsa_signal_wait API is confusing with its two hints
@@ -42,7 +62,7 @@
 	* Bug 137 - map/unmap?
 	* Memory allocation does not allow a size of zero (which used to
 	return NULL). The previous scenario is confusing when allocating
-	in non-global regions.ma
+	in non-global regions
 	* Bug 306 - Extension proposal
 	* Finalization API v3.0 has been incorporated into the
 	specification

@@ -206,24 +206,22 @@ typedef struct hsa_dim3_s {
 } hsa_dim3_t;
 
 /**
- * @brief Dimensions in a 3D space.
+ * @brief Access permissions.
  */
 typedef enum {
   /**
-   * X dimension.
+   * Read-only access.
    */
-  HSA_DIM_X = 0,
-
+  HSA_ACCESS_PERMISSION_RO = 1,
   /**
-   * Y dimension.
+   * Write-only access.
    */
-  HSA_DIM_Y = 1,
-
+  HSA_ACCESS_PERMISSION_WO = 2,
   /**
-   * Z dimension.
+   * Read and write access.
    */
-  HSA_DIM_Z = 2
-} hsa_dim_t;
+  HSA_ACCESS_PERMISSION_RW = 3
+} hsa_access_permission_t;
 
 /** @} **/
 
@@ -575,6 +573,13 @@ typedef enum {
    * (::HSA_AGENT_INFO_DEFAULT_FLOAT_ROUNDING_MODE) bit must be set.
    */
   HSA_AGENT_INFO_BASE_PROFILE_DEFAULT_FLOAT_ROUNDING_MODES = 23,
+    /**
+     * Flag indicating that the f16 HSAIL operation is at least as fast as the
+     * f32 operation in the current HSA agent. The value of this attribute is
+     * undefined if the HSA agent is not an HSA component. The type of this
+     * attribute is bool.
+     */
+  HSA_AGENT_INFO_FAST_F16_OPERATION = 24,
   /**
    * Number of work-items in a wavefront. Must be a power of 2 in the range
    * [1,256]. The value of this attribute is undefined if the HSA agent is not
@@ -787,47 +792,6 @@ hsa_status_t hsa_agent_get_exception_policies(
     hsa_agent_t agent,
     hsa_profile_t profile,
     uint16_t *mask);
-
-/*   /\** */
-/*  * @brief Default floating-point rounding mode. */
-/*  *\/ */
-/* typedef enum { */
-/*     /\** */
-/*      * Operation is rounded to 0. */
-/*      *\/ */
-/*     HSA_ROUNDING_MODE_ZERO = 1, */
-/*     /\** */
-/*      * Operation is rounded to the nearest representable number. */
-/*      *\/ */
-/*     HSA_ROUNDING_MODE_NEAR = 2 */
-/* } hsa_rounding_mode_t; */
-
-/* /\** */
-/*  * @brief Retrieve the default rounding mode support for a given combination of */
-/*  * HSA agent and profile */
-/*  * */
-/*  * @param[in] agent HSA agent. */
-/*  * */
-/*  * @param[in] profile Profile. */
-/*  * */
-/*  * @param[out] mask Pointer to a memory location where the HSA runtime stores a */
-/*  * mask of ::hsa_rounding_mode_t values. Must not be NULL. */
-/*  * */
-/*  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully. */
-/*  * */
-/*  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been */
-/*  * initialized. */
-/*  * */
-/*  * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid. */
-/*  * */
-/*  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p profile is not a valid */
-/*  * profile, or @p mask is NULL. */
-/*  * */
-/*  *\/ */
-/* hsa_status_t hsa_agent_get_rounding_mode( */
-/*     hsa_agent_t agent, */
-/*     hsa_profile_t profile, */
-/*     uint16_t *mask); */
 
 /**
  * @brief Retrieve the highest version of an extension supported by an HSA
@@ -2372,24 +2336,6 @@ hsa_status_t HSA_API hsa_memory_copy(
     size_t size);
 
 /**
- * @brief Memory access permissions.
- */
-typedef enum {
-  /**
-   * Read-only access.
-   */
-  HSA_MEMORY_ACCESS_RO = 1,
-  /**
-   * Write-only access.
-   */
-  HSA_MEMORY_ACCESS_WO = 2,
-  /**
-   * Read and write access.
-   */
-  HSA_MEMORY_ACCESS_RW = 3
-} hsa_memory_access_t;
-
-/**
  * @brief Change the ownership of a global, coarse-grained buffer.
  *
  * @details The contents of a coarse-grained buffer are visible to an HSA agent
@@ -2434,7 +2380,7 @@ typedef enum {
 hsa_status_t HSA_API hsa_memory_assign_agent(
     void *ptr,
     hsa_agent_t agent,
-    hsa_memory_access_t access);
+    hsa_access_permission_t access);
 
 /**
  *
@@ -3635,9 +3581,10 @@ typedef enum {
   HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK = 15,
   /**
    * Indirect function object handle. The value of this attribute is undefined
-   * if the symbol is not an indirect function. The type of this attribute
-   * depends on the machine model: if machine model is small, then the type is
-   * uint32_t, if machine model is large, then the type is uint64_t.
+   * if the symbol is not an indirect function, or the associated HSA agent does
+   * not support the Full Profile. The type of this attribute depends on the
+   * machine model: if machine model is small, then the type is uint32_t, if
+   * machine model is large, then the type is uint64_t.
    *
    * If the state of the executable is ::HSA_EXECUTABLE_STATE_UNFROZEN, then 0
    * is returned.
@@ -3645,8 +3592,9 @@ typedef enum {
   HSA_EXECUTABLE_SYMBOL_INFO_INDIRECT_FUNCTION_OBJECT = 23,
   /**
    * Call convention of the indirect function. The value of this attribute is
-   * undefined if the symbol is not an indirect function. The type of this
-   * attribute is uint32_t.
+   * undefined if the symbol is not an indirect function, or the associated HSA
+   * agent does not support the Full Profile. The type of this attribute is
+   * uint32_t.
    */
   HSA_EXECUTABLE_SYMBOL_INFO_INDIRECT_FUNCTION_CALL_CONVENTION = 16
 } hsa_executable_symbol_info_t;

@@ -4,6 +4,11 @@ import xml.etree.ElementTree as ET
 import sys
 import os
 
+# Enumeration types that allow duplicated initialization constants. In general,
+# duplicates seem to be indicative of an erroneous declaration, but we allow
+# exceptions.
+initializer_whitelist = ['hsa_packet_header_width_t']
+
 def get_ifdef(var):
   return "\#ifdef " + var + "\\\\"
 
@@ -308,6 +313,7 @@ def process_enum(enum, tex, defs):
 
   vals = []
   valsdescs = []
+  initializers = []
   valnodes = enum.findall("enumvalue")
   emptydescs = 0 # number of values with empty descriptions
   for val in enum.findall("enumvalue"):
@@ -317,7 +323,14 @@ def process_enum(enum, tex, defs):
     defs.append(('refenu', valname))
     valtxt = "\\hspace{1.7em}\\hypertarget{" + val.get('id') + "}{"
     valtxt += "\\refenu{" + valname + "}}"
-    valtxt += ' ' + node2tex(val.find('initializer'))
+
+    inittxt = node2tex(val.find('initializer'))
+    utypename = unscape(typename)
+    if inittxt in initializers and utypename not in initializer_whitelist:
+      sys.exit("\nError: initializer '" + inittxt + "' appears twice in " + utypename + ".")
+    initializers.append(inittxt)
+
+    valtxt += ' ' + inittxt
     valtxt = valtxt.strip()
     valdesc = "\\hspace{-2em}\\refenu{" + valname + "}"
     desc = node2tex(val.find('detaileddescription'))
