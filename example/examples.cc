@@ -384,34 +384,30 @@ void barrier(){
     hsa_shut_down();
 }
 
-// Find CPU HSA agent that can process Agent Dispatch packets.
-hsa_status_t get_agent_dispatch_agent(hsa_agent_t agent, void* data) {
-    uint32_t features = 0;
+// Find CPU agent.
+hsa_status_t get_cpu_agent(hsa_agent_t agent, void* data) {
     hsa_device_type_t device;
-    hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
-    if (features & HSA_AGENT_FEATURE_AGENT_DISPATCH) {
-        hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device);
-        if (device == HSA_DEVICE_TYPE_CPU) {
-            hsa_agent_t* ret = (hsa_agent_t*)data;
-            *ret = agent;
-            return HSA_STATUS_INFO_BREAK;
-        }
+    hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, &device);
+    if (device == HSA_DEVICE_TYPE_CPU) {
+      hsa_agent_t* ret = (hsa_agent_t*)data;
+      *ret = agent;
+      return HSA_STATUS_INFO_BREAK;
     }
     return HSA_STATUS_SUCCESS;
 }
 
-void process_agent_dispatch(hsa_queue_t* service_queue) {
-    hsa_agent_dispatch_packet_t* packets = (hsa_agent_dispatch_packet_t*) service_queue->base_address;
-    uint64_t read_index = hsa_queue_load_read_index_acquire(service_queue);
+void process_agent_dispatch(hsa_queue_t* queue) {
+    hsa_agent_dispatch_packet_t* packets = (hsa_agent_dispatch_packet_t*) queue->base_address;
+    uint64_t read_index = hsa_queue_load_read_index_acquire(queue);
     assert(read_index == 0);
-    hsa_signal_t doorbell = service_queue->doorbell_signal;
+    hsa_signal_t doorbell = queue->doorbell_signal;
 
     while (read_index < 100) {
 
         while (hsa_signal_wait_acquire(doorbell, HSA_SIGNAL_CONDITION_GTE, read_index, UINT64_MAX, HSA_WAIT_STATE_BLOCKED) <
             (hsa_signal_value_t) read_index);
 
-        hsa_agent_dispatch_packet_t* packet = packets + read_index % service_queue->size;
+        hsa_agent_dispatch_packet_t* packet = packets + read_index % queue->size;
 
         if (packet->type == 0x8000) {
             // HSA component requests memory
@@ -426,7 +422,7 @@ void process_agent_dispatch(hsa_queue_t* service_queue) {
         }
         packet_type_store_release(&packet->header, HSA_PACKET_TYPE_INVALID);
         read_index++;
-        hsa_queue_store_read_index_release(service_queue, read_index);
+        hsa_queue_store_read_index_release(queue, read_index);
     }
 }
 
@@ -461,13 +457,35 @@ void allocate(void* kernarg) {
     }
 }
 
+hsa_status_t get_fine_grained_region(hsa_region_t region, void* data) {
+    hsa_region_segment_t segment;
+    hsa_region_get_info(region, HSA_REGION_INFO_SEGMENT, &segment);
+    if (segment != HSA_REGION_SEGMENT_GLOBAL) {
+        return HSA_STATUS_SUCCESS;
+    }
+    hsa_region_global_flag_t flags;
+    hsa_region_get_info(region, HSA_REGION_INFO_GLOBAL_FLAGS, &flags);
+    if (flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) {
+        hsa_region_t* ret = (hsa_region_t*) data;
+        *ret = region;
+        return HSA_STATUS_INFO_BREAK;
+    }
+    return HSA_STATUS_SUCCESS;
+}
 
 // THIS FUNCTION IS NOT USED IN THE CODE BUT FROM LATEX
-void create_service_queue() {
-hsa_agent_t agent_dispatch_agent;
-hsa_iterate_agents(get_agent_dispatch_agent, &agent_dispatch_agent);
-hsa_queue_t *service_queue;
-hsa_queue_create(agent_dispatch_agent, 16, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &service_queue);
+void create_soft_queue() {
+hsa_agent_t cpu_agent;
+hsa_iterate_agents(get_cpu_agent, &cpu_agent);
+
+hsa_region_t region;
+hsa_agent_iterate_regions(cpu_agent, get_fine_grained_region, &region);
+
+hsa_signal_t completion_signal;
+hsa_signal_create(1, 0, NULL, &completion_signal);
+
+hsa_queue_t *soft_queue;
+hsa_soft_queue_create(region, 16, HSA_QUEUE_TYPE_MULTI, HSA_QUEUE_FEATURE_AGENT_DISPATCH, completion_signal, &soft_queue);
 }
 
 void agent_dispatch(){
@@ -475,7 +493,7 @@ void agent_dispatch(){
 
     // Create service queue
     hsa_agent_t agent_dispatch_agent;
-    hsa_iterate_agents(get_agent_dispatch_agent, &agent_dispatch_agent);
+    hsa_iterate_agents(get_cpu_agent, &agent_dispatch_agent);
     hsa_queue_t *service_queue;
     hsa_queue_create(agent_dispatch_agent, 16, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &service_queue);
 

@@ -588,7 +588,7 @@ ways. In the snippet below the application indicates that the queue should
 be able to hold 256 packets.
 \begin{lstlisting}
 hsa_queue_t *queue;
-hsa_queue_create(component, 256, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, &queue);
+hsa_queue_create(component, 256, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, UINT32_MAX, UINT32_MAX, &queue);
 \end{lstlisting}
 
 The next step is to create a packet and push it into the newly created
@@ -1030,7 +1030,7 @@ hsa_agent_t component;
 hsa_iterate_agents(get_component, &component);
 
 hsa_queue_t *queue;
-hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, callback, NULL, &queue);
+hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, callback, NULL, UINT32_MAX, UINT32_MAX, &queue);
 \end{lstlisting}
 
 The callback prints the ID of the problematic queue, and the string associated
@@ -1068,7 +1068,7 @@ supporting multiple producers:
 hsa_agent_t component;
 hsa_iterate_agents(get_component, &component);
 hsa_queue_t *queue;
-hsa_queue_create(component, 4, HSA_QUEUE_TYPE_MULTI, callback, NULL, &queue);
+hsa_queue_create(component, 4, HSA_QUEUE_TYPE_MULTI, callback, NULL, UINT32_MAX, UINT32_MAX, &queue);
 \end{lstlisting}
 Each CPU thread submits 1,000 Kernel Dispatch packets by executing the function
 listed below. For simplicity, we omitted the code that creates the CPU threads.
@@ -1149,22 +1149,30 @@ type \hsaref{hsa_agent_dispatch_packet_t} to represent Agent Dispatch packets.
 
 A host application is allowed to submit Agent Dispatch packets to any
 destination HSA agent that supports them. However, a more common scenario is
-that the producer will be a kernel executing in an HSA component. The following
-steps describe the set of actions required from the application, the kernel, and
-the destination HSA agent:
+that the producer will be a kernel executing in an HSA component, and the
+consumer is the host application. The following steps describe the set of
+actions required from the application, the kernel, and the destination HSA
+agent:
 \begin{enumerate}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item (Application) Locate a destination HSA agent that supports Agent Dispatch
-  packets. The application must check whether the feature
-  \hsaref{HSA_AGENT_FEATURE_AGENT_DISPATCH} is present in an HSA agent.
-\item (Application) Create a so-called "service'' queue on the destination HSA
-  agent using \hsaref{hsa_queue_create}.
+\item (Application) Locate the HSA agent associated with the host (CPU) by
+  calling \hsaref{hsa_iterate_agents}.
+\item (Application) Locate a memory \textit{region} that is accessible to the
+  host and the HSA component -- for example, a global fine-grained region. The
+  function \hsaref{hsa_agent_iterate_regions} lists the memory regions
+  associated with a given HSA agent. Memory regions are explained in
+  Section~\ref{sec:memory}.
+\item (Application) Create a signal by calling \hsaref{hsa_signal_create}.
+\item (Application) Create a \textit{soft} queue (using the signal and region
+  handles retrieved before) that supports Agent Dispatch packets using
+  \hsaref{hsa_soft_queue_create}. The application is responsible for processing
+  the AQL packets enqueued in the soft queue.
 \item (Application) Launch a kernel in an HSA component. The work-items
-  executing the kernel have access to the service queue -- for example, it has
+  executing the kernel have access to the soft queue -- for example, it has
   been passed as an argument in a Kernel Dispatch packet.
 \item (Kernel) When a work-item needs to execute a given built-in (service), it
-  submits an Agent Dispatch packet to the service queue following the steps
+  submits an Agent Dispatch packet to the soft queue following the steps
   described in Section~\ref{sec:queues}.
-\item (Destination Agent) The HSA agent parses the packet, executes the
+\item (Application) The application parses the packet, executes the
   indicated service, stores the result in the memory location pointed to by
   \hsaref{hsa_agent_dispatch_packet_t.return_address}, and decrements the
   completion signal if present.
@@ -1180,22 +1188,27 @@ instruction to allocate virtual memory. In this scenario, the destination HSA
 agent is the application running on the CPU, and the service is memory
 allocation.
 
-The application starts by finding a CPU HSA agent where it can create a queue
-that supports Agent Dispatch packets:
-\lstinputfunlisting{get_agent_dispatch_agent}
+The application starts by finding the CPU HSA agent:
+\lstinputfunlisting{get_cpu_agent}
 
-An application creates a service queue on the CPU HSA agent:
-\lstinputfunlisting[1]{create_service_queue}
+, and the associated fine-grained memory region:
+\lstinputfunlisting{get_fine_grained_region}
+
+Afterwards, the application creates the soft queue where the allocation requests
+will be enqueued: \lstinputfunlisting[1]{create_soft_queue} Note how
+the application (and not the HSA runtime) decides which completion signal and
+memory must be used when creating the queue. This is a major difference with
+respect to ``regular'' queues created using \hsaref{hsa_queue_create}.
 
 The application now creates a regular queue on an HSA component and launches a
-kernel in that queue. A pointer to the service queue is passed as an argument to
+kernel in that queue. A pointer to the soft queue is passed as an argument to
 the Kernel Dispatch packet by placing it into the buffer stored in the
 \hsaref{hsa_kernel_dispatch_packet_t.kernarg_address}
 field. Section~\ref{sec:memory:global} describes the HSA runtime elements needed
 for allocating memory that can be used to pass kernel arguments.
 
 Every time a work-item needs more virtual memory, it will submit an Agent
-Dispatch packet to the service queue. The allocation size is stored in the first
+Dispatch packet to the soft queue. The allocation size is stored in the first
 element of \hsaref{hsa_agent_dispatch_packet_t.arg}, and
 \hsaref{hsa_agent_dispatch_packet_t.return_address} contains the memory address
 where the application will store the starting address of the allocation.
@@ -1205,15 +1218,14 @@ application-defined code. Let's assume that the allocation service type is
 
 The following example code shows how a thread running on the host might process
 the Agent Dispatch packets submitted from the HSA component. The application
-waits for the value of the doorbell signal in the service queue to be
-monotonically increased. When that happens, the thread processes the next service
-request by invoking malloc.
+waits for the value of the doorbell signal in the soft queue to be monotonically
+increased. When that happens, the thread processes the allocation request by
+invoking malloc.
 
 \lstinputfunlisting{process_agent_dispatch}
 
-In practice, processing of Agent Dispatch packets is usually more
-complex because the consumer has to take into account multiple-producer
-scenarios.
+In practice, processing of Agent Dispatch packets is usually more complex
+because the consumer has to take into account multiple-producer scenarios.
 
 \subsection{Barrier-AND and Barrier-OR packets}\label{barrier-packet}
 
@@ -1326,6 +1338,7 @@ diagram.
   \hsaref{hsa_queue_destroy}, the behavior is undefined.
 
 \end{description}
+
 
 \subsection{API}
 \input{api/altlatex/group-aql}

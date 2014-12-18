@@ -1312,6 +1312,27 @@ hsa_signal_value_t HSA_API hsa_signal_wait_relaxed(
 
 /** @} */
 
+
+/** \defgroup memory Memory
+ *  @{
+ */
+
+/**
+ * @brief A memory region represents a block of virtual memory with certain
+ * properties. For example, the HSA runtime represents fine-grained memory in
+ * the global segment using a region. A region might be associated with more
+ * than one HSA agent.
+ */
+typedef struct hsa_region_s {
+  /**
+   * Opaque handle.
+   */
+  uint64_t handle;
+} hsa_region_t;
+
+/** @} */
+
+
 /** \defgroup queue Queues
  *  @{
  */
@@ -1489,6 +1510,67 @@ hsa_status_t HSA_API hsa_queue_create(
     void *data,
     uint32_t private_segment_size,
     uint32_t group_segment_size,
+    hsa_queue_t **queue);
+
+/**
+ * @brief Create a queue for which the application or a kernel is responsible
+ * for processing the AQL packets.
+ *
+ * @details The application can use this function to create queues where AQL
+ * packets are not parsed by the packet processor associated with an HSA agent,
+ * but rather by a unit of execution running on that HSA agent (for example, a
+ * thread in the host application).
+ *
+ * The application is responsible for ensuring that all the producers and
+ * consumers of the resulting queue can access the provided completion signal
+ * and memory region. The application is also responsible for ensuring that the
+ * unit of execution processing the queue packets supports the indicated
+ * features (AQL packet types).
+ *
+ * When the queue is created, the HSA runtime allocates the packet buffer using
+ * @p region, and the write and read indexes. The initial value of the write and
+ * read indexes is 0. The value of the @e size, @e type, @e features, and @e
+ * completion_signal fields in the returned queue match the values passed by the
+ * application.
+ *
+ * @param[in] region Memory region that the HSA runtime should use to allocate
+ * the AQL packet buffer and any other queue metadata.
+ *
+ * @param[in] size Number of packets the queue is expected to hold. Must be a
+ * power of 2 greater than 0.
+ *
+ * @param[in] type Queue type.
+ *
+ * @param[in] features Supported queue features. This is a bit-field of
+ * ::hsa_queue_feature_t values.
+ *
+ * @param[in] completion_signal Completion signal that the HSA runtime must
+ * associate with the returned queue. The signal handle must not be 0.
+ *
+ * @param[out] queue Memory location where the HSA runtime stores a pointer to
+ * the newly created queue. The application should not rely on the value
+ * returned for this argument but only in the status code to determine if the
+ * queue is valid. Must not be NULL.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is failure to allocate
+ * the resources required by the implementation.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p size is not a power of two, @p
+ * size is 0, @p type is an invalid queue type, the completion signal handle is
+ * 0, or @p queue is NULL.
+ *
+ */
+hsa_status_t HSA_API hsa_soft_queue_create(
+    hsa_region_t region,
+    uint32_t size,
+    hsa_queue_type_t type,
+    uint32_t features,
+    hsa_signal_t completion_signal,
     hsa_queue_t **queue);
 
 /**
@@ -2076,22 +2158,9 @@ typedef struct hsa_barrier_or_packet_s {
 
 /** @} */
 
-/** \defgroup memory Memory
+/** \addtogroup memory Memory
  *  @{
  */
-
-/**
- * @brief A memory region represents a block of virtual memory with certain
- * properties. For example, the HSA runtime represents fine-grained memory in
- * the global segment using a region. A region might be associated with more
- * than one HSA agent.
- */
-typedef struct hsa_region_s {
-  /**
-   * Opaque handle.
-   */
-  uint64_t handle;
-} hsa_region_t;
 
 /**
  * @brief Memory segments associated with a region.
@@ -2136,8 +2205,8 @@ typedef enum {
   /**
    * Updates to memory in this region can be performed by a single HSA agent at
    * a time. If a different HSA agent in the system is allowed to access the
-   * region, the application must explicitely invoke ::hsa_memory_assign_agent in order
-   * to transfer ownership to that HSA agent for a particular buffer.
+   * region, the application must explicitely invoke ::hsa_memory_assign_agent
+   * in order to transfer ownership to that HSA agent for a particular buffer.
    */
   HSA_REGION_GLOBAL_FLAG_COARSE_GRAINED = 4
 } hsa_region_global_flag_t;
@@ -2162,14 +2231,6 @@ typedef enum {
    * Size of this region, in bytes. The type of this attribute is size_t.
    */
   HSA_REGION_INFO_SIZE = 2,
-  /**
-   * Null pointer value. The type of this attribute is uint64_t.
-   *
-   * The value of this attribute for all the regions associated with the global
-   * segment should be NULL (the host null pointer). If the region is not in the
-   * global or readonly segments, the value of this attribute is undefined.
-   */
-  HSA_REGION_INFO_NULLPTR = 3,
   /**
    * Maximum allocation size in this region, in bytes. Must not exceed the value
    * of ::HSA_REGION_INFO_SIZE. The type of this attribute is size_t.

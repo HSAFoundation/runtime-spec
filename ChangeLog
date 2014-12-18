@@ -1,3 +1,18 @@
+2014-12-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 266 - [Queue] queue create specify agent that acts as packet
+	processor
+	* Bug 327 - [Memory] Nullptr outside of global and readonly
+	segments
+	* Bug 337 - [Images] Image clear pattern is a float[4], but the
+	channel type may be integer (forcing conversion)
+	* Bug 340 - [Images] copy function requires that the offset is
+	identical for the source and destination images
+	* Updated examples, which used old queue creation signature
+	* [AQL packets] Agent Dispatch example and text use soft queue
+	creation approach.
+	* [Images] improved text
+
 2014-12-15  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 327 - [Memory] Nullptr outside of global and readonly
