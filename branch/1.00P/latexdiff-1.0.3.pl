@@ -1,1 +1,1 @@
-../../latexdiff-1.0.3.pl
+../../latexdiff-1.0.4.pl
