@@ -14,14 +14,33 @@
 std::atomic<int>* counter; // used in the multi-threaded dispatch
 uint64_t KERNEL_OBJECT;
 
-void initialize_packet(hsa_kernel_dispatch_packet_t* packet) {
-    // Contents are zeroed:
-    //    -Reserved fields must be 0
-    //    -Type is set to HSA_PACKET_TYPE_ALWAYS_RESERVED, so the packet cannot be consumed by the packet processor
-    memset(packet, 0, sizeof(hsa_kernel_dispatch_packet_t));
 
-    packet->header |= HSA_FENCE_SCOPE_COMPONENT << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
-    packet->header |= HSA_FENCE_SCOPE_COMPONENT << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+// used in the specification as an example, never invoked as such
+
+#define HSA_EXTENSION_HAL_FOO 23
+
+typedef struct hsa_hal_foo_pfn_s {
+hsa_status_t (*hsa_hal_foo_pfn_do_something)();
+} hsa_hal_foo_pfn_t;
+
+void extension_example(hsa_agent_t agent) {
+bool system_support, agent_support;
+hsa_system_extension_supported(HSA_EXTENSION_HAL_FOO, 1, 0, &system_support);
+hsa_agent_extension_supported(HSA_EXTENSION_HAL_FOO, agent, 1, 0, &agent_support);
+if (system_support && agent_support) {
+    hsa_hal_foo_pfn_t pfns;
+    hsa_system_get_extension_table(HSA_EXTENSION_HAL_FOO, 1, 0, &pfns);
+    pfns.hsa_hal_foo_pfn_do_something();
+}
+}
+
+void initialize_packet(hsa_kernel_dispatch_packet_t* packet) {
+    // Reserved fields, private and group memory, and completion signal are all set to 0.
+    size_t header_size = sizeof(packet->header);
+    memset(packet + header_size, 0, sizeof(hsa_kernel_dispatch_packet_t) - header_size);
+
+    packet->header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
+    packet->header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
 
     packet->setup |= 1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
     packet->workgroup_size_x = 256;
@@ -40,12 +59,12 @@ void initialize_packet(hsa_kernel_dispatch_packet_t* packet) {
     packet->kernarg_address = NULL;
 }
 
-// Find HSA agent that can process Kernel Dispatch packets.
-hsa_status_t get_component(hsa_agent_t agent, void* data) {
+// Find HSA agent that can process kernel dispatch packets.
+hsa_status_t get_kernel_agent(hsa_agent_t agent, void* data) {
     uint32_t features = 0;
     hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
     if (features & HSA_AGENT_FEATURE_KERNEL_DISPATCH) {
-        // Store HSA component in the application-provided buffer and return
+        // Store kernel agent in the application-provided buffer and return
         hsa_agent_t* ret = (hsa_agent_t*) data;
         *ret = agent;
         return HSA_STATUS_INFO_BREAK;
@@ -54,8 +73,9 @@ hsa_status_t get_component(hsa_agent_t agent, void* data) {
     return HSA_STATUS_SUCCESS;
 }
 
-void packet_type_store_release(uint16_t* header, hsa_packet_type_t type) {
-    __atomic_store_n((uint8_t*) header, (uint8_t) type, __ATOMIC_RELEASE);
+void packet_type_store_release(uint32_t* packet, hsa_packet_type_t type) {
+    // Assume host is little-endian
+    __atomic_store_n(packet, type | *packet, __ATOMIC_RELEASE);
 }
 
 void hello_world() {
@@ -66,13 +86,13 @@ void simple_dispatch() {
     // Initialize the runtime
     hsa_init();
 
-    // Retrieve the HSA component
-    hsa_agent_t component;
-    hsa_iterate_agents(get_component, &component);
+    // Retrieve the kernel agent
+    hsa_agent_t kernel_agent;
+    hsa_iterate_agents(get_kernel_agent, &kernel_agent);
 
-    // Create a queue in the HSA component. The queue can hold 4 packets, and has no callback or service queue associated with it
+    // Create a queue in the kernel agent. The queue can hold 4 packets, and has no callback or service queue associated with it
     hsa_queue_t *queue;
-    hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue);
+    hsa_queue_create(kernel_agent, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue);
 
     // Request a packet ID from the queue. Since no packets have been enqueued yet, the expected ID is zero
     uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
@@ -80,14 +100,14 @@ void simple_dispatch() {
     // Calculate the virtual address where to place the packet
     hsa_kernel_dispatch_packet_t* packet = (hsa_kernel_dispatch_packet_t*) queue->base_address + packet_id;
 
-    // Populate fields in Kernel Dispatch packet, except for the completion signal and the header type
+    // Populate fields in kernel dispatch packet, except for the completion signal and the header type
     initialize_packet(packet);
 
     // Create a signal with an initial value of one to monitor the task completion
     hsa_signal_create(1, 0, NULL, &packet->completion_signal);
 
     // Notify the queue that the packet is ready to be processed
-    packet_type_store_release(&packet->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+    packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_KERNEL_DISPATCH);
     hsa_signal_store_release(queue->doorbell_signal, packet_id);
 
     // Wait for the task to finish, which is the same as waiting for the value of the completion signal to be zero
@@ -104,7 +124,7 @@ void increment(void* kernarg) {
     counter->fetch_add(1, std::memory_order_release);
 }
 
-hsa_status_t get_multi_component(hsa_agent_t agent, void* data) {
+hsa_status_t get_multi_kernel_agent(hsa_agent_t agent, void* data) {
     uint32_t features = 0;
     hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
     if (features & HSA_AGENT_FEATURE_KERNEL_DISPATCH) {
@@ -138,7 +158,7 @@ void enqueue(hsa_queue_t* queue) {
         initialize_packet(packet);
         packet->kernarg_address = counter;
         packet->completion_signal = signal;
-        packet_type_store_release(&packet->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+        packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_KERNEL_DISPATCH);
         hsa_signal_store_release(queue->doorbell_signal, packet_id);
     }
 
@@ -150,11 +170,11 @@ void enqueue(hsa_queue_t* queue) {
 void multithread_dispatch() {
     hsa_init();
     counter = new std::atomic<int>(0);
-    hsa_agent_t component;
-    hsa_iterate_agents(get_multi_component, &component);
+    hsa_agent_t kernel_agent;
+    hsa_iterate_agents(get_multi_kernel_agent, &kernel_agent);
     hsa_queue_t *queue;
-    // Create a queue in the selected component.
-    hsa_queue_create(component, 4, HSA_QUEUE_TYPE_MULTI, NULL, NULL, 0, 0, &queue);
+    // Create a queue in the selected agent.
+    hsa_queue_create(kernel_agent, 4, HSA_QUEUE_TYPE_MULTI, NULL, NULL, 0, 0, &queue);
 
     std::vector<std::thread*> threads;
     const int kNumThreads = 4;
@@ -181,11 +201,11 @@ void callback(hsa_status_t status, hsa_queue_t* queue, void* data) {
 
 void error_callback() {
   hsa_init();
-  hsa_agent_t component;
-  hsa_iterate_agents(get_component, &component);
+  hsa_agent_t kernel_agent;
+  hsa_iterate_agents(get_kernel_agent, &kernel_agent);
 
   hsa_queue_t *queue;
-  hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, callback, NULL, 0, 0, &queue);
+  hsa_queue_create(kernel_agent, 4, HSA_QUEUE_TYPE_SINGLE, callback, NULL, 0, 0, &queue);
 
   uint64_t write_index = hsa_queue_add_write_index_relaxed(queue, 1);
   hsa_kernel_dispatch_packet_t* packet = (hsa_kernel_dispatch_packet_t*)queue->base_address + write_index;
@@ -199,7 +219,7 @@ void error_callback() {
   hsa_signal_t signal;
   hsa_signal_create(1, 0, NULL, &signal);
   packet->completion_signal = signal;
-  packet_type_store_release(&packet->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+  packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_KERNEL_DISPATCH);
   hsa_signal_store_release(queue->doorbell_signal, write_index);
 
   // Wait for the task to finish, which is the same as waiting for the value of the
@@ -243,9 +263,9 @@ hsa_status_t get_kernarg(hsa_region_t region, void* data) {
     return HSA_STATUS_SUCCESS;
 }
 
-void populate_kernarg(hsa_agent_t component, hsa_kernel_dispatch_packet_t* packet) {
+void populate_kernarg(hsa_agent_t kernel_agent, hsa_kernel_dispatch_packet_t* packet) {
 hsa_region_t region;
-hsa_agent_iterate_regions(component, get_kernarg, &region);
+hsa_agent_iterate_regions(kernel_agent, get_kernarg, &region);
 
 // Allocate a buffer where to place the kernel arguments.
 hsa_memory_allocate(region, sizeof(hsa_signal_t), (void**) &packet->kernarg_address);
@@ -254,7 +274,7 @@ hsa_memory_allocate(region, sizeof(hsa_signal_t), (void**) &packet->kernarg_addr
 hsa_signal_t* buffer = (hsa_signal_t*) packet->kernarg_address;
 assert(buffer != NULL);
 hsa_signal_t signal;
-hsa_signal_create(128, 1, &component, &signal);
+hsa_signal_create(128, 1, &kernel_agent, &signal);
 *buffer = signal;
 }
 
@@ -262,13 +282,13 @@ int kernarg_usage() {
     // Initialize the runtime
     hsa_init();
 
-    // Retrieve the HSA component
-    hsa_agent_t component;
-    hsa_iterate_agents(get_component, &component);
+    // Retrieve the kernel agent
+    hsa_agent_t kernel_agent;
+    hsa_iterate_agents(get_kernel_agent, &kernel_agent);
 
-    // Create a queue in the selected HSA component. The queue can hold up to 4 packets associated with it.
+    // Create a queue in the selected kernel agent. The queue can hold up to 4 packets associated with it.
     hsa_queue_t *queue;
-    hsa_queue_create(component, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue);
+    hsa_queue_create(kernel_agent, 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue);
 
     // Request a packet ID from the queue. Since no packets have been enqueued yet, the expected ID is zero.
     uint64_t write_index = hsa_queue_add_write_index_relaxed(queue, 1);
@@ -280,7 +300,7 @@ int kernarg_usage() {
     initialize_packet(packet);
 
     // Find region that serves as backing storage for the kernarg segment
-    populate_kernarg(component, packet);
+    populate_kernarg(kernel_agent, packet);
 
     // Create a signal with an initial value of one to monitor the task completion
     hsa_signal_t completion_signal;
@@ -288,7 +308,7 @@ int kernarg_usage() {
     packet->completion_signal = completion_signal;
 
     // Notify the queue that the packet is ready to be processed
-    packet_type_store_release(&packet->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+    packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_KERNEL_DISPATCH);
     hsa_signal_store_release(queue->doorbell_signal, write_index);
 
     // Wait for the task to finish, which is the same as waiting for the value of the completion signal to be zero.
@@ -303,14 +323,14 @@ int kernarg_usage() {
 }
 
 void KERNEL_OBJECT_A() {
-    printf("Component A\n");
+    printf("Kernel agent A\n");
 }
 void KERNEL_OBJECT_B() {
-    printf("Component B\n");
+    printf("Kernel agent B\n");
 }
 
-// Find HSA agent that can process Kernel Dispatch packets.
-hsa_status_t accumulate_components(hsa_agent_t agent, void* data) {
+// Find HSA agent that can process kernel dispatch packets.
+hsa_status_t accumulate_kernel_agents(hsa_agent_t agent, void* data) {
     uint32_t features = 0;
     hsa_agent_get_info(agent, HSA_AGENT_INFO_FEATURE, &features);
     if (features & HSA_AGENT_FEATURE_KERNEL_DISPATCH) {
@@ -320,21 +340,21 @@ hsa_status_t accumulate_components(hsa_agent_t agent, void* data) {
     return HSA_STATUS_SUCCESS;
 }
 
-hsa_agent_t* get_components() {
-    std::vector<hsa_agent_t>* components = new std::vector<hsa_agent_t>();
-    hsa_iterate_agents(accumulate_components, (void*) components);
-    return &(components->at(0));
+hsa_agent_t* get_kernel_agents() {
+    std::vector<hsa_agent_t>* kernel_agents = new std::vector<hsa_agent_t>();
+    hsa_iterate_agents(accumulate_kernel_agents, (void*) kernel_agents);
+    return &(kernel_agents->at(0));
 }
 
 void barrier(){
     hsa_init();
 
-    // Find available HSA components. Let's assume there are two, A and B
-    hsa_agent_t* component = get_components();
+    // Find available kernel agents. Let's assume there are two, A and B
+    hsa_agent_t* kernel_agent = get_kernel_agents();
 
-    // Create queue in HSA component A and prepare a Kernel Dispatch packet
+    // Create queue in kernel agent A and prepare a kernel dispatch packet
     hsa_queue_t *queue_a;
-    hsa_queue_create(component[0], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue_a);
+    hsa_queue_create(kernel_agent[0], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue_a);
     uint64_t packet_id_a = hsa_queue_add_write_index_relaxed(queue_a, 1);
 
     hsa_kernel_dispatch_packet_t* packet_a =  (hsa_kernel_dispatch_packet_t*) queue_a->base_address + packet_id_a;
@@ -342,29 +362,30 @@ void barrier(){
     // KERNEL_OBJECT_A is the 1st kernel object
     packet_a->kernel_object = (uint64_t) KERNEL_OBJECT_A;
 
-    // Create a signal with a value of 1 and attach it to the first Kernel Dispatch packet
+    // Create a signal with a value of 1 and attach it to the first kernel dispatch packet
     hsa_signal_create(1, 0, NULL, &packet_a->completion_signal);
 
-    // Tell packet processor of A to launch the first Kernel Dispatch packet
-    packet_type_store_release(&packet_a->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+    // Tell packet processor of A to launch the first kernel dispatch packet
+    packet_type_store_release((uint32_t*) packet_a, HSA_PACKET_TYPE_KERNEL_DISPATCH);
     hsa_signal_store_release(queue_a->doorbell_signal, packet_id_a);
 
-    // Create queue in HSA component B
+    // Create queue in kernel agent B
     hsa_queue_t *queue_b;
-    hsa_queue_create(component[1], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue_b);
+    hsa_queue_create(kernel_agent[1], 4, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &queue_b);
     uint64_t packet_id_b = hsa_queue_add_write_index_relaxed(queue_b, 2);
 
-    // Create Barrier-AND packet that is enqueued in a queue of B
+    // Create barrier-AND packet that is enqueued in a queue of B
     const size_t packet_size = sizeof(hsa_kernel_dispatch_packet_t);
     hsa_barrier_and_packet_t* barrier_and_packet = (hsa_barrier_and_packet_t*)queue_b->base_address + packet_id_b;
-    memset(barrier_and_packet, 0, packet_size);
-    barrier_and_packet->header |= HSA_FENCE_SCOPE_COMPONENT << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+    size_t header_size = sizeof(barrier_and_packet->header);
+    memset(barrier_and_packet + header_size, 0, packet_size - header_size);
+    barrier_and_packet->header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
 
-    // Add dependency on the first Kernel Dispatch Packet
+    // Add dependency on the first kernel dispatch Packet
     barrier_and_packet->dep_signal[0] = packet_a->completion_signal;
-    packet_type_store_release(&barrier_and_packet->header, HSA_PACKET_TYPE_BARRIER_AND);
+    packet_type_store_release((uint32_t*) barrier_and_packet, HSA_PACKET_TYPE_BARRIER_AND);
 
-    // Create and enqueue a second Kernel Dispatch packet after the Barrier-AND in B. The second dispatch is launched after
+    // Create and enqueue a second kernel dispatch packet after the barrier-AND in B. The second dispatch is launched after
     // the first has completed
     hsa_kernel_dispatch_packet_t* packet_b =  (hsa_kernel_dispatch_packet_t*) queue_b->base_address + packet_id_b;
     initialize_packet(packet_b);
@@ -372,7 +393,7 @@ void barrier(){
     packet_b->kernel_object = (uint64_t) KERNEL_OBJECT_B;
     hsa_signal_create(1, 0, NULL, &packet_b->completion_signal);
 
-    packet_type_store_release(&packet_b->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+    packet_type_store_release((uint32_t*) packet_b, HSA_PACKET_TYPE_KERNEL_DISPATCH);
     hsa_signal_store_release(queue_b->doorbell_signal, packet_id_b + 1);
 
     while (hsa_signal_wait_acquire(packet_b->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE) != 0);
@@ -410,17 +431,17 @@ void process_agent_dispatch(hsa_queue_t* queue) {
         hsa_agent_dispatch_packet_t* packet = packets + read_index % queue->size;
 
         if (packet->type == 0x8000) {
-            // HSA component requests memory
+            // kernel agent requests memory
             void** ret = (void**) packet->return_address;
             size_t size = (size_t) packet->arg[0];
             *ret = malloc(size);
         } else {
-            // Process other Agent Dispatch packet types...
+            // Process other agent dispatch packet types...
         }
         if (packet->completion_signal.handle != 0) {
             hsa_signal_subtract_release(packet->completion_signal, 1);
         }
-        packet_type_store_release(&packet->header, HSA_PACKET_TYPE_INVALID);
+        packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_INVALID);
         read_index++;
         hsa_queue_store_read_index_release(queue, read_index);
     }
@@ -439,8 +460,8 @@ void allocate(void* kernarg) {
         hsa_agent_dispatch_packet_t* packet = (hsa_agent_dispatch_packet_t*)service_queue->base_address + (write_index % service_queue->size);
         memset(packet, 0, sizeof(*packet));
 
-        packet->header |= HSA_FENCE_SCOPE_COMPONENT << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
-        packet->header |= HSA_FENCE_SCOPE_COMPONENT << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+        packet->header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
+        packet->header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
 
         packet->type = 0x8000;
         packet->arg[0] = i + 1;
@@ -448,7 +469,7 @@ void allocate(void* kernarg) {
         hsa_signal_store_release(signal, 1);
         packet->completion_signal = signal;
 
-        packet_type_store_release(&packet->header, HSA_PACKET_TYPE_AGENT_DISPATCH);
+        packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_AGENT_DISPATCH);
         hsa_signal_store_release(service_queue->doorbell_signal, write_index);
 
         while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE));
@@ -497,16 +518,16 @@ void agent_dispatch(){
     hsa_queue_t *service_queue;
     hsa_queue_create(agent_dispatch_agent, 16, HSA_QUEUE_TYPE_SINGLE, NULL, NULL, 0, 0, &service_queue);
 
-    // Launch thread serving Agent Dispatch packets
+    // Launch thread serving agent dispatch packets
     std::thread* agent_dispatch_thread = new std::thread(process_agent_dispatch, service_queue);
 
-    // Retrieve the HSA component
-    hsa_agent_t component;
-    hsa_iterate_agents(get_component, &component);
+    // Retrieve the kernel agent
+    hsa_agent_t kernel_agent;
+    hsa_iterate_agents(get_kernel_agent, &kernel_agent);
     hsa_queue_t* queue;
-    hsa_queue_create(component, 16, HSA_QUEUE_TYPE_MULTI, callback, service_queue, 0, 0,  &queue);
+    hsa_queue_create(kernel_agent, 16, HSA_QUEUE_TYPE_MULTI, callback, service_queue, 0, 0,  &queue);
 
-    // Dispatch kernel on HSA component that requests multiple allocation via Agent Dispatch packets
+    // Dispatch kernel on kernel agent that requests multiple allocation via agent dispatch packets
     uint64_t write_index = hsa_queue_add_write_index_relaxed(queue, 1);
     hsa_kernel_dispatch_packet_t* packet = (hsa_kernel_dispatch_packet_t*)queue->base_address + write_index;
     initialize_packet(packet);
@@ -517,7 +538,7 @@ void agent_dispatch(){
     hsa_signal_create(1, 0, NULL, &packet->completion_signal);
 
     // Notify the queue that the packet is ready to be processed
-    packet_type_store_release(&packet->header, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+    packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_KERNEL_DISPATCH);
     hsa_signal_store_release(queue->doorbell_signal, write_index);
 
     // Wait for the task to finish, which is the same as waiting for the value of the
@@ -556,7 +577,7 @@ int main (int argc, char *argv[]) {
      printf("Test: Barrier packet\n");
      barrier();
    } else if (test == 5) {
-     printf("Test: Agent Dispatch\n");
+     printf("Test: Agent dispatch\n");
      agent_dispatch();
    }
    return 1;

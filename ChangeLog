@@ -1,3 +1,35 @@
+2014-01-19  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 353 - [Extensions] Extensions interface versioning
+	* Bug 391 - Clarify the differences between isa and kernel agent
+	* Bug 394 - Incorrect example in section 2.6.1.1 for packet
+	initialisation
+	* Bug 395 - packet_type_store_release use in examples either
+	depends on endianness or will overwrite header bits
+	* Bug 399 - Rename hsa_variable_linkage_t to hsa_symbol_linkage_t
+
+2014-01-16  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 345 - [Signals] "signal" argument in HSA APIs that create
+	and destroy signals
+	* Bug 353 - [Extensions] Extensions interface versioning
+	* Bug 354 - [System Information, Finalizer] default floating-point
+	rounding mode of HSA executables
+	* Bug 356 - Replacement for "HSA Component" term
+	* Bug 368 - Should "component" memory scope be renamed to "agent"
+	memory scope?
+	* Bug 369 - Should hsa_executable_load_code_object have an options
+	argument?
+	* Bug 370 - Should hsa_soft_queue_create initialize the queue
+	buffer?
+	* Bug 371 - How are exceptions reported via the User Mode Queue
+	callback?
+	* Bug 378 - hsa_isa_t functions to allow offline finalisation
+	* [Queues] hsa_soft_queue_create used the term 'completion signal'
+	when in reality referring to the 'doorbell signal' of the queue
+	* renamed HSA agent to simply agent, as packet types are no longer
+	capitalized (for example, Kernel Dispatch is now kernel dispatch)
+
 2014-12-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 266 - [Queue] queue create specify agent that acts as packet
@@ -10,7 +42,7 @@
 	identical for the source and destination images
 	* Updated examples, which used old queue creation signature
 	* [AQL packets] Agent Dispatch example and text use soft queue
-	creation approach.
+	creation approach
 	* [Images] improved text
 
 2014-12-15  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>

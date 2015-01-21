@@ -182,7 +182,8 @@ hsa_status_t HSA_API hsa_ext_program_destroy(
  *
  * @param[in] module HSAIL module. The application can add the same HSAIL module
  * to @p program at most once. The HSAIL module must specify the same machine
- * model and profile as @p program.
+ * model and profile as @p program. If the floating-mode rounding mode of @p
+ * module is not default, then it should match that of @p program.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -480,6 +481,43 @@ hsa_status_t HSA_API hsa_ext_program_finalize(
 
 /** @} */
 
+#define hsa_ext_finalizer_1_00
+
+typedef struct hsa_ext_finalizer_1_00_pfn_s {
+  hsa_status_t (*hsa_ext_program_create)(
+    hsa_machine_model_t machine_model,
+    hsa_profile_t profile,
+    hsa_default_float_rounding_mode_t default_float_rounding_mode,
+    const char *options,
+    hsa_ext_program_t *program);
+
+  hsa_status_t (*hsa_ext_program_destroy)(
+    hsa_ext_program_t program);
+
+  hsa_status_t (*hsa_ext_program_add_module)(
+    hsa_ext_program_t program,
+    hsa_ext_module_t module);
+
+  hsa_status_t (*hsa_ext_program_iterate_modules)(
+    hsa_ext_program_t program,
+    hsa_status_t (*callback)(hsa_ext_program_t program, hsa_ext_module_t module,
+                             void* data),
+    void* data);
+
+  hsa_status_t (*hsa_ext_program_get_info)(
+    hsa_ext_program_t program,
+    hsa_ext_program_info_t attribute,
+    void *value);
+
+  hsa_status_t (*hsa_ext_program_finalize)(
+    hsa_ext_program_t program,
+    hsa_isa_t isa,
+    int32_t call_convention,
+    hsa_ext_control_directives_t control_directives,
+    const char *options,
+    hsa_code_object_type_t code_object_type,
+    hsa_code_object_t *code_object);
+} hsa_ext_finalizer_1_00_pfn_t;
 
 /** \defgroup ext-images Images and Samplers
  *  @{
@@ -487,7 +525,7 @@ hsa_status_t HSA_API hsa_ext_program_finalize(
 
 /**
  * @brief Image handle, populated by ::hsa_ext_image_create. Images
- * handles are only unique within an HSA agent, not across HSA agents.
+ * handles are only unique within an agent, not across agents.
  *
  */
 typedef struct hsa_ext_image_s {
@@ -656,32 +694,32 @@ typedef struct hsa_ext_image_descriptor_s {
  */
 typedef enum  {
    /**
-    * Images of this geometry and format are not supported in the HSA agent.
+    * Images of this geometry and format are not supported in the agent.
     */
     HSA_EXT_IMAGE_CAPABILITY_NOT_SUPPORTED = 0x0,
    /**
-    * Read-only images of this geometry and format are supported by the HSA
+    * Read-only images of this geometry and format are supported by the
     * agent.
     */
     HSA_EXT_IMAGE_CAPABILITY_READ_ONLY = 0x1,
    /**
-    * Write-only images of this geometry and format are supported by the HSA
+    * Write-only images of this geometry and format are supported by the
     * agent.
     */
     HSA_EXT_IMAGE_CAPABILITY_WRITE_ONLY = 0x2,
    /**
-    * Read-write images of this geometry and format are supported by the HSA
+    * Read-write images of this geometry and format are supported by the
     * agent.
     */
     HSA_EXT_IMAGE_CAPABILITY_READ_WRITE = 0x4,
    /**
     * Images of this geometry and format can be accessed from read-modify-write
-    * operations in the HSA agent.
+    * operations in the agent.
     */
     HSA_EXT_IMAGE_CAPABILITY_READ_MODIFY_WRITE = 0x8,
     /**
     * Images of this geometry and format are guaranteed to have a consistent
-    * data layout regardless of how they are accessed by the associated HSA
+    * data layout regardless of how they are accessed by the associated
     * agent.
     */
     HSA_EXT_IMAGE_CAPABILITY_ACCESS_INVARIANT_DATA_LAYOUT = 0x10
@@ -689,9 +727,9 @@ typedef enum  {
 
 /**
  * @brief Retrieve the supported image capabilities for a given combination of
- * HSA agent, image format and geometry.
+ * agent, image format and geometry.
  *
- * @param[in] agent HSA agent to be associated with the image.
+ * @param[in] agent Agent to be associated with the image.
  *
  * @param[in] geometry Geometry.
  *
@@ -706,7 +744,7 @@ typedef enum  {
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p geometry is not a valid image
  * geometry value, @p image_format is NULL, or @p capability_mask is NULL.
@@ -718,7 +756,7 @@ hsa_status_t HSA_API hsa_ext_image_get_capability(
     uint32_t *capability_mask);
 
 /**
- * @brief HSA agent-specific image size and alignment requirements, populated by
+ * @brief Agent-specific image size and alignment requirements, populated by
  * ::hsa_ext_image_data_get_info.
  */
 typedef struct hsa_ext_image_data_info_s {
@@ -736,7 +774,7 @@ typedef struct hsa_ext_image_data_info_s {
 
 /**
  * @brief Retrieve the image data requirements for a given combination of image
- * descriptor, access permission, and HSA agent.
+ * descriptor, access permission, and agent.
  *
  * @details The optimal image data size and alignment requirements may vary
  * depending on the image attributes specified in @p image_descriptor. Also,
@@ -749,7 +787,7 @@ typedef struct hsa_ext_image_data_info_s {
  * ::HSA_EXT_IMAGE_CAPABILITY_ACCESS_INVARIANT_DATA_LAYOUT for the geometry
  * and image format contained in the image descriptor.
  *
- * @param[in] agent HSA agent to be associated with the image.
+ * @param[in] agent Agent to be associated with the image.
  *
  * @param[in] image_descriptor Pointer to an image descriptor. Must not be NULL.
  *
@@ -763,12 +801,12 @@ typedef struct hsa_ext_image_data_info_s {
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED The HSA agent does
+ * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED The agent does
  * not support the image format specified by the descriptor.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_SIZE_UNSUPPORTED The HSA agent does
+ * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_SIZE_UNSUPPORTED The agent does
  * not support the image dimensions specified by the format descriptor.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p image_descriptor is NULL, @p
@@ -782,8 +820,8 @@ hsa_status_t HSA_API hsa_ext_image_data_get_info(
     hsa_ext_image_data_info_t *image_data_info);
 
 /**
- * @brief Creates a HSA agent-defined image handle from an
- * implementation-independent image descriptor and a HSA agent-specific image
+ * @brief Creates a agent-defined image handle from an
+ * implementation-independent image descriptor and a agent-specific image
  * data.
  *
  * @details Image created with different access permissions but the same image
@@ -798,7 +836,7 @@ hsa_status_t HSA_API hsa_ext_image_data_get_info(
  * clear) to prepare the image for the intended use regardless of the access
  * permissions.
  *
- * @param[in] agent HSA agent to be associated with the image.
+ * @param[in] agent agent to be associated with the image.
  *
  * @param[in] image_descriptor Pointer to an image descriptor. Must not be NULL.
  *
@@ -810,9 +848,9 @@ hsa_status_t HSA_API hsa_ext_image_data_get_info(
  * responsible for ensuring that the lifetime of the image data exceeds that of
  * all the associated images.
  *
- * @param[in] access_permission Access permission of the image by the HSA
- * agent. The access permission defines how the HSA agent expects to use the
- * image and must match the corresponding HSAIL image handle type. The HSA agent
+ * @param[in] access_permission Access permission of the image by the
+ * agent. The access permission defines how the agent expects to use the
+ * image and must match the corresponding HSAIL image handle type. The agent
  * must support the image format specified in @p image_descriptor for the given
  * permission.
  *
@@ -824,14 +862,14 @@ hsa_status_t HSA_API hsa_ext_image_data_get_info(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED The HSA agent does
+ * @retval ::HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED The agent does
  * not have the capability to support the image format contained in the image
  * descriptor using the specified access permission.
  *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES The HSA runtime cannot create the
- * image because it is out of resources (for example, the HSA agent does not
+ * image because it is out of resources (for example, the agent does not
  * support the creation of more image handles with the given access permission).
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p image_descriptor is NULL, @p
@@ -853,7 +891,7 @@ hsa_status_t HSA_API hsa_ext_image_create(
  * there are references to it queued for execution or currently being used in a
  * kernel.
  *
- * @param[in] agent HSA agent associated with the image.
+ * @param[in] agent Agent associated with the image.
  *
  * @param[in] image Image.
  *
@@ -862,7 +900,7 @@ hsa_status_t HSA_API hsa_ext_image_create(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
  */
 hsa_status_t HSA_API hsa_ext_image_destroy(
     hsa_agent_t agent,
@@ -889,9 +927,9 @@ hsa_status_t HSA_API hsa_ext_image_destroy(
  * offset and range references an out-out-bounds element in any of the images,
  * the behavior is undefined.
  *
- * @param[in] agent HSA agent associated with both images.
+ * @param[in] agent Agent associated with both images.
  *
- * @param[in] src_image Source image. The HSA agent associated with the source
+ * @param[in] src_image Source image. The agent associated with the source
  * image must be identical to that of the destination image.
  *
  * @param[in] src_offset Pointer to the offset within the source image where to
@@ -911,7 +949,7 @@ hsa_status_t HSA_API hsa_ext_image_destroy(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p src_offset is
  * NULL, @p dst_offset is NULL, or @p range is NULL.
@@ -961,7 +999,7 @@ typedef struct hsa_ext_image_region_s {
  * of the source and destination memory within the import operation produces
  * undefined results.
  *
- * @param[in] agent HSA agent associated with the image.
+ * @param[in] agent Agent associated with the image.
  *
  * @param[in] src_memory Source memory. Must not be NULL.
  *
@@ -979,13 +1017,13 @@ typedef struct hsa_ext_image_region_s {
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p src_memory is NULL, or @p
  * image_region is NULL.
  *
  */
-hsa_status_t HSA_API hsa_ext_image_import (
+hsa_status_t HSA_API hsa_ext_image_import(
     hsa_agent_t agent,
     const void *src_memory,
     size_t src_row_pitch,
@@ -1013,7 +1051,7 @@ hsa_status_t HSA_API hsa_ext_image_import (
  * the source and destination memory within the export operation produces
  * undefined results.
  *
- * @param[in] agent HSA agent associated with the image.
+ * @param[in] agent Agent associated with the image.
  *
  * @param[in] src_image Source image.
  *
@@ -1033,7 +1071,7 @@ hsa_status_t HSA_API hsa_ext_image_import (
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p dst_memory is NULL, or @p
  * image_region is NULL.
@@ -1068,7 +1106,7 @@ hsa_status_t HSA_API hsa_ext_image_export(
  *  - HSA_EXT_IMAGE_CHANNEL_TYPE_UNSIGNED_INT8, HSA_EXT_IMAGE_CHANNEL_TYPE_UNSIGNED_INT16, and HSA_EXT_IMAGE_CHANNEL_TYPE_UNSIGNED_INT32 map to uint32_t.
  *  - Any other channel type maps to a 32-bit float.
  *
- * @param[in] agent HSA agent associated with the image.
+ * @param[in] agent Agent associated with the image.
  *
  * @param[in] image Image to be cleared.
  *
@@ -1085,7 +1123,7 @@ hsa_status_t HSA_API hsa_ext_image_export(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p data is NULL, or @p
  * image_region is NULL.
@@ -1099,7 +1137,7 @@ hsa_status_t HSA_API hsa_ext_image_clear(
 /**
  * @brief Sampler handle. Samplers are populated by
  * ::hsa_ext_sampler_create. Sampler handles are only unique within an
- * HSA agent, not across HSA agents.
+ * agent, not across agents.
  */
 typedef struct hsa_ext_sampler_s {
   /**
@@ -1201,10 +1239,10 @@ typedef struct hsa_ext_sampler_descriptor_s {
 } hsa_ext_sampler_descriptor_t;
 
 /**
- * @brief Create an HSA component-defined sampler handle for a given combination
- * of a (agent-independent) sampler descriptor and HSA agent.
+ * @brief Create a kernel agent defined sampler handle for a given combination
+ * of a (agent-independent) sampler descriptor and agent.
  *
- * @param[in] agent HSA agent to be associated with the sampler.
+ * @param[in] agent Agent to be associated with the sampler.
  *
  * @param[in] sampler_descriptor Pointer to a sampler descriptor. Must not be
  * NULL.
@@ -1217,9 +1255,9 @@ typedef struct hsa_ext_sampler_descriptor_s {
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES The HSA agent cannot create the
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES The agent cannot create the
  * specified handle because it is out of resources.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p sampler_descriptor is NULL, or
@@ -1233,7 +1271,7 @@ hsa_status_t HSA_API hsa_ext_sampler_create(
 /**
  * @brief Destroy a sampler previously created using ::hsa_ext_sampler_create.
  *
- * @param[in] agent HSA agent associated with the sampler.
+ * @param[in] agent Agent associated with the sampler.
  *
  * @param[in] sampler Sampler.  The sampler handle should not be destroyed while
  * there are references to it queued for execution or currently being used in a
@@ -1244,7 +1282,7 @@ hsa_status_t HSA_API hsa_ext_sampler_create(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The HSA agent is invalid.
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
  */
 hsa_status_t HSA_API hsa_ext_sampler_destroy(
     hsa_agent_t agent,
@@ -1266,8 +1304,8 @@ enum {
 
 /**
  * @brief Enumeration constants added to ::hsa_agent_info_t by this
- * extension. The value of any of these attributes is undefined if the HSA
- * agent is not a component, or the implementation does not support images.
+ * extension. The value of any of these attributes is undefined if the
+ * agent is not a kernel agent, or the implementation does not support images.
  */
 enum {
   /**
@@ -1339,6 +1377,77 @@ enum {
 };
 
 /** @} */
+
+
+#define hsa_ext_images_1_00
+
+typedef struct hsa_ext_images_1_00_pfn_s {
+
+  hsa_status_t (*hsa_ext_image_get_capability)(
+    hsa_agent_t agent,
+    hsa_ext_image_geometry_t geometry,
+    const hsa_ext_image_format_t *image_format,
+    uint32_t *capability_mask);
+
+  hsa_status_t (*hsa_ext_image_data_get_info)(
+    hsa_agent_t agent,
+    const hsa_ext_image_descriptor_t *image_descriptor,
+    hsa_access_permission_t access_permission,
+    hsa_ext_image_data_info_t *image_data_info);
+
+  hsa_status_t (*hsa_ext_image_create)(
+    hsa_agent_t agent,
+    const hsa_ext_image_descriptor_t *image_descriptor,
+    const void *image_data,
+    hsa_access_permission_t access_permission,
+    hsa_ext_image_t *image);
+
+  hsa_status_t (*hsa_ext_image_destroy)(
+    hsa_agent_t agent,
+    hsa_ext_image_t image);
+
+  hsa_status_t (*hsa_ext_image_copy)(
+    hsa_agent_t agent,
+    hsa_ext_image_t src_image,
+    const hsa_dim3_t* src_offset,
+    hsa_ext_image_t dst_image,
+    const hsa_dim3_t* dst_offset,
+    const hsa_dim3_t* range);
+
+  hsa_status_t (*hsa_ext_image_import)(
+    hsa_agent_t agent,
+    const void *src_memory,
+    size_t src_row_pitch,
+    size_t src_slice_pitch,
+    hsa_ext_image_t dst_image,
+    const hsa_ext_image_region_t *image_region);
+
+  hsa_status_t (*hsa_ext_image_export)(
+    hsa_agent_t agent,
+    hsa_ext_image_t src_image,
+    void *dst_memory,
+    size_t dst_row_pitch,
+    size_t dst_slice_pitch,
+    const hsa_ext_image_region_t *image_region);
+
+  hsa_status_t (*hsa_ext_image_clear)(
+    hsa_agent_t agent,
+    hsa_ext_image_t image,
+    const void* data,
+    const hsa_ext_image_region_t *image_region);
+
+  hsa_status_t (*hsa_ext_sampler_create)(
+    hsa_agent_t agent,
+    const hsa_ext_sampler_descriptor_t *sampler_descriptor,
+    hsa_ext_sampler_t *sampler);
+
+  hsa_status_t (*hsa_ext_sampler_destroy)(
+    hsa_agent_t agent,
+    hsa_ext_sampler_t sampler);
+
+} hsa_ext_images_1_00_pfn_t;
+
+
 #ifdef __cplusplus
 }
 #endif  /*__cplusplus*/

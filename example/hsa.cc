@@ -173,7 +173,7 @@ namespace hsa {
     Queue& operator=(Queue const&) = delete;
 
     static bool HasFence(uint16_t fence) {
-      return fence == HSA_FENCE_SCOPE_COMPONENT || fence == HSA_FENCE_SCOPE_SYSTEM;
+      return fence == HSA_FENCE_SCOPE_AGENT || fence == HSA_FENCE_SCOPE_SYSTEM;
     }
 
     void DecrementCompletionSignal(packet_t& packet) {
