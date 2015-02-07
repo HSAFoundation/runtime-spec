@@ -36,13 +36,8 @@ if (system_support && agent_support) {
 
 void initialize_packet(hsa_kernel_dispatch_packet_t* packet) {
     // Reserved fields, private and group memory, and completion signal are all set to 0.
-    size_t header_size = sizeof(packet->header);
-    memset(packet + header_size, 0, sizeof(hsa_kernel_dispatch_packet_t) - header_size);
+    memset(((uint8_t*) packet) + 4, 0, sizeof(hsa_kernel_dispatch_packet_t) - 4);
 
-    packet->header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
-    packet->header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
-
-    packet->setup |= 1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
     packet->workgroup_size_x = 256;
     packet->workgroup_size_y = 1;
     packet->workgroup_size_z = 1;
@@ -73,9 +68,27 @@ hsa_status_t get_kernel_agent(hsa_agent_t agent, void* data) {
     return HSA_STATUS_SUCCESS;
 }
 
-void packet_type_store_release(uint32_t* packet, hsa_packet_type_t type) {
-    // Assume host is little-endian
-    __atomic_store_n(packet, type | *packet, __ATOMIC_RELEASE);
+uint16_t header(hsa_packet_type_t type) {
+    uint16_t header = type << HSA_PACKET_HEADER_TYPE;
+    header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
+    header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+    return header;
+}
+
+uint16_t kernel_dispatch_setup() {
+    return 1 << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS;
+}
+
+
+void packet_store_release(uint32_t* packet, uint16_t header, uint16_t rest) {
+    __atomic_store_n(packet, header | (rest << 16), __ATOMIC_RELEASE);
+}
+
+// used for document examples only
+void set_header_and_setup(uint32_t* packet) {
+uint16_t hdr = header(HSA_PACKET_TYPE_KERNEL_DISPATCH);
+uint16_t setup = kernel_dispatch_setup();
+__atomic_store_n(packet, hdr | (setup << 16), __ATOMIC_RELEASE);
 }
 
 void hello_world() {
@@ -100,14 +113,14 @@ void simple_dispatch() {
     // Calculate the virtual address where to place the packet
     hsa_kernel_dispatch_packet_t* packet = (hsa_kernel_dispatch_packet_t*) queue->base_address + packet_id;
 
-    // Populate fields in kernel dispatch packet, except for the completion signal and the header type
+    // Populate fields in kernel dispatch packet, except for the header, the setup, and the completion signal fields
     initialize_packet(packet);
 
     // Create a signal with an initial value of one to monitor the task completion
     hsa_signal_create(1, 0, NULL, &packet->completion_signal);
 
     // Notify the queue that the packet is ready to be processed
-    packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+    packet_store_release((uint32_t*) packet, header(HSA_PACKET_TYPE_KERNEL_DISPATCH), kernel_dispatch_setup());
     hsa_signal_store_release(queue->doorbell_signal, packet_id);
 
     // Wait for the task to finish, which is the same as waiting for the value of the completion signal to be zero
@@ -158,7 +171,7 @@ void enqueue(hsa_queue_t* queue) {
         initialize_packet(packet);
         packet->kernarg_address = counter;
         packet->completion_signal = signal;
-        packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+        packet_store_release((uint32_t*) packet, header(HSA_PACKET_TYPE_KERNEL_DISPATCH), kernel_dispatch_setup());
         hsa_signal_store_release(queue->doorbell_signal, packet_id);
     }
 
@@ -210,16 +223,13 @@ void error_callback() {
   uint64_t write_index = hsa_queue_add_write_index_relaxed(queue, 1);
   hsa_kernel_dispatch_packet_t* packet = (hsa_kernel_dispatch_packet_t*)queue->base_address + write_index;
 
-  // Wrong setup: the grid dimensions have to be between 1 and 3.
-  // causes HSA_STATUS_ERROR_INVALID_PACKET_FORMAT
-  packet->setup = 0;
-
   // Rest of dispatch packet is setup...
 
   hsa_signal_t signal;
   hsa_signal_create(1, 0, NULL, &signal);
   packet->completion_signal = signal;
-  packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+  // Wrong setup: the grid dimensions have to be between 1 and 3. Causes HSA_STATUS_ERROR_INVALID_PACKET_FORMAT
+  packet_store_release((uint32_t*) packet, header(HSA_PACKET_TYPE_KERNEL_DISPATCH), 0);
   hsa_signal_store_release(queue->doorbell_signal, write_index);
 
   // Wait for the task to finish, which is the same as waiting for the value of the
@@ -308,7 +318,7 @@ int kernarg_usage() {
     packet->completion_signal = completion_signal;
 
     // Notify the queue that the packet is ready to be processed
-    packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+    packet_store_release((uint32_t*) packet, header(HSA_PACKET_TYPE_KERNEL_DISPATCH), kernel_dispatch_setup());
     hsa_signal_store_release(queue->doorbell_signal, write_index);
 
     // Wait for the task to finish, which is the same as waiting for the value of the completion signal to be zero.
@@ -366,7 +376,7 @@ void barrier(){
     hsa_signal_create(1, 0, NULL, &packet_a->completion_signal);
 
     // Tell packet processor of A to launch the first kernel dispatch packet
-    packet_type_store_release((uint32_t*) packet_a, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+    packet_store_release((uint32_t*) packet_a, header(HSA_PACKET_TYPE_KERNEL_DISPATCH), kernel_dispatch_setup());
     hsa_signal_store_release(queue_a->doorbell_signal, packet_id_a);
 
     // Create queue in kernel agent B
@@ -375,15 +385,12 @@ void barrier(){
     uint64_t packet_id_b = hsa_queue_add_write_index_relaxed(queue_b, 2);
 
     // Create barrier-AND packet that is enqueued in a queue of B
-    const size_t packet_size = sizeof(hsa_kernel_dispatch_packet_t);
     hsa_barrier_and_packet_t* barrier_and_packet = (hsa_barrier_and_packet_t*)queue_b->base_address + packet_id_b;
-    size_t header_size = sizeof(barrier_and_packet->header);
-    memset(barrier_and_packet + header_size, 0, packet_size - header_size);
-    barrier_and_packet->header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+    memset(((uint8_t*) barrier_and_packet) + 4, 0, sizeof(*barrier_and_packet) - 4);
 
-    // Add dependency on the first kernel dispatch Packet
+    // Add dependency on the first kernel dispatch packet
     barrier_and_packet->dep_signal[0] = packet_a->completion_signal;
-    packet_type_store_release((uint32_t*) barrier_and_packet, HSA_PACKET_TYPE_BARRIER_AND);
+    packet_store_release((uint32_t*) barrier_and_packet, header(HSA_PACKET_TYPE_BARRIER_AND), 0);
 
     // Create and enqueue a second kernel dispatch packet after the barrier-AND in B. The second dispatch is launched after
     // the first has completed
@@ -393,7 +400,7 @@ void barrier(){
     packet_b->kernel_object = (uint64_t) KERNEL_OBJECT_B;
     hsa_signal_create(1, 0, NULL, &packet_b->completion_signal);
 
-    packet_type_store_release((uint32_t*) packet_b, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+    packet_store_release((uint32_t*) packet_b, header(HSA_PACKET_TYPE_KERNEL_DISPATCH), kernel_dispatch_setup());
     hsa_signal_store_release(queue_b->doorbell_signal, packet_id_b + 1);
 
     while (hsa_signal_wait_acquire(packet_b->completion_signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE) != 0);
@@ -441,7 +448,7 @@ void process_agent_dispatch(hsa_queue_t* queue) {
         if (packet->completion_signal.handle != 0) {
             hsa_signal_subtract_release(packet->completion_signal, 1);
         }
-        packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_INVALID);
+        packet_store_release((uint32_t*) packet, header(HSA_PACKET_TYPE_INVALID), packet->type);
         read_index++;
         hsa_queue_store_read_index_release(queue, read_index);
     }
@@ -458,18 +465,14 @@ void allocate(void* kernarg) {
     for (int i = 0; i < 100; i++) {
         uint64_t write_index = hsa_queue_add_write_index_relaxed(service_queue, 1);
         hsa_agent_dispatch_packet_t* packet = (hsa_agent_dispatch_packet_t*)service_queue->base_address + (write_index % service_queue->size);
-        memset(packet, 0, sizeof(*packet));
+        memset((uint8_t*) packet + 4, 0, sizeof(*packet) - 4);
 
-        packet->header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
-        packet->header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
-
-        packet->type = 0x8000;
         packet->arg[0] = i + 1;
         packet->return_address = &ret;
         hsa_signal_store_release(signal, 1);
         packet->completion_signal = signal;
 
-        packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_AGENT_DISPATCH);
+        packet_store_release((uint32_t*) packet, header(HSA_PACKET_TYPE_AGENT_DISPATCH), 0x8000);
         hsa_signal_store_release(service_queue->doorbell_signal, write_index);
 
         while (hsa_signal_wait_acquire(signal, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX, HSA_WAIT_STATE_ACTIVE));
@@ -538,7 +541,7 @@ void agent_dispatch(){
     hsa_signal_create(1, 0, NULL, &packet->completion_signal);
 
     // Notify the queue that the packet is ready to be processed
-    packet_type_store_release((uint32_t*) packet, HSA_PACKET_TYPE_KERNEL_DISPATCH);
+    packet_store_release((uint32_t*) packet, header(HSA_PACKET_TYPE_KERNEL_DISPATCH), kernel_dispatch_setup());
     hsa_signal_store_release(queue->doorbell_signal, write_index);
 
     // Wait for the task to finish, which is the same as waiting for the value of the

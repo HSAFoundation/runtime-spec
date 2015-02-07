@@ -1,3 +1,8 @@
+2014-01-30  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 394 - Incorrect example in section 2.6.1.1 for packet
+	initialisation
+
 2014-01-19  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 353 - [Extensions] Extensions interface versioning

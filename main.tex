@@ -537,6 +537,7 @@ hsa_agent_t kernel_agent;
 hsa_iterate_agents(get_kernel_agent, &kernel_agent);
 \end{lstlisting}
 where the application-provided callback \textit{get_kernel_agent} is:
+
 \lstinputfunlisting{get_kernel_agent}
 
 Section~\ref{sec:agentinfo} lists the set of available agent and
@@ -609,15 +610,19 @@ packet processor that there is new work available. The notification is divided
 in two parts:
 
 \begin{enumerate}
-\item The type field in the packet header must be
-  atomically set to the appropriate value using a release memory ordering. This
-  ensures that the modifications to the rest of the packet listed before are
-  globally visible before or at the same time the desired packet type is
-  visible. One possible implementation of the atomic storage (in GCC) is:
-\begin{lstlisting}
-uint32_t* p =  (uint32_t*) packet;
-__atomic_store_n(p, *p | HSA_PACKET_TYPE_KERNEL_DISPATCH, __ATOMIC_RELEASE);
-\end{lstlisting}
+\item The contents of the first 32 bits of the packet (which include the
+  \hsaref{hsa_kernel_dispatch_packet_t.header} and the
+  \hsaref{hsa_kernel_dispatch_packet_t.setup} fields) must be atomically set
+  using a release memory ordering. This ensures that previous modifications to
+  the rest of the packet are globally visible by the time the first 32 bits of
+  the packet are also visible. The most relevant information passed in the
+  header is the packet's type (in this case,
+  \hsaref{HSA_PACKET_TYPE_KERNEL_DISPATCH}). For simplicity we omit the details
+  on how to setup the header and setup fields (the reader can refer to
+  Section~\ref{dispatch-packet} for the source code of the helper functions used
+  in the snippet).  One possible implementation of the atomic update in GCC
+  is:
+\lstinputfunlisting[1]{set_header_and_setup}
 \item The buffer index where the packet has been written (in the example, zero)
 must be stored in the \textit{doorbell signal} of the queue.
 \end{enumerate}
@@ -1004,8 +1009,8 @@ processor, and indicates that the kernel has finished.
 
 \lstinputfunlisting{simple_dispatch}
 
-The definitions of initialize_packet and packet_type_store_release are listed
-in Section~\ref{sec:aql}.
+The definitions of the helper functions (such as initialize_packet) are listed
+in Section~\ref{dispatch-packet}.
 
 \subsection{Example: error callback}
 The previous example can be slightly modified to illustrate the usage of queue
@@ -1121,12 +1126,21 @@ dispatch uses 256 work-items, all in the same work-group along the X dimension.
 
 \lstinputfunlisting{initialize_packet}
 
-The definition of the function that atomically sets the packet type depends on
-the endianness of the host agent and the library used by the application to
-perform atomic memory updates. A possible definition (in GCC) would be
+The definition of the function that atomically sets the first 32 bits of an AQL
+packet (the header and setup fields, in the case of a kernel dispatch packet)
+depends on the library used by the application to perform atomic memory
+updates. In GCC, a possible definition would be
 
-\lstinputfunlisting{packet_type_store_release}
+\lstinputfunlisting{packet_store_release}
 
+The header is built using the following function:
+
+\lstinputfunlisting{header}
+
+The \hsaref{hsa_kernel_dispatch_packet_t.setup} contents indicate that the
+dispatch uses one dimension:
+
+\lstinputfunlisting{kernel_dispatch_setup}
 
 \subsection{Agent dispatch packet}\label{agent-packet}
 
@@ -1440,7 +1454,7 @@ allocation buffer by invoking the synchronous copy function
 In the kernel setup example listed in Section~\ref{dispatch-packet}, the kernel
 receives no arguments:
 \begin{lstlisting}
-dispatch_packet->kernarg_address = NULL;
+packet->kernarg_address = NULL;
 \end{lstlisting}
 Let's assume now that the kernel expects a single argument, a signal handle. The
 application needs to populate the
