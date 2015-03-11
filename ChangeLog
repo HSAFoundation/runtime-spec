@@ -1,3 +1,18 @@
+2014-03-09  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 430 - Require lifetime of code object to be no shorter than
+	lifetime of executables into which it is loaded
+	* Bug 433 - Rename hsa_symbol_t to hsa_symbol_kind_t
+	* Bug 434 - Naming of default floating-point rounding mode
+	* Bug 438 - hsa_ext_sampler_coordinate_mode_t enumeration does not
+	match PRM BRIG enumeration BrigSamplerCoordNormalization
+	* Bug 439 - Add error code for isa queries to indicate invalid or
+	unknown isa name
+	* Bug 453 - Remove declaration/definition from
+	hsa_symbol_linkage_t
+	* Bug 456 - Switch hsa_ext_module_t from opaque handle to a
+	pointer to Brig in memory
+
 2014-02-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* 1.00 final related cleanup: removed date from footer, added

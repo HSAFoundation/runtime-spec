@@ -39,6 +39,8 @@ extern "C" {
 #endif  /* __cplusplus */
 
 
+typedef void* BrigModule_t;
+
 /** \defgroup ext-alt-finalizer-extensions Finalization Extensions
  *  @{
  */
@@ -87,14 +89,10 @@ enum {
  */
 
 /**
- * @brief An opaque handle to a BRIG memory representation of an HSAIL module.
+ * @brief HSAIL (BRIG) module. The HSA Programmer's Reference Manual contains
+ * the definition of the BrigModule_t type.
  */
-typedef struct hsa_ext_module_s {
-  /**
-   * Opaque handle.
-   */
-  uint64_t handle;
-} hsa_ext_module_t;
+typedef BrigModule_t hsa_ext_module_t;
 
 /**
  * @brief An opaque handle to a HSAIL program, which groups a set of HSAIL
@@ -115,8 +113,8 @@ typedef struct hsa_ext_program_s {
  *
  * @param[in] profile Profile used in the HSAIL program.
  *
- * @param[in] default_float_rounding_mode Default float rounding mode used in
- * the HSAIL program.
+ * @param[in] default_float_rounding_mode Default floating-point rounding mode
+ * used in the HSAIL program.
  *
  * @param[in] options Vendor-specific options. May be NULL.
  *
@@ -182,8 +180,8 @@ hsa_status_t HSA_API hsa_ext_program_destroy(
  *
  * @param[in] module HSAIL module. The application can add the same HSAIL module
  * to @p program at most once. The HSAIL module must specify the same machine
- * model and profile as @p program. If the floating-mode rounding mode of @p
- * module is not default, then it should match that of @p program.
+ * model and profile as @p program. If the default floating-point rounding mode
+ * of @p module is not default, then it should match that of @p program.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -258,7 +256,7 @@ typedef enum {
    */
   HSA_EXT_PROGRAM_INFO_PROFILE = 1,
   /**
-   * Default float rounding mode specified when the HSAIL program was
+   * Default floating-point rounding mode specified when the HSAIL program was
    * created. The type of this attribute is ::hsa_default_float_rounding_mode_t.
    */
   HSA_EXT_PROGRAM_INFO_DEFAULT_FLOAT_ROUNDING_MODE = 2
@@ -1184,15 +1182,16 @@ typedef enum {
  * BRIG_SAMPLER_COORD bit in BrigSamplerModifier.
  */
 typedef enum {
-  /**
-   * Coordinates are all in the range of 0.0 to 1.0.
-   */
-  HSA_EXT_SAMPLER_COORDINATE_MODE_NORMALIZED = 0,
 
   /**
    * Coordinates are all in the range of 0 to (dimension-1).
    */
-  HSA_EXT_SAMPLER_COORDINATE_MODE_UNNORMALIZED = 1
+  HSA_EXT_SAMPLER_COORDINATE_MODE_UNNORMALIZED = 0,
+
+  /**
+   * Coordinates are all in the range of 0.0 to 1.0.
+   */
+  HSA_EXT_SAMPLER_COORDINATE_MODE_NORMALIZED = 1
 
 } hsa_ext_sampler_coordinate_mode_t;
 

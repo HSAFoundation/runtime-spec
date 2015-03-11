@@ -135,6 +135,10 @@ typedef enum {
      */
     HSA_STATUS_ERROR_INVALID_ISA = 0x100F,
     /**
+     * The instruction set architecture name is invalid.
+     */
+    HSA_STATUS_ERROR_INVALID_ISA_NAME = 0x1017,
+    /**
      * The code object is invalid.
      */
     HSA_STATUS_ERROR_INVALID_CODE_OBJECT = 0x1010,
@@ -526,17 +530,18 @@ typedef enum {
  */
 typedef enum {
   /**
-   * Use a floating-point rounding mode specified elsewhere.
+   * Use a default floating-point rounding mode specified elsewhere.
    */
   HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT = 0,
   /**
-   * Operations are rounded to zero by default.
+   * Operations that specify the default floating-point mode are rounded to zero
+   * by default.
    */
   HSA_DEFAULT_FLOAT_ROUNDING_MODE_ZERO = 1,
   /**
-   * Operations are rounded to the nearest representable number and that ties
-   * should be broken by selecting the value with an even least significant
-   * bit.
+   * Operations that specify the default floating-point mode are rounded to the
+   * nearest representable number and that ties should be broken by selecting
+   * the value with an even least significant bit.
    */
   HSA_DEFAULT_FLOAT_ROUNDING_MODE_NEAR = 2
 } hsa_default_float_rounding_mode_t;
@@ -578,10 +583,10 @@ typedef enum {
    */
   HSA_AGENT_INFO_DEFAULT_FLOAT_ROUNDING_MODE = 5,
   /**
-   * Default floating-point rounding modes supported by the agent in the
-   * Base profile. The type of this attribute is a mask of
-   * ::hsa_default_float_rounding_mode_t. The default rounding mode
-   * (::HSA_AGENT_INFO_DEFAULT_FLOAT_ROUNDING_MODE) bit must be set.
+   * Default floating-point rounding modes supported by the agent in the Base
+   * profile. The type of this attribute is a mask of
+   * ::hsa_default_float_rounding_mode_t. The default floating-point rounding
+   * mode (::HSA_AGENT_INFO_DEFAULT_FLOAT_ROUNDING_MODE) bit must not be set.
    */
   HSA_AGENT_INFO_BASE_PROFILE_DEFAULT_FLOAT_ROUNDING_MODES = 23,
     /**
@@ -2525,16 +2530,16 @@ typedef enum {
   /**
    * Variable.
    */
-  HSA_SYMBOL_VARIABLE = 0,
+  HSA_SYMBOL_KIND_VARIABLE = 0,
   /**
    * Kernel.
    */
-  HSA_SYMBOL_KERNEL = 1,
+  HSA_SYMBOL_KIND_KERNEL = 1,
   /**
    * Indirect function.
    */
-  HSA_SYMBOL_INDIRECT_FUNCTION = 2
-} hsa_symbol_t;
+  HSA_SYMBOL_KIND_INDIRECT_FUNCTION = 2
+} hsa_symbol_kind_t;
 
 /**
  * @brief Allocation type of a variable.
@@ -2555,21 +2560,13 @@ typedef enum {
  */
 typedef enum {
   /**
-   * Module linkage definition.
+   * Module linkage.
    */
-  HSA_SYMBOL_LINKAGE_MODULE_DEFINITION = 0,
+  HSA_SYMBOL_LINKAGE_MODULE = 0,
   /**
-   * Module linkage declaration.
+   * Program linkage.
    */
-  HSA_SYMBOL_LINKAGE_MODULE_DECLARATION = 1,
-  /**
-   * Program linkage definition.
-   */
-  HSA_SYMBOL_LINKAGE_PROGRAM_DEFINITION = 2,
-  /**
-   * Program linkage declaration.
-   */
-  HSA_SYMBOL_LINKAGE_PROGRAM_DECLARATION = 3
+  HSA_SYMBOL_LINKAGE_PROGRAM = 1
 } hsa_symbol_linkage_t;
 
 /**
@@ -2617,6 +2614,9 @@ typedef struct hsa_isa_s {
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p name is NULL, or @p isa is
  * NULL.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ISA_NAME The given name does not
+ * correspond to any instruction set architecture.
  */
 hsa_status_t hsa_isa_from_name(
     const char* name,
@@ -2820,8 +2820,9 @@ hsa_status_t HSA_API hsa_code_object_deserialize(
 /**
  * @brief Destroy a code object.
  *
- * @details Destruction of a code object does not affect the executable which
- * loaded this code object.
+ * @details The lifetime of a code object must exceed that of any executable
+ * where it has been loaded. If an executable that loaded @p code_object has not
+ * been destroyed, the behavior is undefined.
  *
  * @param[in] code_object Code object. The handle becomes invalid after it has
  * been destroyed.
@@ -2878,8 +2879,9 @@ typedef enum {
    */
   HSA_CODE_OBJECT_INFO_PROFILE = 4,
   /**
-   * Default float rounding mode used when the code object is produced. The
-   * type of this attribute is ::hsa_default_float_rounding_mode_t.
+   * Default floating-point rounding mode used when the code object is
+   * produced. The type of this attribute is
+   * ::hsa_default_float_rounding_mode_t.
    */
   HSA_CODE_OBJECT_INFO_DEFAULT_FLOAT_ROUNDING_MODE = 5
 } hsa_code_object_info_t;
@@ -2955,7 +2957,7 @@ hsa_status_t HSA_API hsa_code_object_get_symbol(
  */
 typedef enum {
   /**
-   * The type of the symbol. The type of this attribute is ::hsa_symbol_t.
+   * The type of the symbol. The type of this attribute is ::hsa_symbol_kind_t.
    */
   HSA_CODE_SYMBOL_INFO_TYPE = 0,
   /**
@@ -2986,6 +2988,11 @@ typedef enum {
    * ::hsa_symbol_linkage_t.
    */
   HSA_CODE_SYMBOL_INFO_LINKAGE = 5,
+  /**
+   * Indicates whether the symbol corresponds to a definition. The type of this
+   * attribute is bool.
+   */
+  HSA_CODE_SYMBOL_INFO_IS_DEFINITION = 17,
   /**
    * The allocation kind of the variable. The value of this attribute is
    * undefined if the symbol is not a variable. The type of this attribute is
@@ -3231,9 +3238,11 @@ hsa_status_t HSA_API hsa_executable_destroy(
  * @param[in] executable Executable.
  *
  * @param[in] agent Agent to load code object for. The agent must support the
- * floating-point rounding mode used by @p code_object.
+ * default floating-point rounding mode used by @p code_object.
  *
- * @param[in] code_object Code object to load.
+ * @param[in] code_object Code object to load.  The lifetime of the code object
+ * must exceed that of the executable: if @p code_object is destroyed before @p
+ * executable, the behavior is undefined.
  *
  * @param[in] options Vendor-specific options. May be NULL.
  *
@@ -3252,10 +3261,10 @@ hsa_status_t HSA_API hsa_executable_destroy(
  * @retval ::HSA_STATUS_ERROR_INVALID_CODE_OBJECT @p code_object is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS @p agent is not compatible
- * with @p code_object (for example, @p agent does not support the rounding mode
- * specified by @p code_object), or @p code_object is not compatible with @p
- * executable (for example, @p code_object and @p executable have different
- * machine models or profiles).
+ * with @p code_object (for example, @p agent does not support the default
+ * floating-point rounding mode specified by @p code_object), or @p code_object
+ * is not compatible with @p executable (for example, @p code_object and @p
+ * executable have different machine models or profiles).
  *
  * @retval ::HSA_STATUS_ERROR_FROZEN_EXECUTABLE @p executable is frozen.
  */
@@ -3471,9 +3480,9 @@ hsa_status_t HSA_API hsa_executable_readonly_variable_define(
 
 /**
  * @brief Validate executable. Checks that all code objects have matching
- * machine model, profile, and default float rounding mode. Checks that all
- * declarations have definitions. Checks declaration-definition compatibility
- * (see HSA Programming Reference Manual for compatibility rules).
+ * machine model, profile, and default floating-point rounding mode. Checks that
+ * all declarations have definitions. Checks declaration-definition
+ * compatibility (see HSA Programming Reference Manual for compatibility rules).
  *
  * @param[in] executable Executable.
  *
@@ -3550,7 +3559,7 @@ hsa_status_t HSA_API hsa_executable_get_symbol(
  */
 typedef enum {
   /**
-   * The kind of the symbol. The type of this attribute is ::hsa_symbol_t.
+   * The kind of the symbol. The type of this attribute is ::hsa_symbol_kind_t.
    */
   HSA_EXECUTABLE_SYMBOL_INFO_TYPE = 0,
   /**
@@ -3596,6 +3605,11 @@ typedef enum {
    * ::hsa_symbol_linkage_t.
    */
   HSA_EXECUTABLE_SYMBOL_INFO_LINKAGE = 5,
+  /**
+   * Indicates whether the symbol corresponds to a definition. The type of this
+   * attribute is bool.
+   */
+  HSA_EXECUTABLE_SYMBOL_INFO_IS_DEFINITION = 17,
   /**
    * The allocation kind of the variable. The value of this attribute is
    * undefined if the symbol is not a variable.  The type of this attribute is
