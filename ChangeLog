@@ -1,3 +1,21 @@
+2014-04-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 465 - Rename runtime api functions that specify memory order
+	to clarify they are scacquire and screlease
+
+2014-04-01  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 464 - Avoid using enumeration type is hsa_queue_t definition
+	* Bug 465 - Rename runtime api functions that specify memory order
+	to clarify they are scacquire and screlease
+	* Bug 466 - Clarify limitations of single producer AQL queues
+	* Bug 468 - Late March/early April 2015 errata
+	* Bug 469 - Alignment queries
+	* Bug 474 - Add new error code: HSA_STATUS_ERROR_INVALID_SYMBOL
+	* Bug 475 - Missing module name when getting code object's symbol handle
+	* Bug 478 - Error in kernel dispatch example
+	* Converging document's format with public PDF version
+
 2014-03-09  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 430 - Require lifetime of code object to be no shorter than

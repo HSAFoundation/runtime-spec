@@ -1,13 +1,12 @@
 \documentclass[final,oneside]{book}
-\newcommand{\doctitle}{HSA Runtime Programmer's Reference Manual}
 
 % Needed so characters such as underscore are recognized in PDF
 % viewers. Otherwise searching for say `hsa_open` produces no
 % results
 \usepackage[T1]{fontenc}
 
-% Times font definitions
-\usepackage{times}
+% Use Open Sans font
+\usepackage[default]{opensans}
 
 \usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
 
@@ -18,6 +17,8 @@
 \usepackage{pbox}
 \usepackage{sidecap}
 \usepackage{float}
+
+\newcommand{\doctitle}{HSA Runtime Programmer's Reference Manual}
 
 % overwrite global draft option so the source is shown in draft mode
 \usepackage[final]{listings}
@@ -77,7 +78,7 @@
         framexbottommargin=3pt, % bottom frame padding
         framextopmargin=3pt, % top frame padding
         inputencoding=utf8,
-        keywordstyle=\color{Blue},
+        keywordstyle=\color{black},
         language=C,
         rulecolor=\color{lightgray}, % invisible (we use it because it allows padding)
         showstringspaces=false,
@@ -125,11 +126,11 @@
 
 \usepackage[
             % link color is black
-            allcolors=black,
+            allcolors=Cerulean,
             % Do not use colors or frames in links
             % If colors are used, they overwrite those of the DIFF tool so
             % many differences would not be shown
-            hidelinks,
+            colorlinks=true,
             % use links even if the document is draft
             final,
             %sections and subsections linked
@@ -195,11 +196,11 @@
 \newcommand{\hfstyle}{
 % clear all header and footer fields
 \fancyhf{}
-\rfoot{\scriptsize{\thepage}}
-\lfoot{\scriptsize{\doctitle$\:$v1.00$\:$}}
-\lhead{\scriptsize{\nouppercase{\tidyhdr{\leftmark}{\rightmark}}}}
+\rfoot{\scriptsize{\color{Gray} \thepage}}
+\lfoot{\scriptsize{\color{Gray}\doctitle$\:$v1.01$\:$}}
+\lhead{\scriptsize{\color{Gray}\nouppercase{\tidyhdr{\leftmark}{\rightmark}}}}
 \renewcommand{\headrulewidth}{0pt}
-\renewcommand{\footrulewidth}{0pt}
+\renewcommand{\footrulewidth}{.5pt}
 }
 
 % use custom header and footer
@@ -238,8 +239,8 @@
 % redefine DIFadd command to avoid \uwave, which causes troubles when the
 % argument includes \hypertarget or \hyperlink
 % also, changing default 'add color' to avoid collisions with lstlistings colors
-\providecommand{\DIFadd}[1]{{\protect\color{Cerulean}#1}}
-\renewcommand{\DIFadd}[1]{{\protect\color{Cerulean}#1}}
+\providecommand{\DIFadd}[1]{{\protect\color{Green}#1}}
+\renewcommand{\DIFadd}[1]{{\protect\color{Green}#1}}
 
 % Surrounding the text with \mbox is the only way \sout can wrap \hyperref or
 % \hypertarget; otherwise, we get a compilation error.
@@ -252,16 +253,14 @@
 \addcontentsline{toc}{chapter}{Cover} % add cover to TOC
 
 \begin{titlepage}
-\includegraphics[width=.4\textwidth]{fig/foundation.png}
+\includegraphics[width=.3\textwidth]{fig/foundation.png}
 \vspace*{7cm}
 \begin{center}
-{\Large \doctitle\\[1ex]\large v1.00}\\ % remember to change footer version too!
-\vspace*{1cm}
-\vspace*{0.5cm}
-{\small \today}
+{\Huge \color{Cerulean}{\doctitle}\\[7cm]}
+{\small Revision: Version 1.01 $\bullet$ Issue Date: \today}\\ % remember to change footer version too!
 \end{center}
 \end{titlepage}
-\thispagestyle{empty} {\textcopyright 2013-2014 HSA Foundation. All rights
+\thispagestyle{empty} {\textcopyright 2013-2015 HSA Foundation. All rights
   reserved.}
 
 
@@ -651,10 +650,10 @@ When the runtime creates a queue, it also automatically creates a ``doorbell''
 signal that must be used by the application to inform the packet processor of
 the index of the packet ready to be consumed. The doorbell signal is contained
 in the \hsaref{hsa_queue_t.doorbell_signal} field of the queue. The value of a
-signal can be updated using \hsaref{hsa_signal_store_release}:
+signal can be updated using \hsaref{hsa_signal_store_screlease}:
 
 \begin{lstlisting}
-hsa_signal_store_release(queue->doorbell_signal, 0);
+hsa_signal_store_screlease(queue->doorbell_signal, 0);
 \end{lstlisting}
 
 After the packet processor has been notified, the execution of the kernel may
@@ -794,7 +793,7 @@ or HSAIL instructions. The advantage of signals over shared memory is that
 signal operations usually perform better in terms of power or speed. For
 example, a spin loop involving atomic memory operations that waits for a shared
 memory location to satisfy a condition can be replaced with an HSA signal wait
-operator such as \hsaref{hsa_signal_wait_acquire}, which is implemented by the
+operator such as \hsaref{hsa_signal_wait_scacquire}, which is implemented by the
 runtime using efficient hardware features.
 
 The runtime API uses opaque signal handlers of type \hsaref{hsa_signal_t} to
@@ -808,7 +807,7 @@ Modifying the value of a signal is equivalent to sending the signal. In addition
 to the regular update (store) of a signal value, an application can perform
 atomic operations such as add, subtract, or compare-and-swap. Each read or write
 signal operation specifies which memory order to use. For example, store-release
-(\hsaref{hsa_signal_store_release} function) is equivalent to storing a value on
+(\hsaref{hsa_signal_store_screlease} function) is equivalent to storing a value on
 the signal with release memory ordering. The combinations of actions and
 memory orders available in the API match the corresponding HSAIL
 instructions. For more information on memory orders and the HSA memory model,
@@ -818,10 +817,11 @@ The application may wait on a signal, with a condition specifying the terms of
 the wait. The wait can be done either in the kernel agent by using an HSAIL
 \refhsl{wait} instruction or in the host CPU by using a runtime API
 call. Waiting for a signal implies reading the current signal value (which is
-returned to the application) using an acquire (\hsaref{hsa_signal_wait_acquire})
-or a relaxed (\hsaref{hsa_signal_wait_relaxed}) memory order. The signal value
-returned by the wait operation is not guaranteed to satisfy the wait condition
-due to multiple reasons:
+returned to the application) using a SC acquire
+(\hsaref{hsa_signal_wait_scacquire}) or a relaxed
+(\hsaref{hsa_signal_wait_relaxed}) memory order. The signal value returned by
+the wait operation is not guaranteed to satisfy the wait condition due to
+multiple reasons:
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
 \item A spurious wakeup interrupts the wait.
 \item The wait time exceeded the user-specified timeout.
@@ -874,7 +874,7 @@ following steps:
 \item Reserve a packet ID by incrementing the write index of the queue, which is
   a 64-bit unsigned integer that contains the number of packets allocated so
   far. The runtime exposes several functions such as
-  \hsaref{hsa_queue_add_write_index_acquire} to increment the value of the write
+  \hsaref{hsa_queue_add_write_index_scacquire} to increment the value of the write
   index.
 
 \item Wait until the queue is not full (has space for the packet) before writing
@@ -884,7 +884,7 @@ size. The read index of a queue is a 64-bit unsigned integer that contains the
 number of packets that have been processed and released by the queue's packet
 processor (i.e., the identifier of the next packet to be released). The
 application can load the read index using
-\hsaref{hsa_queue_load_read_index_acquire} or
+\hsaref{hsa_queue_load_read_index_scacquire} or
 \hsaref{hsa_queue_load_read_index_relaxed}.
 
   If the application observes that the read index matches the write index, the
@@ -901,7 +901,7 @@ application can load the read index using
 
 \item Launch the packet by first setting the type of the packet field on its
   header to the corresponding value, and then storing the packet ID in
-  \hsaref{hsa_queue_t.doorbell_signal} using \hsaref{hsa_signal_store_release}
+  \hsaref{hsa_queue_t.doorbell_signal} using \hsaref{hsa_signal_store_screlease}
   (or any variant that uses a different memory order). The application is
   required to ensure that the rest of the packet is globally visible before or
   at the same time the type is written.
@@ -938,6 +938,29 @@ are:
   etc.), and memory order applied(relaxed, release, etc.).
 \end{itemize}
 
+\subsection{Single vs. Multiple Producers}
+
+An application may limit the job submission to a single agent. When this is the
+case, the application can create a single producer queue (a queue of type
+\hsaref{HSA_QUEUE_TYPE_SINGLE}), which may be more efficient than a regular,
+multiple producer queue.
+
+The submission process can be simplified for queues that are only submitted to
+by a single agent:
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item The increment of the write index by the submitting agent can be done using
+  an atomic store (for example, \hsaref{hsa_queue_store_write_index_screlease}),
+  instead of a read-modify-write operation (for example,
+  \hsaref{hsa_queue_add_write_index_screlease}), as it is the only agent
+  permitted to update the value.
+\item The submitting agent may use a private variable to hold a copy of the
+  value of write index and can assume no one else will modify the write index to
+  avoid reading it again.
+\end{itemize}
+
+For queues of type \hsaref{HSA_QUEUE_TYPE_SINGLE}, the agent must submit
+AQL packets in order -- the value of the associated doorbell signal can only be
+increased on every update.
 
 % \begin{figure}[t]
 %   \centering
@@ -1009,10 +1032,11 @@ are:
 % \end{description}
 \subsection{Example: a simple dispatch}
 In this example, we extend the dispatch code introduced in
-Section~\ref{sec:executionmodel} in order to illustrate how packet IDs are
-reserved (invocation of \hsaref{hsa_queue_add_write_index_relaxed}), and how the
-application can wait for a packet to be complete (invocation of
-\hsaref{hsa_signal_wait_acquire}). The application creates a signal with an
+Section~\ref{sec:executionmodel} in order to illustrate how to update the write
+index of a single producer queue (invocation of
+\hsaref{hsa_queue_store_write_index_relaxed}), and how the application can wait
+for a packet to be complete (invocation of
+\hsaref{hsa_signal_wait_scacquire}). The application creates a signal with an
 initial value of 1, sets the completion signal of the kernel dispatch packet to
 be the newly created signal, and after notifying the packet processor it waits
 for the signal value to become zero. The decrement is performed by the packet
@@ -1132,7 +1156,7 @@ requirements.
 Examples of kernel dispatches in previous sections have omitted the setup of the
 kernel dispatch packet. The code listed below shows how to configure the launch
 of a kernel that receives no arguments (the
-\hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field is NULL). The
+\hsaref{hsa_kernel_dispatch_packet_t.kernarg_address} field is NULL). The
 dispatch uses 256 work-items, all in the same work-group along the X dimension.
 
 \lstinputfunlisting{initialize_packet}
@@ -1877,6 +1901,11 @@ handle from an agent-independent sampler descriptor
 
 \subsection{API}
 \input{api/altlatex/group-ext-images}
+
+
+% Deprecated stuff
+\chapter{Deprecated Declarations}
+\input{api/altlatex/deprecated}
 
 
 % Glossary

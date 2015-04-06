@@ -4,10 +4,13 @@ import xml.etree.ElementTree as ET
 import sys
 import os
 
+# deprecated elementsd
+deprecated =[]
+
 # Enumeration types that allow duplicated initialization constants. In general,
 # duplicates seem to be indicative of an erroneous declaration, but we allow
 # exceptions.
-initializer_whitelist = ['hsa_packet_header_width_t']
+initializer_whitelist = ['hsa_packet_header_t', 'hsa_packet_header_width_t']
 
 def get_ifdef(var):
   return "\#ifdef " + var + "\\\\"
@@ -150,6 +153,18 @@ def linkify(definition):
     start = definition.find('hsa_', end)
   return ret
 
+def is_deprecated(func):
+  paras = func.findall('detaileddescription/para')
+  if len(paras) == 0:
+    return False
+  deprecation =  paras[0].find('xrefsect/xreftitle')
+  return deprecation is not None and node2tex(deprecation) == 'Deprecated'
+
+# precondition: is_deprecated(node) is True
+def deprecation_text_node(node):
+  paras = node.findall('detaileddescription/para')
+  return paras[0].find('xrefsect/xrefdescription/para')
+
 def format_arg(line):
   argname_start = line.rfind(' ') + 1
   argname = " \\reffld{" + line[argname_start : ] + "}"
@@ -162,9 +177,18 @@ def process_typedef(typedef, tex, defs):
     #blacklist
     return
   tex.write('\\subsubsection{' + name + '}\n')
+
+  # brief
+  tex.write('\\vspace{-2.5mm}')
+  # if there is more than one paragraph, it goes into detaileddescription
+  paras = typedef.findall('detaileddescription/para/parblock/para')
+  paras = typedef.findall('briefdescription/para') if not paras else paras
+  paras = map(lambda para: node2tex(para), paras)
+  tex.write("\n\\\\[2mm]".join(paras))
+
   # typedef definition. We use the 'definition' string because in the presence
   # of pointers to functions using the type itself is tricky.
-  tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
+  tex.write("\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
   definition = node2tex(typedef.find('definition'))
   definition = linkify(definition)
   newname = " \\hypertarget{" + typedef.get('id') + "}{\\textbf{" + name + "}}"
@@ -186,13 +210,7 @@ def process_typedef(typedef, tex, defs):
   tex.write("\\end{mylongtable}\n")
   defs.append(('reftyp', name))
   typename_id[name] = typedef.get('id')
-  # brief
-  tex.write('\\vspace{-5mm}')
 
-  # if there is more than one paragraph, it goes into detaileddescription
-  paras = typedef.findall('detaileddescription/para/parblock/para')
-  paras = typedef.findall('briefdescription/para') if not paras else paras
-  map(lambda para: tex.write(node2tex(para) + "\n\\\\[2mm]"), paras)
 
 # Check that any field reference matches a local field name
 def check_field_refs(fields, typename):
@@ -223,8 +241,13 @@ def apply_replacement_directive(replacement_index, txts):
 def process_struct_or_union(typedef, tex, defs):
   typename = node2tex(typedef.find('name'))
   tex.write('\\subsubsection{' + typename + '}\n')
+
+  # brief
+  tex.write('\\vspace{-2.5mm}')
+  tex.write(node2tex(typedef.find('briefdescription/para')))
+
   # name
-  tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
+  tex.write("\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
   tex.write("\\rule{0pt}{3ex}")
   typ = typedef.find('type').text;
   actname = typedef.find('type/ref').text
@@ -283,9 +306,6 @@ def process_struct_or_union(typedef, tex, defs):
   defs.append(('reftyp', typename))
   typename_id[typename] = typedef.get('id')
 
-  # brief
-  tex.write('\\vspace{-5.5mm}')
-  tex.write(node2tex(typedef.find('briefdescription/para')) + "\n\n")
   # data fields
   tex.write("\\noindent\\textbf{Data Fields}\\\\[-7mm]" + "\n")
   tex.write("\\begin{longtable}{@{}>{\\hangindent=2em}p{\\textwidth}}" + "\n")
@@ -317,6 +337,9 @@ def process_enum(enum, tex, defs):
   valnodes = enum.findall("enumvalue")
   emptydescs = 0 # number of values with empty descriptions
   for val in enum.findall("enumvalue"):
+    if is_deprecated(val):
+      deprecated.append(('enumvalue', val))
+      continue
     valname = node2tex(val.find('name'))
     check_name(typename, valname)
     typename_id[valname] = val.get('id')
@@ -341,8 +364,12 @@ def process_enum(enum, tex, defs):
     vals.append(valtxt)
     valsdescs.append(valdesc)
 
+  # brief
+  tex.write('\\vspace{-2.5mm}')
+  tex.write(node2tex(enum.find('briefdescription/para')))
+
   # enum box: name and values
-  tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
+  tex.write("\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
   tex.write("\\rule{0pt}{3ex}")
   if typename is '':
     tex.write('enum \{\\\\')
@@ -354,11 +381,7 @@ def process_enum(enum, tex, defs):
   tex.write("\} \\hypertarget{" + enum.get('id') + "}")
   tex.write("{\\textbf{" + typename + "}};")
   tex.write("\\rule[-2ex]{0pt}{0pt}")
-  tex.write("\\end{mylongtable}\n")
-
-  # brief
-  tex.write('\\vspace{-5.5mm}')
-  tex.write(node2tex(enum.find('briefdescription/para')) + "\n\n")
+  tex.write("\\end{mylongtable}")
 
   # value descriptions
   if emptydescs == len(valnodes):
@@ -383,8 +406,20 @@ def register_function(func, tex, listings, commands):
 # returns None if function is not a memory order variant
 # otherwise, it returns the name without the memory order
 def function_name_minus_memory_order(name):
-  memorders = ['_\-acquire', '_\-acq_\-rel', '_\-relaxed', '_\-release']
+  memorders = ['_\-acquire', '_\-acq_\-rel', '_\-release']
+  memorders += ['_\-scacquire', '_\-scacq_\-screl', '_\-relaxed', '_\-screlease']
   return next((name[:-len(x)] for x in memorders if name.endswith(x)), None)
+
+def function_name_memory_order_group(name):
+  memorders = ['_\-acquire', '_\-acq_\-rel', '_\-release']
+  for x in memorders:
+      if name.endswith(x):
+          return name[:-len(x)]
+  memorders = ['_\-scacquire', '_\-scacq_\-screl', '_\-relaxed', '_\-screlease']
+  for x in memorders:
+      if name.endswith(x):
+          return 'sc' + name[:-len(x)]
+  return None
 
 # Check that any argument reference matches an argument name in the current function
 def check_argument_refs(func):
@@ -432,6 +467,9 @@ def print_signature(func, tex):
   return ret
 
 def process_function(func, tex, listings, commands, variants):
+  if is_deprecated(func):
+    deprecated.append(('func', func))
+    return
   map(lambda f : register_function(f, tex, listings, commands), variants)
   funname = node2tex(func.find('name'))
   tex.write('\\subsubsection{')
@@ -443,14 +481,17 @@ def process_function(func, tex, listings, commands, variants):
 
   check_argument_refs(func)
 
+  # brief
+  tex.write("\\vspace{-2.5mm}")
+  tex.write(node2tex(func.find('briefdescription/para')))
+
   # signature
-  tex.write("\\vspace{-5.5mm}\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
+  tex.write("\\begin{mylongtable}{@{}p{\\textwidth}}" + "\n")
   tex.write("\\\\[4mm]\n".join(map(lambda f : print_signature(f, tex), variants)))
   tex.write("\\end{mylongtable}\n")
-  # brief
-  tex.write('\\vspace{-5.5mm}')
-  tex.write(node2tex(func.find('briefdescription/para')) + "\n\n")
+
   # parameters
+  tex.write('\\vspace{-3.5mm}')
   args = func.findall(".//parameterlist[@kind='param']/parameteritem")
   if args:
     tex.write("\\hspace*{-.3mm}\\textbf{Parameters}\\\\[-7mm]" + "\n")
@@ -511,11 +552,11 @@ def process_function(func, tex, listings, commands, variants):
 def function_variants(currfunc, funcs):
   ret = [currfunc]
   currname = node2tex(currfunc.find('name'))
-  currpre = function_name_minus_memory_order(currname)
+  currpre = function_name_memory_order_group(currname)
   if currpre is not None:
     for func in funcs:
       name = node2tex(func.find('name'))
-      pre = function_name_minus_memory_order(name)
+      pre = function_name_memory_order_group(name)
       if pre == currpre and func != currfunc:
         ret += [func]
   return ret
@@ -551,6 +592,23 @@ def process_file(file, listings, defs):
       processed_funcs += variants
 
   tex.close()
+
+def print_deprecated_table_type(tex, type):
+    tex.write('\\begin{itemize}')
+    for _, node in filter(lambda (t, _) : t == type, deprecated):
+      tex.write('\\item ')
+      tex.write(node2tex(node.find('name')))
+      tex.write('\\\\')
+      tex.write(node2tex(deprecation_text_node(node)))
+    tex.write('\\end{itemize}')
+
+
+def print_deprecated_table():
+  with open(os.path.join("altlatex", 'deprecated'), "w+") as tex:
+    tex.write('\\section{Enumeration Constants}')
+    print_deprecated_table_type(tex, 'enumvalue')
+    tex.write('\\section{Functions}')
+    print_deprecated_table_type(tex, 'func')
 
 # Convert an identifier to a link its declaration in the document (where the
 # displayed name
@@ -615,6 +673,9 @@ def main():
   listings.close()
   commands.write(generate_hsaref(defs))
   commands.close()
+
+  # print deprecation info
+  print_deprecated_table()
   return
 
 

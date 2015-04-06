@@ -165,7 +165,15 @@ typedef enum {
     /**
      * An HSAIL operation resulted on a hardware exception.
      */
-    HSA_STATUS_ERROR_EXCEPTION = 0x1016
+    HSA_STATUS_ERROR_EXCEPTION = 0x1016,
+    /**
+     * The code object symbol is invalid.
+     */
+    HSA_STATUS_ERROR_INVALID_CODE_SYMBOL = 0x1018,
+    /**
+     * The executablre symbol is invalid.
+     */
+    HSA_STATUS_ERROR_INVALID_EXECUTABLE_SYMBOL = 0x1019
 } hsa_status_t;
 
 /**
@@ -922,20 +930,29 @@ hsa_status_t HSA_API hsa_signal_destroy(
     hsa_signal_t signal);
 
 /**
+ * @deprecated Use ::hsa_signal_load_scacquire instead.
+ *
+ * @copydoc hsa_signal_load_scacquire
+*/
+hsa_signal_value_t HSA_API hsa_signal_load_acquire(
+    hsa_signal_t signal);
+
+/**
  * @brief Atomically read the current value of a signal.
  *
  * @param[in] signal Signal.
  *
  * @return Value of the signal.
 */
-hsa_signal_value_t HSA_API hsa_signal_load_acquire(
+hsa_signal_value_t HSA_API hsa_signal_load_scacquire(
     hsa_signal_t signal);
 
 /**
- * @copydoc hsa_signal_load_acquire
+ * @copydoc hsa_signal_load_scacquire
  */
 hsa_signal_value_t HSA_API hsa_signal_load_relaxed(
     hsa_signal_t signal);
+
 
 /**
  * @brief Atomically set the value of a signal.
@@ -952,9 +969,28 @@ void HSA_API hsa_signal_store_relaxed(
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_store_relaxed
+ * @deprecated Use ::hsa_signal_store_screlease instead.
+ *
+ * @copydoc hsa_signal_store_screlease
  */
 void HSA_API hsa_signal_store_release(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_store_relaxed
+ */
+void HSA_API hsa_signal_store_screlease(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+
+/**
+ * @deprecated Use ::hsa_signal_exchange_scacq_screl instead.
+ *
+ * @copydoc hsa_signal_exchange_scacq_screl
+ */
+hsa_signal_value_t HSA_API hsa_signal_exchange_acq_rel(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
@@ -972,29 +1008,57 @@ void HSA_API hsa_signal_store_release(
  * @return Value of the signal prior to the exchange.
  *
  */
-hsa_signal_value_t HSA_API hsa_signal_exchange_acq_rel(
+hsa_signal_value_t HSA_API hsa_signal_exchange_scacq_screl(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_exchange_acq_rel
+ * @deprecated Use ::hsa_signal_exchange_scacquire instead.
+ *
+ * @copydoc hsa_signal_exchange_scacquire
  */
 hsa_signal_value_t HSA_API hsa_signal_exchange_acquire(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_exchange_acq_rel
+ * @copydoc hsa_signal_exchange_scacq_screl
+ */
+hsa_signal_value_t HSA_API hsa_signal_exchange_scacquire(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_exchange_scacq_screl
  */
 hsa_signal_value_t HSA_API hsa_signal_exchange_relaxed(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_exchange_acq_rel
+ * @deprecated Use ::hsa_signal_exchange_screlease instead.
+ *
+ * @copydoc hsa_signal_exchange_screlease
  */
 hsa_signal_value_t HSA_API hsa_signal_exchange_release(
     hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_exchange_scacq_screl
+ */
+hsa_signal_value_t HSA_API hsa_signal_exchange_screlease(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @deprecated Use ::hsa_signal_cas_scacq_screl instead.
+ *
+ * @copydoc hsa_signal_cas_scacq_screl
+ */
+hsa_signal_value_t HSA_API hsa_signal_cas_acq_rel(
+    hsa_signal_t signal,
+    hsa_signal_value_t expected,
     hsa_signal_value_t value);
 
 /**
@@ -1015,13 +1079,15 @@ hsa_signal_value_t HSA_API hsa_signal_exchange_release(
  * @return Observed value of the signal.
  *
  */
-hsa_signal_value_t HSA_API hsa_signal_cas_acq_rel(
+hsa_signal_value_t HSA_API hsa_signal_cas_scacq_screl(
     hsa_signal_t signal,
     hsa_signal_value_t expected,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_cas_acq_rel
+ * @deprecated Use ::hsa_signal_cas_scacquire instead.
+ *
+ * @copydoc hsa_signal_cas_scacquire
  */
 hsa_signal_value_t HSA_API hsa_signal_cas_acquire(
     hsa_signal_t signal,
@@ -1029,7 +1095,15 @@ hsa_signal_value_t HSA_API hsa_signal_cas_acquire(
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_cas_acq_rel
+ * @copydoc hsa_signal_cas_scacq_screl
+ */
+hsa_signal_value_t HSA_API hsa_signal_cas_scacquire(
+    hsa_signal_t signal,
+    hsa_signal_value_t expected,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_cas_scacq_screl
  */
 hsa_signal_value_t HSA_API hsa_signal_cas_relaxed(
     hsa_signal_t signal,
@@ -1037,11 +1111,30 @@ hsa_signal_value_t HSA_API hsa_signal_cas_relaxed(
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_cas_acq_rel
+ * @deprecated Use ::hsa_signal_cas_screlease instead.
+ *
+ * @copydoc hsa_signal_cas_screlease
  */
 hsa_signal_value_t HSA_API hsa_signal_cas_release(
     hsa_signal_t signal,
     hsa_signal_value_t expected,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_cas_scacq_screl
+ */
+hsa_signal_value_t HSA_API hsa_signal_cas_screlease(
+    hsa_signal_t signal,
+    hsa_signal_value_t expected,
+    hsa_signal_value_t value);
+
+/**
+ * @deprecated Use ::hsa_signal_add_scacq_screl instead.
+ *
+ * @copydoc hsa_signal_add_scacq_screl
+ */
+void HSA_API hsa_signal_add_acq_rel(
+    hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
@@ -1056,28 +1149,56 @@ hsa_signal_value_t HSA_API hsa_signal_cas_release(
  * @param[in] value Value to add to the value of the signal.
  *
  */
-void HSA_API hsa_signal_add_acq_rel(
+void HSA_API hsa_signal_add_scacq_screl(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_add_acq_rel
+ * @deprecated Use ::hsa_signal_add_scacquire instead.
+ *
+ * @copydoc hsa_signal_add_scacquire
  */
 void HSA_API hsa_signal_add_acquire(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_add_acq_rel
+ * @copydoc hsa_signal_add_scacq_screl
+ */
+void HSA_API hsa_signal_add_scacquire(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_add_scacq_screl
  */
 void HSA_API hsa_signal_add_relaxed(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_add_acq_rel
+ * @deprecated Use ::hsa_signal_add_screlease instead.
+ *
+ * @copydoc hsa_signal_add_screlease
  */
 void HSA_API hsa_signal_add_release(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_add_scacq_screl
+ */
+void HSA_API hsa_signal_add_screlease(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+
+/**
+ * @deprecated Use ::hsa_signal_subtract_scacq_screl instead.
+ *
+ * @copydoc hsa_signal_subtract_scacq_screl
+ */
+void HSA_API hsa_signal_subtract_acq_rel(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
@@ -1093,28 +1214,55 @@ void HSA_API hsa_signal_add_release(
  * @param[in] value Value to subtract from the value of the signal.
  *
  */
-void HSA_API hsa_signal_subtract_acq_rel(
+void HSA_API hsa_signal_subtract_scacq_screl(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_subtract_acq_rel
+ * @deprecated Use ::hsa_signal_subtract_scacquire instead.
+ *
+ * @copydoc hsa_signal_subtract_scacquire
  */
 void HSA_API hsa_signal_subtract_acquire(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_subtract_acq_rel
+ * @copydoc hsa_signal_subtract_scacq_screl
+ */
+void HSA_API hsa_signal_subtract_scacquire(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_subtract_scacq_screl
  */
 void HSA_API hsa_signal_subtract_relaxed(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_subtract_acq_rel
+ * @deprecated Use ::hsa_signal_subtract_screlease instead.
+ *
+ * @copydoc hsa_signal_subtract_screlease
  */
 void HSA_API hsa_signal_subtract_release(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_subtract_scacq_screl
+ */
+void HSA_API hsa_signal_subtract_screlease(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @deprecated Use ::hsa_signal_and_scacq_screl instead.
+ *
+ * @copydoc hsa_signal_and_scacq_screl
+ */
+void HSA_API hsa_signal_and_acq_rel(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
@@ -1131,28 +1279,55 @@ void HSA_API hsa_signal_subtract_release(
  * @param[in] value Value to AND with the value of the signal.
  *
  */
-void HSA_API hsa_signal_and_acq_rel(
+void HSA_API hsa_signal_and_scacq_screl(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_and_acq_rel
+ * @deprecated Use ::hsa_signal_and_scacquire instead.
+ *
+ * @copydoc hsa_signal_and_scacquire
  */
 void HSA_API hsa_signal_and_acquire(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_and_acq_rel
+ * @copydoc hsa_signal_and_scacq_screl
+ */
+void HSA_API hsa_signal_and_scacquire(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_and_scacq_screl
  */
 void HSA_API hsa_signal_and_relaxed(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_and_acq_rel
+ * @deprecated Use ::hsa_signal_and_screlease instead.
+ *
+ * @copydoc hsa_signal_and_screlease
  */
 void HSA_API hsa_signal_and_release(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_and_scacq_screl
+ */
+void HSA_API hsa_signal_and_screlease(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @deprecated Use ::hsa_signal_or_scacq_screl instead.
+ *
+ * @copydoc hsa_signal_or_scacq_screl
+ */
+void HSA_API hsa_signal_or_acq_rel(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
@@ -1168,28 +1343,56 @@ void HSA_API hsa_signal_and_release(
  *
  * @param[in] value Value to OR with the value of the signal.
  */
-void HSA_API hsa_signal_or_acq_rel(
+void HSA_API hsa_signal_or_scacq_screl(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_or_acq_rel
+ * @deprecated Use ::hsa_signal_or_scacquire instead.
+ *
+ * @copydoc hsa_signal_or_scacquire
  */
 void HSA_API hsa_signal_or_acquire(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_or_acq_rel
+ * @copydoc hsa_signal_or_scacq_screl
+ */
+void HSA_API hsa_signal_or_scacquire(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_or_scacq_screl
  */
 void HSA_API hsa_signal_or_relaxed(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_or_acq_rel
+ * @deprecated Use ::hsa_signal_or_screlease instead.
+ *
+ * @copydoc hsa_signal_or_screlease
  */
 void HSA_API hsa_signal_or_release(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_or_scacq_screl
+ */
+void HSA_API hsa_signal_or_screlease(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+
+/**
+ * @deprecated Use ::hsa_signal_xor_scacq_screl instead.
+ *
+ * @copydoc hsa_signal_xor_scacq_screl
+ */
+void HSA_API hsa_signal_xor_acq_rel(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
@@ -1206,28 +1409,46 @@ void HSA_API hsa_signal_or_release(
  * @param[in] value Value to XOR with the value of the signal.
  *
  */
-void HSA_API hsa_signal_xor_acq_rel(
+void HSA_API hsa_signal_xor_scacq_screl(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_xor_acq_rel
+ * @deprecated Use ::hsa_signal_xor_scacquire instead.
+ *
+ * @copydoc hsa_signal_xor_scacquire
  */
 void HSA_API hsa_signal_xor_acquire(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_xor_acq_rel
+ * @copydoc hsa_signal_xor_scacq_screl
+ */
+void HSA_API hsa_signal_xor_scacquire(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_xor_scacq_screl
  */
 void HSA_API hsa_signal_xor_relaxed(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
 /**
- * @copydoc hsa_signal_xor_acq_rel
+ * @deprecated Use ::hsa_signal_xor_screlease instead.
+ *
+ * @copydoc hsa_signal_xor_screlease
  */
 void HSA_API hsa_signal_xor_release(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_xor_scacq_screl
+ */
+void HSA_API hsa_signal_xor_screlease(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
@@ -1266,6 +1487,19 @@ typedef enum {
      */
     HSA_WAIT_STATE_ACTIVE = 1
 } hsa_wait_state_t;
+
+
+/**
+ * @deprecated Use ::hsa_signal_wait_scacquire instead.
+ *
+ * @copydoc hsa_signal_wait_scacquire
+ */
+hsa_signal_value_t HSA_API hsa_signal_wait_acquire(
+    hsa_signal_t signal,
+    hsa_signal_condition_t condition,
+    hsa_signal_value_t compare_value,
+    uint64_t timeout_hint,
+    hsa_wait_state_t wait_state_hint);
 
 /**
  * @brief Wait until a signal value satisfies a specified condition, or a
@@ -1306,7 +1540,7 @@ typedef enum {
  * condition.
  *
 */
-hsa_signal_value_t HSA_API hsa_signal_wait_acquire(
+hsa_signal_value_t HSA_API hsa_signal_wait_scacquire(
     hsa_signal_t signal,
     hsa_signal_condition_t condition,
     hsa_signal_value_t compare_value,
@@ -1314,7 +1548,7 @@ hsa_signal_value_t HSA_API hsa_signal_wait_acquire(
     hsa_wait_state_t wait_state_hint);
 
 /**
- * @copydoc hsa_signal_wait_acquire
+ * @copydoc hsa_signal_wait_scacquire
  */
 hsa_signal_value_t HSA_API hsa_signal_wait_relaxed(
     hsa_signal_t signal,
@@ -1360,10 +1594,18 @@ typedef enum {
    */
   HSA_QUEUE_TYPE_MULTI = 0,
   /**
-   * Queue only supports a single producer.
+   * Queue only supports a single producer. In some scenarios, the application
+   * may want to limit the submission of AQL packets to a single agent. Queues
+   * that support a single producer may be more efficient than queues supporting
+   * multiple producers.
    */
   HSA_QUEUE_TYPE_SINGLE = 1
 } hsa_queue_type_t;
+
+/**
+ * @brief A fixed-size type used to represent ::hsa_queue_type_t constants.
+ */
+typedef uint32_t hsa_queue_type32_t;
 
 /**
  * @brief Queue features.
@@ -1392,7 +1634,7 @@ typedef struct hsa_queue_s {
   /**
    * Queue type.
    */
-  hsa_queue_type_t type;
+  hsa_queue_type32_t type;
 
   /**
    * Queue features mask. This is a bit-field of ::hsa_queue_feature_t
@@ -1635,19 +1877,35 @@ hsa_status_t HSA_API hsa_queue_inactivate(
     hsa_queue_t *queue);
 
 /**
+ * @deprecated Use ::hsa_queue_load_read_index_scacquire instead.
+ *
+ * @copydoc hsa_queue_load_read_index_scacquire
+ */
+uint64_t HSA_API hsa_queue_load_read_index_acquire(
+    const hsa_queue_t *queue);
+
+/**
  * @brief Atomically load the read index of a queue.
  *
  * @param[in] queue Pointer to a queue.
  *
  * @return Read index of the queue pointed by @p queue.
  */
-uint64_t HSA_API hsa_queue_load_read_index_acquire(
+uint64_t HSA_API hsa_queue_load_read_index_scacquire(
     const hsa_queue_t *queue);
 
 /**
- * @copydoc hsa_queue_load_read_index_acquire
+ * @copydoc hsa_queue_load_read_index_scacquire
  */
 uint64_t HSA_API hsa_queue_load_read_index_relaxed(
+    const hsa_queue_t *queue);
+
+/**
+ * @deprecated Use ::hsa_queue_load_write_index_scacquire instead.
+ *
+ * @copydoc hsa_queue_load_write_index_scacquire
+ */
+uint64_t HSA_API hsa_queue_load_write_index_acquire(
     const hsa_queue_t *queue);
 
 /**
@@ -1657,17 +1915,21 @@ uint64_t HSA_API hsa_queue_load_read_index_relaxed(
  *
  * @return Write index of the queue pointed by @p queue.
  */
-uint64_t HSA_API hsa_queue_load_write_index_acquire(
+uint64_t HSA_API hsa_queue_load_write_index_scacquire(
     const hsa_queue_t *queue);
 
 /**
- * @copydoc hsa_queue_load_write_index_acquire
+ * @copydoc hsa_queue_load_write_index_scacquire
  */
 uint64_t HSA_API hsa_queue_load_write_index_relaxed(
     const hsa_queue_t *queue);
 
 /**
  * @brief Atomically set the write index of a queue.
+ *
+ * @details It is recommended that the application uses this function to update
+ * the write index when there is a single agent submitting work to the queue
+ * (the queue type is ::HSA_QUEUE_TYPE_SINGLE).
  *
  * @param[in] queue Pointer to a queue.
  *
@@ -1679,10 +1941,29 @@ void HSA_API hsa_queue_store_write_index_relaxed(
     uint64_t value);
 
 /**
- * @copydoc hsa_queue_store_write_index_relaxed
+ * @deprecated Use ::hsa_queue_store_write_index_screlease instead.
+ *
+ * @copydoc hsa_queue_store_write_index_screlease
  */
 void HSA_API hsa_queue_store_write_index_release(
     const hsa_queue_t *queue,
+    uint64_t value);
+
+/**
+ * @copydoc hsa_queue_store_write_index_relaxed
+ */
+void HSA_API hsa_queue_store_write_index_screlease(
+    const hsa_queue_t *queue,
+    uint64_t value);
+
+/**
+ * @deprecated Use ::hsa_queue_cas_write_index_scacq_screl instead.
+ *
+ * @copydoc hsa_queue_cas_write_index_scacq_screl
+ */
+uint64_t HSA_API hsa_queue_cas_write_index_acq_rel(
+    const hsa_queue_t *queue,
+    uint64_t expected,
     uint64_t value);
 
 /**
@@ -1699,13 +1980,15 @@ void HSA_API hsa_queue_store_write_index_release(
  *
  * @return Previous value of the write index.
  */
-uint64_t HSA_API hsa_queue_cas_write_index_acq_rel(
+uint64_t HSA_API hsa_queue_cas_write_index_scacq_screl(
     const hsa_queue_t *queue,
     uint64_t expected,
     uint64_t value);
 
 /**
- * @copydoc hsa_queue_cas_write_index_acq_rel
+ * @deprecated Use ::hsa_queue_cas_write_index_scacquire instead.
+ *
+ * @copydoc hsa_queue_cas_write_index_scacquire
  */
 uint64_t HSA_API hsa_queue_cas_write_index_acquire(
     const hsa_queue_t *queue,
@@ -1713,7 +1996,15 @@ uint64_t HSA_API hsa_queue_cas_write_index_acquire(
     uint64_t value);
 
 /**
- * @copydoc hsa_queue_cas_write_index_acq_rel
+ * @copydoc hsa_queue_cas_write_index_scacq_screl
+ */
+uint64_t HSA_API hsa_queue_cas_write_index_scacquire(
+    const hsa_queue_t *queue,
+    uint64_t expected,
+    uint64_t value);
+
+/**
+ * @copydoc hsa_queue_cas_write_index_scacq_screl
  */
 uint64_t HSA_API hsa_queue_cas_write_index_relaxed(
     const hsa_queue_t *queue,
@@ -1721,11 +2012,30 @@ uint64_t HSA_API hsa_queue_cas_write_index_relaxed(
     uint64_t value);
 
 /**
- * @copydoc hsa_queue_cas_write_index_acq_rel
+ * @deprecated Use ::hsa_queue_cas_write_index_screlease instead.
+ *
+ * @copydoc hsa_queue_cas_write_index_screlease
  */
 uint64_t HSA_API hsa_queue_cas_write_index_release(
     const hsa_queue_t *queue,
     uint64_t expected,
+    uint64_t value);
+
+/**
+ * @copydoc hsa_queue_cas_write_index_scacq_screl
+ */
+uint64_t HSA_API hsa_queue_cas_write_index_screlease(
+    const hsa_queue_t *queue,
+    uint64_t expected,
+    uint64_t value);
+
+/**
+ * @deprecated Use ::hsa_queue_add_write_index_scacq_screl instead.
+ *
+ * @copydoc hsa_queue_add_write_index_scacq_screl
+ */
+uint64_t HSA_API hsa_queue_add_write_index_acq_rel(
+    const hsa_queue_t *queue,
     uint64_t value);
 
 /**
@@ -1737,28 +2047,46 @@ uint64_t HSA_API hsa_queue_cas_write_index_release(
  *
  * @return Previous value of the write index.
  */
-uint64_t HSA_API hsa_queue_add_write_index_acq_rel(
+uint64_t HSA_API hsa_queue_add_write_index_scacq_screl(
     const hsa_queue_t *queue,
     uint64_t value);
 
 /**
- * @copydoc hsa_queue_add_write_index_acq_rel
+ * @deprecated Use ::hsa_queue_add_write_index_scacquire instead.
+ *
+ * @copydoc hsa_queue_add_write_index_scacquire
  */
 uint64_t HSA_API hsa_queue_add_write_index_acquire(
     const hsa_queue_t *queue,
     uint64_t value);
 
 /**
- * @copydoc hsa_queue_add_write_index_acq_rel
+ * @copydoc hsa_queue_add_write_index_scacq_screl
+ */
+uint64_t HSA_API hsa_queue_add_write_index_scacquire(
+    const hsa_queue_t *queue,
+    uint64_t value);
+
+/**
+ * @copydoc hsa_queue_add_write_index_scacq_screl
  */
 uint64_t HSA_API hsa_queue_add_write_index_relaxed(
     const hsa_queue_t *queue,
     uint64_t value);
 
 /**
- * @copydoc hsa_queue_add_write_index_acq_rel
+ * @deprecated Use ::hsa_queue_add_write_index_screlease instead.
+ *
+ * @copydoc hsa_queue_add_write_index_screlease
  */
 uint64_t HSA_API hsa_queue_add_write_index_release(
+    const hsa_queue_t *queue,
+    uint64_t value);
+
+/**
+ * @copydoc hsa_queue_add_write_index_scacq_screl
+ */
+uint64_t HSA_API hsa_queue_add_write_index_screlease(
     const hsa_queue_t *queue,
     uint64_t value);
 
@@ -1780,9 +2108,18 @@ void HSA_API hsa_queue_store_read_index_relaxed(
     uint64_t value);
 
 /**
- * @copydoc hsa_queue_store_read_index_relaxed
+ * @deprecated Use ::hsa_queue_store_read_index_screlease instead.
+ *
+ * @copydoc hsa_queue_store_read_index_screlease
  */
 void HSA_API hsa_queue_store_read_index_release(
+    const hsa_queue_t *queue,
+    uint64_t value);
+
+/**
+ * @copydoc hsa_queue_store_read_index_relaxed
+ */
+void HSA_API hsa_queue_store_read_index_screlease(
    const hsa_queue_t *queue,
    uint64_t value);
 /** @} */
@@ -1879,6 +2216,10 @@ typedef enum {
    * sees any data previously released at the scopes specified by the acquire
    * fence. The value of this sub-field must be one of ::hsa_fence_scope_t.
    */
+   HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE = 9,
+   /**
+    * @deprecated Use ::HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE instead.
+    */
    HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE = 9,
   /**
    * Release fence scope, The value of this sub-field determines the scope and
@@ -1889,6 +2230,10 @@ typedef enum {
    * kernel agent visible in all the scopes specified by the release fence. The
    * value of this sub-field must be one of ::hsa_fence_scope_t.
    */
+   HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE = 11,
+   /**
+    * @deprecated Use ::HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE instead.
+    */
    HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE = 11
  } hsa_packet_header_t;
 
@@ -1898,7 +2243,15 @@ typedef enum {
  typedef enum {
    HSA_PACKET_HEADER_WIDTH_TYPE = 8,
    HSA_PACKET_HEADER_WIDTH_BARRIER = 1,
+   HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE = 2,
+   /**
+    * @deprecated Use HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE instead.
+    */
    HSA_PACKET_HEADER_WIDTH_ACQUIRE_FENCE_SCOPE = 2,
+   HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE = 2,
+   /**
+    * @deprecated Use HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE instead.
+    */
    HSA_PACKET_HEADER_WIDTH_RELEASE_FENCE_SCOPE = 2
  } hsa_packet_header_width_t;
 
@@ -2902,11 +3255,10 @@ typedef enum {
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is an invalid
- * code object attribute, or @p value is NULL.
- *
  * @retval ::HSA_STATUS_ERROR_INVALID_CODE_OBJECT @p code_object is invalid.
  *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is an invalid
+ * code object attribute, or @p value is NULL.
  */
 hsa_status_t HSA_API hsa_code_object_get_info(
     hsa_code_object_t code_object,
@@ -2924,6 +3276,8 @@ typedef struct hsa_code_symbol_s {
 } hsa_code_symbol_t;
 
 /**
+ * @deprecated Use ::hsa_code_object_get_symbol_from_name instead.
+ *
  * @brief Get the symbol handle within a code object for a given a symbol name.
  *
  * @param[in] code_object Code object.
@@ -2949,6 +3303,39 @@ typedef struct hsa_code_symbol_s {
  */
 hsa_status_t HSA_API hsa_code_object_get_symbol(
     hsa_code_object_t code_object,
+    const char *symbol_name,
+    hsa_code_symbol_t *symbol);
+
+/**
+ * @brief Get the symbol handle within a code object for a given a symbol name.
+ *
+ * @param[in] code_object Code object.
+ *
+ * @param[in] module_name Module name. Must be NULL if the symbol has
+ * program linkage.
+ *
+ * @param[in] symbol_name Symbol name.
+ *
+ * @param[out] symbol Memory location where the HSA runtime stores the symbol
+ * handle.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_CODE_OBJECT @p code_object is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_SYMBOL_NAME There is no symbol with a name
+ * that matches @p symbol_name.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p symbol_name is NULL, or
+ * @p symbol is NULL.
+ *
+ */
+hsa_status_t HSA_API hsa_code_object_get_symbol_from_name(
+    hsa_code_object_t code_object,
+    const char *module_name,
     const char *symbol_name,
     hsa_code_symbol_t *symbol);
 
@@ -3006,8 +3393,11 @@ typedef enum {
    */
   HSA_CODE_SYMBOL_INFO_VARIABLE_SEGMENT = 7,
   /**
-   * Alignment of the variable. The value of this attribute is undefined if the
-   * symbol is not a variable. The type of this attribute is uint32_t.
+   * Alignment of the symbol in memory. The value of this attribute is undefined
+   * if the symbol is not a variable. The type of this attribute is uint32_t.
+   *
+   * The current alignment of the variable in memory may be greater than the
+   * value specified in the source program variable declaration.
    */
   HSA_CODE_SYMBOL_INFO_VARIABLE_ALIGNMENT = 8,
   /**
@@ -3076,6 +3466,7 @@ typedef enum {
   HSA_CODE_SYMBOL_INFO_INDIRECT_FUNCTION_CALL_CONVENTION = 16
 } hsa_code_symbol_info_t;
 
+
 /**
  * @brief Get the current value of an attribute for a given code symbol.
  *
@@ -3091,6 +3482,8 @@ typedef enum {
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_CODE_SYMBOL The code symbol is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is an invalid
  * code symbol attribute, or @p value is NULL.
@@ -3623,8 +4016,11 @@ typedef enum {
    */
   HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_SEGMENT = 7,
   /**
-   * Alignment of the variable. The value of this attribute is undefined if
-   * the symbol is not a variable. The type of this attribute is uint32_t.
+   * Alignment of the symbol in memory. The value of this attribute is undefined
+   * if the symbol is not a variable. The type of this attribute is uint32_t.
+   *
+   * The current alignment of the variable in memory may be greater than the
+   * value specified in the source program variable declaration.
    */
   HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ALIGNMENT = 8,
   /**
@@ -3729,6 +4125,9 @@ typedef enum {
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_EXECUTABLE_SYMBOL The executable symbol is
+ * invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is an invalid
  * executable symbol attribute, or @p value is NULL.
