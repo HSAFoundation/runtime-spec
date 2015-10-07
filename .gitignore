@@ -1,0 +1,14 @@
+*.log
+*.aux
+*.out
+*.toc
+*.idx
+*.ilg
+*.ind
+*.toc
+*.fls
+*.pdf
+*.fdb_latexmk
+*/altlatex
+*/html
+*/xml
