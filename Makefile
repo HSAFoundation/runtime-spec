@@ -9,7 +9,7 @@ else
    RM = rm -Rf
    CP = cp -i -u
    MKDIR = mkdir -p
-   PYTHON = python2.7
+   PYTHON = python2
 endif
 
 ifneq ("$(wildcard main-diff.tex)","")
@@ -77,8 +77,9 @@ main-diff.tex: main-all.tex main-all-prev.tex
 # Generate one Latex file out of resolving all \include tags in a given main
 # file. This is is needed because `latexdiff --flatten` requires all included
 # files to be in the same directory as the main doc.
-main-all.tex: main.tex
+main-all.tex: main.tex listingexpand.py
 	latexpand main.tex > main-all.tex
+	$(PYTHON) listingexpand.py main-all.tex
 
 clean:
 	@latexmk -silent -C main

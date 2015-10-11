@@ -23,7 +23,7 @@ def main():
       print('OK')
       continue
     output.write('\\makeatletter')
-    output.write('\\newcommand{\\lstinputfunlisting}[2][0]{\\ifnum\\pdf@strcmp{#2}{blablablablabla}=0 blablablablabla')
+    output.write('\\newcommand{\\lstinputfunlisting}[2][0]{\\ifnum\\pdf@strcmp{#2}{blablablablabla}=0 blablablablabla\n')
     for fun in funs:
       name = fun.find('name')
       location = fun.find('location')

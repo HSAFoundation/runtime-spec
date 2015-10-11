@@ -48,6 +48,8 @@ typedef struct BrigModuleHeader* BrigModule_t;
 
 /**
  * @brief Enumeration constants added to ::hsa_status_t by this extension.
+ *
+ * @remark Additions to hsa_status_t
  */
 enum {
   /**
@@ -1290,6 +1292,8 @@ hsa_status_t HSA_API hsa_ext_sampler_destroy(
 
 /**
  * @brief Enumeration constants added to ::hsa_status_t by this extension.
+ *
+ * @remark Additions to hsa_status_t
  */
 enum {
     /**
@@ -1306,6 +1310,9 @@ enum {
  * @brief Enumeration constants added to ::hsa_agent_info_t by this
  * extension. The value of any of these attributes is undefined if the
  * agent is not a kernel agent, or the implementation does not support images.
+ *
+ * @remark Additions to hsa_agent_info_t
+
  */
 enum {
   /**

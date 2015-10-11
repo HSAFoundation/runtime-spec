@@ -197,7 +197,7 @@
 % clear all header and footer fields
 \fancyhf{}
 \rfoot{\scriptsize{\color{Gray} \thepage}}
-\lfoot{\scriptsize{\color{Gray}\doctitle$\:$v1.01$\:$}}
+\lfoot{\scriptsize{\color{Gray}\doctitle, Version 1.1}}
 \lhead{\scriptsize{\color{Gray}\nouppercase{\tidyhdr{\leftmark}{\rightmark}}}}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{.5pt}
@@ -257,10 +257,10 @@
 \vspace*{7cm}
 \begin{center}
 {\Huge \color{Cerulean}{\doctitle}\\[7cm]}
-{\small Revision: Version 1.01 $\bullet$ Issue Date: \today}\\ % remember to change footer version too!
+{\small Revision: Version 1.1 $\bullet$ Issue Date: \today}\\ % remember to change footer version too!
 \end{center}
 \end{titlepage}
-\thispagestyle{empty} {\textcopyright 2013-2015 HSA Foundation. All rights
+\thispagestyle{empty} {\textcopyright 2013-\the\year $\:$HSA Foundation. All rights
   reserved.}
 
 
@@ -548,7 +548,7 @@ hsa_iterate_agents(get_kernel_agent, &kernel_agent);
 \end{lstlisting}
 where the application-provided callback \textit{get_kernel_agent} is:
 
-\lstinputfunlisting{get_kernel_agent}
+\lstinputfunlisting[0]{get_kernel_agent}
 
 Section~\ref{sec:agentinfo} lists the set of available agent and
 system-wide attributes, and describes the functions to query them.
@@ -1042,7 +1042,7 @@ be the newly created signal, and after notifying the packet processor it waits
 for the signal value to become zero. The decrement is performed by the packet
 processor, and indicates that the kernel has finished.
 
-\lstinputfunlisting{simple_dispatch}
+\lstinputfunlisting[0]{simple_dispatch}
 
 The definitions of the helper functions (such as initialize_packet) are listed
 in Section~\ref{dispatch-packet}.
@@ -1061,7 +1061,7 @@ hsa_queue_create(kernel_agent, 4, HSA_QUEUE_TYPE_SINGLE, callback, NULL, UINT32_
 
 The callback prints the ID of the problematic queue, and the string associated
 with the asynchronous event:
-\lstinputfunlisting{callback}
+\lstinputfunlisting[0]{callback}
 Let's now assume that the application makes a mistake and submits an invalid
 packet to the queue. For example, the AQL packet type is set to an invalid
 value. When the packet processor encounters this packet, it will trigger an
@@ -1086,7 +1086,7 @@ scenario:
 
 We start by finding a kernel agent that allows applications to create queues
 supporting multiple producers:
-\lstinputfunlisting{get_multi_kernel_agent}
+\lstinputfunlisting[0]{get_multi_kernel_agent}
 
 , and then creating a queue on it. The queue type is now
 \hsaref{HSA_QUEUE_TYPE_MULTI} instead of \hsaref{HSA_QUEUE_TYPE_SINGLE}.
@@ -1099,7 +1099,7 @@ hsa_queue_create(kernel_agent, 4, HSA_QUEUE_TYPE_MULTI, callback, NULL, UINT32_M
 Each CPU thread submits 1,000 kernel dispatch packets by executing the function
 listed below. For simplicity, we omitted the code that creates the CPU threads.
 
-\lstinputfunlisting{enqueue}
+\lstinputfunlisting[0]{enqueue}
 
 \subsection{API}
 \input{api/altlatex/group-queue}
@@ -1159,23 +1159,23 @@ of a kernel that receives no arguments (the
 \hsaref{hsa_kernel_dispatch_packet_t.kernarg_address} field is NULL). The
 dispatch uses 256 work-items, all in the same work-group along the X dimension.
 
-\lstinputfunlisting{initialize_packet}
+\lstinputfunlisting[0]{initialize_packet}
 
 The definition of the function that atomically sets the first 32 bits of an AQL
 packet (the header and setup fields, in the case of a kernel dispatch packet)
 depends on the library used by the application to perform atomic memory
 updates. In GCC, a possible definition would be
 
-\lstinputfunlisting{packet_store_release}
+\lstinputfunlisting[0]{packet_store_release}
 
 The header is built using the following function:
 
-\lstinputfunlisting{header}
+\lstinputfunlisting[0]{header}
 
 The \hsaref{hsa_kernel_dispatch_packet_t.setup} contents indicate that the
 dispatch uses one dimension:
 
-\lstinputfunlisting{kernel_dispatch_setup}
+\lstinputfunlisting[0]{kernel_dispatch_setup}
 
 \subsection{Agent dispatch packet}\label{agent-packet}
 
@@ -1230,10 +1230,10 @@ agent is the application running on the CPU, and the service is memory
 allocation.
 
 The application starts by finding the CPU agent:
-\lstinputfunlisting{get_cpu_agent}
+\lstinputfunlisting[0]{get_cpu_agent}
 
 , and the associated fine-grained memory region:
-\lstinputfunlisting{get_fine_grained_region}
+\lstinputfunlisting[0]{get_fine_grained_region}
 
 Afterwards, the application creates the soft queue where the allocation requests
 will be enqueued: \lstinputfunlisting[1]{create_soft_queue} Note how
@@ -1263,7 +1263,7 @@ waits for the value of the doorbell signal in the soft queue to be monotonically
 increased. When that happens, the thread processes the allocation request by
 invoking malloc.
 
-\lstinputfunlisting{process_agent_dispatch}
+\lstinputfunlisting[0]{process_agent_dispatch}
 
 In practice, processing of agent dispatch packets is usually more complex
 because the consumer has to take into account multiple-producer scenarios.
@@ -1297,7 +1297,7 @@ be simultaneously used as \begin{inparaenum}[1\upshape)] \item the completion
 enforces the task dependency by not launching $packet\_b$ until $packet\_a$ has
 completed. The following example illustrates how to programmatically express the
 described dependency using the HSA API.
-\lstinputfunlisting{barrier}
+\lstinputfunlisting[0]{barrier}
 
 \subsection{Packet states}\label{packet-states}
 
@@ -1503,7 +1503,7 @@ determined by the finalizer, for simplicity we will assume that it matches the
 size of a signal handle.
 \lstinputfunlisting[1]{populate_kernarg}
 The definition of \textit{get_kernarg} is:
-\lstinputfunlisting{get_kernarg}
+\lstinputfunlisting[0]{get_kernarg}
 The rest of the dispatch process remains the same.
 
 \subsection{Readonly memory}
@@ -1554,8 +1554,8 @@ execution of a kernel, by populating the
 dispatch packet.
 
 The actual allocation of group and private memory happens automatically, before
-a kernel starts execution. The application must ensure that the request amount
-of group memory per work-group does not exceed the maximum allocation size
+a kernel starts execution. The application must ensure that the amount of group
+memory requested per work-group does not exceed the maximum allocation size
 declared by the kernel agent where the kernel dispatch packet is enqueued, which
 is the value of the \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} attribute in the
 group region associated with that kernel agent. Similarly, the private memory

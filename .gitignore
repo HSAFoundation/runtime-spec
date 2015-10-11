@@ -1,3 +1,5 @@
+main-diff.tex
+main-all-prev.tex
 *.log
 *.aux
 *.out
@@ -12,3 +14,4 @@
 */altlatex
 */html
 */xml
+public

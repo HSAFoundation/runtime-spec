@@ -1,9 +1,27 @@
-2014-04-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+2015-10-11  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 226 - [Signals] Change signal value without waking up
+	consumer
+	* Bug 529 - Runtime queries (deprecated
+	HSA_AGENT_INFO_WAVEFRONT_SIZE, added attributes
+	HSA_CODE_SYMBOL_INFO_KERNEL_CALL_CONVENTION and
+	HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_CALL_CONVENTION to figure out
+	the call convention of a kernel)
+	* Bug 530 - Grid max size increased to 2^64 - 1
+	* HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE and
+	HSA_CODE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_ALIGNMENT must be
+	multiples of 16
+	* Added clarification to hsa_memory_copy: the buffers should not
+	overlap
+	* Added clarification: HSA_ISA_INFO_CALL_CONVENTION_COUNT should
+	be greater than oenat
+
+2015-04-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 465 - Rename runtime api functions that specify memory order
 	to clarify they are scacquire and screlease
 
-2014-04-01  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+2015-04-01  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 464 - Avoid using enumeration type is hsa_queue_t definition
 	* Bug 465 - Rename runtime api functions that specify memory order
@@ -16,7 +34,7 @@
 	* Bug 478 - Error in kernel dispatch example
 	* Converging document's format with public PDF version
 
-2014-03-09  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+2015-03-09  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 430 - Require lifetime of code object to be no shorter than
 	lifetime of executables into which it is loaded
@@ -31,17 +49,17 @@
 	* Bug 456 - Switch hsa_ext_module_t from opaque handle to a
 	pointer to Brig in memory
 
-2014-02-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+2015-02-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* 1.00 final related cleanup: removed date from footer, added
 	missing acknowledgments
 
-2014-01-30  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+2015-01-30  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 394 - Incorrect example in section 2.6.1.1 for packet
 	initialisation
 
-2014-01-19  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+2015-01-19  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 353 - [Extensions] Extensions interface versioning
 	* Bug 391 - Clarify the differences between isa and kernel agent
@@ -51,7 +69,7 @@
 	depends on endianness or will overwrite header bits
 	* Bug 399 - Rename hsa_variable_linkage_t to hsa_symbol_linkage_t
 
-2014-01-16  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+2015-01-16  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 345 - [Signals] "signal" argument in HSA APIs that create
 	and destroy signals

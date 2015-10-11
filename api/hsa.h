@@ -605,6 +605,10 @@ typedef enum {
      */
   HSA_AGENT_INFO_FAST_F16_OPERATION = 24,
   /**
+   *
+   * @deprecated The wavefront size should be obtained by querying the value of
+   * ::HSA_ISA_INFO_CALL_CONVENTION_INFO_WAVEFRONT_SIZE instead.
+   *
    * Number of work-items in a wavefront. Must be a power of 2 in the range
    * [1,256]. The value of this attribute is undefined if the agent is not
    * a kernel agent. The type of this attribute is uint32_t.
@@ -628,17 +632,25 @@ typedef enum {
    * Maximum number of work-items of each dimension of a grid. Each maximum must
    * be greater than 0, and must not be smaller than the corresponding value in
    * ::HSA_AGENT_INFO_WORKGROUP_MAX_DIM. No maximum can exceed the value of
-   * ::HSA_AGENT_INFO_GRID_MAX_SIZE. The value of this attribute is undefined if
-   * the agent is not a kernel agent. The type of this attribute is
+   * ::HSA_AGENT_INFO_GRID_MAX_SIZE64. The value of this attribute is undefined
+   * if the agent is not a kernel agent. The type of this attribute is
    * ::hsa_dim3_t.
    */
   HSA_AGENT_INFO_GRID_MAX_DIM = 9,
   /**
+   * @deprecated Use ::HSA_AGENT_INFO_GRID_MAX_SIZE64 instead.
+   *
    * Maximum total number of work-items in a grid. The value of this attribute
    * is undefined if the agent is not a kernel agent. The type of this
    * attribute is uint32_t.
    */
   HSA_AGENT_INFO_GRID_MAX_SIZE = 10,
+  /**
+   * Maximum total number of work-items in a grid. The value of this attribute
+   * is undefined if the agent is not a kernel agent. The type of this
+   * attribute is uint64_t.
+   */
+  HSA_AGENT_INFO_GRID_MAX_SIZE64 = 25,
   /**
    * Maximum number of fbarriers per work-group. Must be at least 32. The value
    * of this attribute is undefined if the agent is not a kernel agent. The
@@ -981,6 +993,31 @@ void HSA_API hsa_signal_store_release(
  * @copydoc hsa_signal_store_relaxed
  */
 void HSA_API hsa_signal_store_screlease(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+
+/**
+ * @brief Atomically set the value of a signal without necessarily notifying the
+ * the agents waiting on it.
+ *
+ * @details The agents waiting on @p signal may not wake up even when the new
+ * value satisfies their wait condition. If the application wants to update the
+ * signal and there is no need to notify any agent, invoking this function can
+ * be more efficient than calling the non-silent counterpart.
+ *
+ * @param[in] signal Signal.
+ *
+ * @param[in] value New signal value.
+ */
+void HSA_API hsa_signal_silent_store_relaxed(
+    hsa_signal_t signal,
+    hsa_signal_value_t value);
+
+/**
+ * @copydoc hsa_signal_silent_store_relaxed
+ */
+void HSA_API hsa_signal_silent_store_screlease(
     hsa_signal_t signal,
     hsa_signal_value_t value);
 
@@ -2739,11 +2776,13 @@ hsa_status_t HSA_API hsa_memory_allocate(hsa_region_t region,
 hsa_status_t HSA_API hsa_memory_free(void* ptr);
 
 /**
- * @brief Copy a block of memory.
+ * @brief Copy a block of memory from the location pointed to by @p src to the
+ * memory block pointed to by @p dst.
  *
  * @param[out] dst Buffer where the content is to be copied.
  *
- * @param[in] src A valid pointer to the source of data to be copied.
+ * @param[in] src A valid pointer to the source of data to be copied. The source
+ * buffer must not overlap with the destination buffer.
  *
  * @param[in] size Number of bytes to copy. If @p size is 0, no copy is
  * performed and the function returns success. Copying a number of bytes larger
@@ -2990,7 +3029,7 @@ typedef enum {
   HSA_ISA_INFO_NAME = 1,
   /**
    * Number of call conventions supported by the instruction set architecture.
-   * The type of this attribute is uint32_t.
+   * Must be greater than zero. The type of this attribute is uint32_t.
    */
   HSA_ISA_INFO_CALL_CONVENTION_COUNT = 2,
   /**
@@ -3267,6 +3306,10 @@ hsa_status_t HSA_API hsa_code_object_get_info(
 
 /**
  * @brief Code object symbol.
+ *
+ * The lifetime of a code object symbol matches that of the code object
+ * associated with it. An operation on a symbol whose associated code object has
+ * been destroyed results in undefined behavior.
  */
 typedef struct hsa_code_symbol_s {
   /**
@@ -3416,8 +3459,9 @@ typedef enum {
   HSA_CODE_SYMBOL_INFO_VARIABLE_IS_CONST = 10,
   /**
    * Size of kernarg segment memory that is required to hold the values of the
-   * kernel arguments, in bytes. The value of this attribute is undefined if the
-   * symbol is not a kernel. The type of this attribute is uint32_t.
+   * kernel arguments, in bytes. Must be a multiple of 16. The value of this
+   * attribute is undefined if the symbol is not a kernel. The type of this
+   * attribute is uint32_t.
    */
   HSA_CODE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE = 11,
   /**
@@ -3458,6 +3502,11 @@ typedef enum {
    * functions, or the HSAIL alloca instruction are present in the kernel.
    */
   HSA_CODE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK = 15,
+  /**
+   * Call convention of the kernel. The value of this attribute is undefined if
+   * the symbol is not a kernel. The type of this attribute is uint32_t.
+   */
+  HSA_CODE_SYMBOL_INFO_KERNEL_CALL_CONVENTION = 18,
   /**
    * Call convention of the indirect function. The value of this attribute is
    * undefined if the symbol is not an indirect function. The type of this
@@ -3897,6 +3946,10 @@ hsa_status_t HSA_API hsa_executable_validate(
 
 /**
  * @brief Executable symbol.
+ *
+ * The lifetime of an executable object symbol matches that of the executable
+ * associated with it. An operation on a symbol whose associated executable has
+ * been destroyed results in undefined behavior.
  */
 typedef struct hsa_executable_symbol_s {
   /**
@@ -4048,8 +4101,9 @@ typedef enum {
   HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT = 22,
   /**
    * Size of kernarg segment memory that is required to hold the values of the
-   * kernel arguments, in bytes. The value of this attribute is undefined if the
-   * symbol is not a kernel. The type of this attribute is uint32_t.
+   * kernel arguments, in bytes. Must be a multiple of 16. The value of this
+   * attribute is undefined if the symbol is not a kernel. The type of this
+   * attribute is uint32_t.
    */
   HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE = 11,
   /**
@@ -4090,6 +4144,11 @@ typedef enum {
    * functions, or the HSAIL alloca instruction are present in the kernel.
    */
   HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK = 15,
+  /**
+   * Call convention of the kernel. The value of this attribute is undefined if
+   * the symbol is not a kernel. The type of this attribute is uint32_t.
+   */
+  HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_CALL_CONVENTION = 18,
   /**
    * Indirect function object handle. The value of this attribute is undefined
    * if the symbol is not an indirect function, or the associated agent does

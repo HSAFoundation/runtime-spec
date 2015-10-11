@@ -328,8 +328,10 @@ def check_name(enumname,valname):
 def process_enum(enum, tex, defs):
   typename = node2tex(enum.find('name'))
   # anonymous enums start with @
-  typename = '' if typename.startswith("@") else typename
-  tex.write('\\subsubsection{' + typename + '}\n')
+  anonymous =  typename.startswith("@")
+  typename = '' if anonymous else typename
+  section_title = node2tex(enum.find('.//simplesect[@kind="remark"]/para')) if anonymous else typename
+  tex.write('\\subsubsection{' + section_title + '}\n')
 
   vals = []
   valsdescs = []
@@ -341,7 +343,8 @@ def process_enum(enum, tex, defs):
       deprecated.append(('enumvalue', val))
       continue
     valname = node2tex(val.find('name'))
-    check_name(typename, valname)
+    if not anonymous:
+      check_name(typename, valname)
     typename_id[valname] = val.get('id')
     defs.append(('refenu', valname))
     valtxt = "\\hspace{1.7em}\\hypertarget{" + val.get('id') + "}{"
@@ -604,7 +607,7 @@ def print_deprecated_table_type(tex, type):
 
 
 def print_deprecated_table():
-  with open(os.path.join("altlatex", 'deprecated'), "w+") as tex:
+  with open(os.path.join("altlatex", 'deprecated.tex'), "w+") as tex:
     tex.write('\\section{Enumeration Constants}')
     print_deprecated_table_type(tex, 'enumvalue')
     tex.write('\\section{Functions}')
