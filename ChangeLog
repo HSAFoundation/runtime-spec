@@ -14,7 +14,7 @@
 	* Added clarification to hsa_memory_copy: the buffers should not
 	overlap
 	* Added clarification: HSA_ISA_INFO_CALL_CONVENTION_COUNT should
-	be greater than oenat
+	be greater than one
 
 2015-04-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
