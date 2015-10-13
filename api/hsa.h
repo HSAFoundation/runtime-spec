@@ -3669,9 +3669,9 @@ hsa_status_t HSA_API hsa_executable_destroy(
  * @brief Load code object into the executable.
  *
  * @details Every global/readonly variable that is external must be defined
- * using define set of operations before loading code objects. Internal
- * global/readonly variable is allocated once the code object, that is being
- * loaded, references this variable and this variable is not allocated.
+ * before loading the code object. Internal global/readonly variable is
+ * allocated once the code object, that is being loaded, references this
+ * variable and this variable is not allocated.
  *
  * Any module linkage declaration must have been defined either by a define
  * variable or by loading a code object that has a symbol with module linkage
