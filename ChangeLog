@@ -1,3 +1,7 @@
+2015-10-14  Simon Brand  <simon@codeplay.com>
+	
+	* Added drafts of Performance Counter and Events API
+
 2015-10-11  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 226 - [Signals] Change signal value without waking up
