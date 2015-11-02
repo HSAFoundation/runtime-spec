@@ -1,4 +1,4 @@
-.PHONY: all clean diff checkversion checkprev dist
+.PHONY: all clean diff checkversion main-all-prev main-all dist
 
 ifeq ($(OS),Windows_NT)
    RM = del /Q
@@ -32,7 +32,7 @@ TMPDIST:=public/$(DISTNAME)
 
 all : $(EXAMPLES) $(LISTINGS) main.pdf
 
-diff : all main-diff.pdf
+diff : main-diff.pdf
 
 checkversion :
 	$(if $(HSA_VERSION),,$(error Error: variable HSA_VERSION is not set))
@@ -40,19 +40,17 @@ checkversion :
 # Generate the public files
 # Ex: make HSA_VERSION=1_01 dist
 dist : checkversion diff
-	$(CP) main-all-new.tex main-all.tex
-	git add main-all.tex
 	$(MKDIR) $(TMPDIST)/include/hsa
 	$(CP) main.pdf $(TMPDIST)/$(DISTNAME).pdf
 	$(CP) main-diff.pdf $(TMPDIST)/$(DISTNAME)_diff.pdf
-	$(CP) main-all-new.tex $(TMPDIST)/$(DISTNAME).tex
+	$(CP) main-all.tex $(TMPDIST)/$(DISTNAME).tex
 	$(CP) ChangeLog $(TMPDIST)
 	$(CP) api/hsa.h $(TMPDIST)/include/hsa
 	$(CP) api/hsa_ext.h $(TMPDIST)/include/hsa
 	cd public && zip -r -9 $(DISTNAME) $(DISTNAME)
 	$(RM) $(TMPDIST)
 
-%.pdf: $(DOXYLATEX) %.tex
+%.pdf: %.tex
 	latexmk -g -xelatex -use-make $*.tex
 
 $(EXAMPLES): example/examples.cc example/lstinputfunlisting.py
@@ -65,19 +63,29 @@ $(LISTINGS): api/hsa.h api/hsa_ext.h api/xml2tex.py
 	cd api && $(PYTHON) xml2tex.py
 
 # Diff previous and current version of the document. The result is another Latex
-# file. The current version is expected to be named main-all-new.tex
-main-diff.tex: main-all-new.tex
-	./latexdiff-1.1.0.pl -t UNDERLINE --append-safecmd="hypertarget,hyperlink,reffun,refarg,reffld,reftyp,refenu,refhsl" --exclude-textcmd="chapter,section,subsection,subsubsection" --config="PICTUREENV=(?:picture|DIFnomarkup|tikzpicture|lstlisting|figure)[\w\d*@]*" main-all.tex main-all-new.tex  > main-diff.tex
+# file. The current version is expected to be named main-all.tex
+main-diff.tex: main-all-prev main-all.tex
+	./latexdiff-1.1.0-so.pl -t UNDERLINE --append-safecmd="hypertarget,hyperlink,reffun,refarg,reffld,reftyp,refenu,refhsl" --exclude-textcmd="chapter,section,subsection,subsubsection" --config="PICTUREENV=(?:picture|DIFnomarkup|tikzpicture|lstlisting|figure)[\w\d*@]*" main-all-prev.tex main-all.tex  > main-diff.tex
+
+main-all-prev:
+	git stash
+	git checkout $(COMMIT)
+	make clean main-all.tex
+	$(CP) main-all.tex main-all-prev.tex
+	git checkout master
+	git stash pop
 
 # Generate one Latex file out of resolving all \include tags in a given main
 # file. This is is needed because `latexdiff --flatten` requires all included
 # files to be in the same directory as the main doc.
-main-all-new.tex: main.tex listingexpand.py
-	latexpand main.tex > main-all-new.tex
-	$(PYTHON) listingexpand.py main-all-new.tex
+main-all.tex: $(EXAMPLES) $(LISTINGS) main.tex listingexpand.py
+	latexpand main.tex > main-all.tex
+	$(PYTHON) listingexpand.py main-all.tex
 
 clean:
 	@latexmk -silent -C main
+	@$(RM) main-all.tex
+	@$(RM) main-all-prev.tex
 	@$(RM) main-all-new.tex
         # latexdiff fails if the specified tex input does not exist, but the
         # diff file only exists if 'make diff' was previously invoked.
