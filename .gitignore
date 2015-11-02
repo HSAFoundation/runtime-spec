@@ -1,5 +1,6 @@
 main-diff.tex
-main-all-new.tex
+main-all.tex
+main-all-prev.tex
 *.log
 *.aux
 *.out
