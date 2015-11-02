@@ -1,5 +1,18 @@
+2015-11-01  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+	* Bug 534 - Image extension query issues
+	* Bug 559 - hsa_executable_[agent_]global_variable_define address
+	parameter clarification
+	* Bug 561 - [Agent and System Information, Queues] Remove
+	HSA_AGENT_INFO_QUEUES_MAX
+	* Bug 562 - [Agent and System Information] Remove
+	HSA_AGENT_INFO_NODE
+	* Bug 570 - Clarify HSA_REGION_INFO_SIZE for a private segment
+	region
+	* Bug 571 - Clarify how private segment size is specified in a
+	dispatch packet
+
 2015-10-14  Simon Brand  <simon@codeplay.com>
-	
+
 	* Added drafts of Performance Counter and Events API
 
 2015-10-11  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>

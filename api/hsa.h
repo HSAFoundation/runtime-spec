@@ -658,6 +658,8 @@ typedef enum {
    */
   HSA_AGENT_INFO_FBARRIER_MAX_SIZE = 11,
   /**
+   * @deprecated
+   *
    * Maximum number of queues that can be active (created but not destroyed) at
    * one time in the agent. The type of this attribute is uint32_t.
    */
@@ -681,6 +683,8 @@ typedef enum {
    */
   HSA_AGENT_INFO_QUEUE_TYPE = 15,
   /**
+   * @deprecated
+   *
    * Identifier of the NUMA node associated with the agent. The type of this
    * attribute is uint32_t.
    */
@@ -2643,8 +2647,8 @@ typedef enum {
    * size that the application can pass to ::hsa_memory_allocate. If the region
    * is in the group segment, this is the maximum size (per work-group) that can
    * be requested for a given kernel dispatch. If the region is in the private
-   * segment, this is the maximum size (per work-item) that can be request for a
-   * specific kernel dispatch.
+   * segment, this is the maximum size available to all the work-items in a
+   * kernel dispatch.
    */
   HSA_REGION_INFO_ALLOC_MAX_SIZE = 4,
   /**
@@ -3799,9 +3803,10 @@ hsa_status_t HSA_API hsa_executable_get_info(
  *
  * @param[in] variable_name Name of the variable.
  *
- * @param[in] address Address where the variable is defined. The buffer pointed
- * by @p address is owned by the application, and cannot be deallocated before
- * @p executable is destroyed.
+ * @param[in] address Address where the variable is defined. This address must
+ * be in global memory and can be read and written by any agent in the
+ * system. The application cannot deallocate the buffer pointed by @p address
+ * before @p executable is destroyed.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -3842,9 +3847,10 @@ hsa_status_t HSA_API hsa_executable_global_variable_define(
  *
  * @param[in] variable_name Name of the variable.
  *
- * @param[in] address Address where the variable is defined. The buffer pointed
- * by @p address is owned by the application, and cannot be deallocated before
- * @p executable is destroyed.
+ * @param[in] address Address where the variable is defined. This address must
+ * have been previously allocated using ::hsa_memory_allocate in a global region
+ * that is only visible to @p agent. The application cannot deallocate the
+ * buffer pointed by @p address before @p executable is destroyed.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -3887,6 +3893,11 @@ hsa_status_t HSA_API hsa_executable_agent_global_variable_define(
  * @param[in] agent Agent for which the variable is being defined.
  *
  * @param[in] variable_name Name of the variable.
+ *
+ * @param[in] address Address where the variable is defined. This address must
+ * have been previously allocated using ::hsa_memory_allocate in a readonly
+ * region associated with @p agent. The application cannot deallocate the buffer
+ * pointed by @p address before @p executable is destroyed.
  *
  * @param[in] address Address where the variable is defined. The buffer pointed
  * by @p address is owned by the application, and cannot be deallocated before

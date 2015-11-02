@@ -1140,7 +1140,8 @@ agent. The packet contains the following bits of information:
   the storage requirements in the
   \hsaref{hsa_kernel_dispatch_packet_t.group_segment_size} and
   \hsaref{hsa_kernel_dispatch_packet_t.private_segment_size} fields,
-  respectively.
+  respectively. If the kernel uses a dynamic call stack then the private segment
+  size must be increased by a suitable, implementation-specific amount.
 \end{itemize}
 
 The application must rely on information provided by the finalizer to retrieve
@@ -1150,7 +1151,9 @@ exposes the kernarg
 (\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE}), group
 (\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE}) and private
 (\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE}) static storage
-requirements.
+requirements, together with an indication
+(\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK}) if a dynamic call
+stack is used.
 
 \subsubsection{Example: populating the kernel dispatch packet}
 Examples of kernel dispatches in previous sections have omitted the setup of the
@@ -1352,9 +1355,9 @@ diagram.
   \item[\hsaref{HSA_STATUS_ERROR_INVALID_PACKET_FORMAT}] Malformed AQL
     packet. This can happen if, for example, the packet header type is invalid.
   \item[\hsaref{HSA_STATUS_ERROR_OUT_OF_RESOURCES}] The packet processor is
-    unable to allocate the resources required by the launch. This can happen
-    if, for example, a kernel dispatch packet requests more group memory than
-    the size of the group memory declared by the corresponding kernel agent.
+    unable to allocate the resources required by the launch. This can happen if,
+    for example, a kernel dispatch packet requests more group or private segment
+    memory than the size available on the corresponding kernel agent.
   \end{description}
 \item[Active] The execution of the packet has started.
 
@@ -1514,10 +1517,10 @@ variables that reside in readonly memory.  The contents of a readonly buffer can
 be initialized or changed from one kernel dispatch execution to another by the
 application using the copy function (\hsaref{hsa_memory_copy}).
 
-Each kernel agent exposes one or more readonly regions, which are private to
-that kernel agent. Passing a readonly buffer associated with one agent in a
-kernel dispatch packet that is executed to a different agent results in
-undefined behavior.
+Each kernel agent must expose at least one readonly region, which is private to
+that agent. Passing a readonly buffer associated with one agent in a kernel
+dispatch packet that is executed to a different agent results in undefined
+behavior.
 
 Accesses to readonly buffers might perform better than accesses to global
 buffers on some HSA implementations. All readonly memory is persistent across
@@ -1559,8 +1562,9 @@ memory requested per work-group does not exceed the maximum allocation size
 declared by the kernel agent where the kernel dispatch packet is enqueued, which
 is the value of the \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} attribute in the
 group region associated with that kernel agent. Similarly, the private memory
-usage of a kernel dispatch packet must not exceed the value of
-\hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} for the corresponding private region.
+usage of a kernel dispatch packet (the amount of memory used by all the
+work-items) must not exceed the value of \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE}
+for the corresponding private region.
 
 \subsection{API}
 \input{api/altlatex/group-memory}

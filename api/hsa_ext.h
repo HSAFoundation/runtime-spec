@@ -1308,77 +1308,76 @@ enum {
 
 /**
  * @brief Enumeration constants added to ::hsa_agent_info_t by this
- * extension. The value of any of these attributes is undefined if the
- * agent is not a kernel agent, or the implementation does not support images.
+ * extension.
  *
  * @remark Additions to hsa_agent_info_t
 
  */
 enum {
   /**
-   * Maximum number of elements in 1D images. Must be at most 16384. The type
-   * of this attribute is uint32_t.
+   * Maximum number of elements in 1D images. Must be at least 16384. The type
+   * of this attribute is size_t.
    */
   HSA_EXT_AGENT_INFO_IMAGE_1D_MAX_ELEMENTS = 0x3000,
   /**
-   * Maximum number of elements in 1DA images. Must be at most 16384. The type
-   * of this attribute is uint32_t.
+   * Maximum number of elements in 1DA images. Must be at least 16384. The type
+   * of this attribute is size_t.
    */
   HSA_EXT_AGENT_INFO_IMAGE_1DA_MAX_ELEMENTS = 0x3001,
   /**
-   * Maximum number of elements in 1DB images. Must be at most 65536.  The type
-   * of this attribute is uint32_t.
+   * Maximum number of elements in 1DB images. Must be at least 65536.  The type
+   * of this attribute is size_t.
    */
   HSA_EXT_AGENT_INFO_IMAGE_1DB_MAX_ELEMENTS = 0x3002,
   /**
    * Maximum dimensions (width, height) of 2D images, in image elements. The X
-   * and Y maximums must be at most 16384. The type of this attribute is
-   * uint32_t[2].
+   * and Y maximums must be at least 16384. The type of this attribute is
+   * size_t[2].
    */
   HSA_EXT_AGENT_INFO_IMAGE_2D_MAX_ELEMENTS = 0x3003,
   /**
    * Maximum dimensions (width, height) of 2DA images, in image elements. The X
-   * and Y maximums must be at most 16384. The type of this attribute is
-   * uint32_t[2].
+   * and Y maximums must be at least 16384. The type of this attribute is
+   * size_t[2].
    */
   HSA_EXT_AGENT_INFO_IMAGE_2DA_MAX_ELEMENTS = 0x3004,
   /**
    * Maximum dimensions (width, height) of 2DDEPTH images, in image
-   * elements. The X and Y maximums must be at most 16384. The type of this
-   * attribute is uint32_t[2].
+   * elements. The X and Y maximums must be at least 16384. The type of this
+   * attribute is size_t[2].
    */
   HSA_EXT_AGENT_INFO_IMAGE_2DDEPTH_MAX_ELEMENTS = 0x3005,
   /**
    * Maximum dimensions (width, height) of 2DADEPTH images, in image
-   * elements. The X and Y maximums must be at most 16384. The type of this
-   * attribute is uint32_t[2].
+   * elements. The X and Y maximums must be at least 16384. The type of this
+   * attribute is size_t[2].
    */
   HSA_EXT_AGENT_INFO_IMAGE_2DADEPTH_MAX_ELEMENTS = 0x3006,
   /**
    * Maximum dimensions (width, height, depth) of 3D images, in image
-   * elements. The maximum along any dimension cannot exceed 2048. The type of
-   * this attribute is uint32_t[3].
+   * elements. The maximum along any dimension must be at least 2048. The type
+   * of this attribute is size_t[3].
    */
   HSA_EXT_AGENT_INFO_IMAGE_3D_MAX_ELEMENTS = 0x3007,
   /**
-   * Maximum number of image layers in a image array. Must not exceed 2048. The
-   * type of this attribute is uint32_t.
+   * Maximum number of image layers in a image array. Must be at least 2048. The
+   * type of this attribute is size_t.
    */
   HSA_EXT_AGENT_INFO_IMAGE_ARRAY_MAX_LAYERS = 0x3008,
   /**
    * Maximum number of read-only image handles that can be created at any one
-   * time. Must be at least 128. The type of this attribute is uint32_t.
+   * time. Must be at least 128. The type of this attribute is size_t.
    */
   HSA_EXT_AGENT_INFO_MAX_IMAGE_RD_HANDLES = 0x3009,
   /**
    * Maximum number of write-only and read-write image handles (combined) that
    * can be created at any one time. Must be at least 64. The type of this
-   * attribute is uint32_t.
+   * attribute is size_t.
    */
   HSA_EXT_AGENT_INFO_MAX_IMAGE_RORW_HANDLES = 0x300A,
   /**
    * Maximum number of sampler handlers that can be created at any one
-   * time. Must be at least 16. The type of this attribute is uint32_t.
+   * time. Must be at least 16. The type of this attribute is size_t.
    */
   HSA_EXT_AGENT_INFO_MAX_SAMPLER_HANDLERS = 0x300B
 };
@@ -1981,13 +1980,13 @@ typedef enum {
     HSA_EXT_EVENT_METADATA_TYPE_UINT32 = 0,
     HSA_EXT_EVENT_METADATA_TYPE_UINT64 = 1,
     HSA_EXT_EVENT_METADATA_TYPE_INT32 = 2,
-    HSA_EXT_EVENT_METADATA_TYPE_INT64 = 3,        
+    HSA_EXT_EVENT_METADATA_TYPE_INT64 = 3,
     HSA_EXT_EVENT_METADATA_TYPE_FLOAT = 4,
     HSA_EXT_EVENT_METADATA_TYPE_DOUBLE = 5,
     HSA_EXT_EVENT_METADATA_TYPE_STRING = 6,
-    HSA_EXT_EVENT_METADATA_TYPE_OTHER = 7,        
+    HSA_EXT_EVENT_METADATA_TYPE_OTHER = 7,
 } hsa_ext_event_metadata_type_t;
-    
+
 /**
  * A timeline event
  */
@@ -1998,13 +1997,13 @@ typedef struct hsa_ext_timeline_event_s {
   uint64_t handle;
 } hsa_ext_timeline_event_t;
 
-/** 
+/**
  * @brief An event metadata entry
  */
 
 typedef struct hsa_ext_event_metadata {
     /**
-     * Name of the metadata entry. A NUL-terminated string 
+     * Name of the metadata entry. A NUL-terminated string
      */
     const char* data_name;
 
@@ -2028,7 +2027,7 @@ typedef struct hsa_ext_event_metadata {
      */
     hsa_ext_event_metadata_type_t metadata_type;
 } hsa_ext_event_metadata_t;
-    
+
 /**
  * @brief Initialize the HSA runtime with the timeline events system available for enabling for a given set of event producer types.
  *
@@ -2104,7 +2103,11 @@ hsa_status_t hsa_ext_get_num_application_event_producers(
 /**
  * @brief Get the name of an application event producer from its identifier. An identifier can be retrieved from an event through ::hsa_ext_get_application_event_producer_id. Arbitrary identifiers can be tested below the bound given by ::hsa_ext_get_num_application_event_producers.
  *
- * @detail If many event producers are being registered and the event producer with the given identifier has not been producing events recently, an implementation may silently reclaim and reuse that event producer identifier. Code calling this function can mitigate this by processing events promptly.
+ * @details If many event producers are being registered and the event producer
+ * with the given identifier has not been producing events recently, an
+ * implementation may silently reclaim and reuse that event producer
+ * identifier. Code calling this function can mitigate this by processing events
+ * promptly.
  *
  * @param[in] event_producer_id Event producer identifier.
  *
@@ -2126,7 +2129,11 @@ hsa_status_t hsa_ext_get_application_event_producer_name(
 /**
  * @brief Get the description of an application event producer from its identifier. An identifier can be retrieved from an event through ::hsa_ext_get_application_event_producer_id. Arbitrary identifiers can be tested below the bound given by ::hsa_ext_get_num_application_event_producers.
  *
- * @detail If many event producers are being registered and the event producer with the given identifier has not been producing events recently, an implementation may silently reclaim and reuse that event producer identifier. Code calling this function can mitigate this by processing events promptly.
+ * @details If many event producers are being registered and the event producer
+ * with the given identifier has not been producing events recently, an
+ * implementation may silently reclaim and reuse that event producer
+ * identifier. Code calling this function can mitigate this by processing events
+ * promptly.
  *
  * @param[in] event_producer_id Event producer identifier.
  *
@@ -2189,7 +2196,7 @@ hsa_status_t hsa_ext_enable_agent_events(
  */
 hsa_status_t hsa_ext_enable_io_events(
     hsa_io_t io);
-    
+
 /**
  * @brief Provide a hint to the runtime for how many bytes to reserve for buffering events.
  *
@@ -2282,7 +2289,7 @@ hsa_status_t hsa_ext_get_next_event(
  * initialized.
  *
  * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
- */    
+ */
 hsa_status_t hsa_ext_destroy_event(
     hsa_ext_timeline_event_t event);
 
@@ -2410,10 +2417,10 @@ hsa_status_t hsa_ext_get_timeline_event_metadata(
     hsa_ext_timeline_event_t event,
     hsa_ext_metadata_t** metadata_list,
     size_t* n);
-    
+
 
 /** @} */
-    
+
 #ifdef __cplusplus
 }
 #endif  /*__cplusplus*/

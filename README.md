@@ -15,7 +15,7 @@ all the Latex sources. This process has been automated in a Makefile but you sti
 - Latex. In Linux you can  install the (massive) `texlive-full` package. In Windows, use Miktex
 - Doxygen
 - Python 2.X
-- Perl (required by LatexMK)
+- Perl
 - GNU Make
 
 Most of these packages are already included with the popular Linux distributions. In Linux Mint (17.1) you can use the following one-liner to install the missing dependencies:
