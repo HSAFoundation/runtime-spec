@@ -1,3 +1,11 @@
+2015-12-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+	* Bug 519 - Define topology information for nodes to allow caches
+	and profiling information to be attached to nodes
+	* Bug 569 - hsa_memory_copy and coarse grain memory regions
+	* Bug 582 - Runtime changes to support code object proposal
+	* Bug 609 - Allow kernarg-backing memory to be coarse-grained
+	* Added proposed APIs for multiple signal wait
+
 2015-11-01  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 	* Bug 534 - Image extension query issues
 	* Bug 559 - hsa_executable_[agent_]global_variable_define address

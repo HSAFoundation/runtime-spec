@@ -38,8 +38,8 @@ checkversion :
 	$(if $(HSA_VERSION),,$(error Error: variable HSA_VERSION is not set))
 
 # Generate the public files
-# Ex: make HSA_VERSION=1_01 dist
-dist : checkversion diff
+# Ex: make HSA_VERSION=1_1_20151231 COMMIT=735b23879e8efcc5122845fee43a65db09a31dea dist
+dist : checkversion diff main.pdf
 	$(MKDIR) $(TMPDIST)/include/hsa
 	$(CP) main.pdf $(TMPDIST)/$(DISTNAME).pdf
 	$(CP) main-diff.pdf $(TMPDIST)/$(DISTNAME)_diff.pdf

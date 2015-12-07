@@ -52,6 +52,7 @@ replacement_directives=[
  ["\\\\[-2mm]" + get_ifdef("HSA_LARGE_MODEL"), 0, get_elif(" defined HSA_LITTLE_ENDIAN"), 0, 1, get_else(), 1, 0, get_endif() + "[2mm]"])
 ]
 
+
 # map from a type name to its unique ID. This is necessary because Doxygen does
 # not generate enough information for 'typedefs' such that we can build internal
 # links. For instance, if there is a pointer to a function defined as
@@ -239,6 +240,10 @@ def apply_replacement_directive(replacement_index, txts):
   return ''.join(ret)
 
 def process_struct_or_union(typedef, tex, defs):
+  if is_deprecated(typedef):
+    deprecated.append(('structunion', typedef))
+    return
+
   typename = node2tex(typedef.find('name'))
   tex.write('\\subsubsection{' + typename + '}\n')
 
@@ -326,6 +331,10 @@ def check_name(enumname,valname):
     sys.exit("\nError: enumeration constant  " + valname + " is declared within " + enumname + ", but there is a naming mismatch.")
 
 def process_enum(enum, tex, defs):
+  if is_deprecated(enum):
+    deprecated.append(('enum', enum))
+    return
+
   typename = node2tex(enum.find('name'))
   # anonymous enums start with @
   anonymous =  typename.startswith("@")
@@ -608,10 +617,14 @@ def print_deprecated_table_type(tex, type):
 
 def print_deprecated_table():
   with open(os.path.join("altlatex", 'deprecated.tex'), "w+") as tex:
+    tex.write('\\section{Enumerations}')
+    print_deprecated_table_type(tex, 'enum')
     tex.write('\\section{Enumeration Constants}')
     print_deprecated_table_type(tex, 'enumvalue')
     tex.write('\\section{Functions}')
     print_deprecated_table_type(tex, 'func')
+    tex.write('\\section{Structs and Unions}')
+    print_deprecated_table_type(tex, 'structunion')
 
 # Convert an identifier to a link its declaration in the document (where the
 # displayed name

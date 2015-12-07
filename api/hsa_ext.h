@@ -79,17 +79,205 @@ enum {
    */
   HSA_EXT_STATUS_ERROR_FINALIZATION_FAILED = 0x2005,
   /**
+   * @deprecated
+   *
    * Mismatch between a directive in the control directive structure and in
    * the HSAIL kernel.
    */
-  HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH = 0x2006
+  HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH = 0x2006,
+  /**
+   * The code object writer is invalid.
+   */
+  HSA_EXT_STATUS_ERROR_INVALID_CODE_OBJECT_WRITER = 0x2007
 };
+/**
+ * @brief Iterate over the instruction set architectures supported by the
+ * finalizer extension, and invoke an application-defined callback on every
+ * iteration.
+ *
+ * @param[in] callback Callback to be invoked once per ISA. The HSA
+ * runtime passes two arguments to the callback, the ISA and the
+ * application data.  If @p callback returns a status other than
+ * ::HSA_STATUS_SUCCESS for a particular iteration, the traversal stops and
+ * that status value is returned.
+ *
+ * @param[in] data Application data that is passed to @p callback on every
+ * iteration. May be NULL.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p callback is NULL.
+*/
+hsa_status_t HSA_API hsa_ext_finalizer_iterate_isa(
+    hsa_status_t (*callback)(hsa_isa_t isa, void* data),
+    void* data);
+
+/**
+ * @brief Retrieve instruction set architecture handle for given instruction set
+ * architecture name.
+ *
+ * @param[in] name Vendor-specific instruction set architecture name associated
+ * with particular instruction set architecture handle, must start with vendor
+ * name followed by colon and vendor-specific part (vendor:vendor_specific, for
+ * example, AMD:AMDGPU:8:0:0). Must be NULL-terminated character array. Refer
+ * to desired vendor's specification for vendor-specific name.
+ *
+ * @param[out] isa Memory location to store retrieved istruction set
+ * architecture handle.
+ *
+ * @retval ::HSA_STATUS_SUCCESS Function is executed succesfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p name is NULL. @p isa is
+ * NULL.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ISA_NAME Given instruction set
+ * architecture name does not correspond to any instruction set architecture.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
+ * required.
+ */
+hsa_status_t HSA_API hsa_ext_isa_from_name(
+    const char *name,
+    hsa_isa_t *isa);
+
+/**
+ * @brief Get current value of attribute for given instruction set architecture
+ * handle.
+ *
+ * @param[in] isa Valid instruction set architecture handle.
+ *
+ * @param[in] attribute Instruction set architecture attribute to query.
+ *
+ * @param[in] index Index for attributes which contain more than one piece of
+ * information available (i.e. attributes which have attribute_COUNT attribute).
+ * Must have a value between 0 (inclusive) and value of attribute
+ * attribute_COUNT (not inclusive).
+ *
+ * @param[out] value Application-provided memory location to store value of
+ * attribute. If memory location provided is not large enough to hold value of
+ * @p attribute, behavior is undefined.
+ *
+ * @retval ::HSA_STATUS_SUCCESS Function is executed succesfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is invalid. @p value
+ * is NULL.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ISA @p isa is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_INDEX @p index out of range.
+ */
+hsa_status_t HSA_API hsa_ext_isa_get_info(
+    hsa_isa_t isa,
+    hsa_isa_info_t attribute,
+    size_t index,
+    void *value);
 
 /** @} */
 
 /** \defgroup ext-alt-finalizer-program Finalization Program
  *  @{
  */
+
+/**
+ * @brief Opaque handle to a code object writer. A code object writer is used by
+ * the finalizer to output the finalized code object to a file (if the code
+ * object writer is created using
+ * ::hsa_ext_code_object_writer_create_from_file), or to memory (if the code
+ * object writer is created using
+ * ::hsa_ext_code_object_writer_create_from_memory).
+ */
+typedef struct hsa_ext_code_object_writer_s {
+  /**
+   * Opaque handle.
+   */
+  uint64_t handle;
+} hsa_ext_code_object_writer_t;
+
+/**
+ * @brief Create an empty code object writer to operate on a file.
+ *
+ * @details File must be opened by application with at least write permissions
+ * prior calling this function. POSIX file descriptor for opened file must be
+ * provided. If file descriptor points to non-empty file, file will be
+ * truncated. File is owned and managed by application, code object writer is
+ * only used for populating it. Lifetime of file descriptor must exceed lifetime
+ * of its code object writer.
+ *
+ * @param[in] file_descriptor File descriptor for opened file. File must be
+ * opened with at least write permissions. If file is non-empty, file will be
+ * truncated.
+ *
+ * @param[in] code_object_writer Memory location to store newly created code
+ * object writer handle.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_FILE_DESCRIPTOR @p file_descriptor is
+ * invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
+ * required.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p code_object_writer is NULL.
+ */
+hsa_status_t HSA_API hsa_ext_code_object_writer_create_from_file(
+    hsa_file_t file_descriptor,
+    hsa_ext_code_object_writer_t *code_object_writer);
+
+/**
+ * @brief Create an empty code object writer to operate on memory.
+ *
+ * @details Memory is allocated by application through a callback function.
+ * Memory must be deallocated by application in case of failure. Allocated
+ * memory is owned and must be managed by application, code object writer is
+ * only used for populating it. Lifetime of memory that is allocated must exceed
+ * lifetime of its code object writer.
+ *
+ * @param[in] memory_allocate Callback function to be invoked once per
+ * finalization to allocate memory needed for outputting of code object.
+ * Callback function takes in four arguments: requested size, requested
+ * alignment, pointer to memory location where application stores pointer to
+ * allocated memory, application-provided data. If callback function returns
+ * status code other than ::HSA_STATUS_SUCCESS, then finalization function
+ * returns same code.
+ *
+ * @param[in] data Application-provided data to pass into @p memory_allocate.
+ * May be NULL.
+ *
+ * @param[in] code_object_writer Memory location to store newly created code
+ * object writer handle.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
+ * required.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p memory_allocate is NULL.
+ * @p code_object_writer is NULL.
+ */
+hsa_status_t HSA_API hsa_ext_code_object_writer_create_from_memory(
+    hsa_status_t (*memory_allocate)(size_t size, size_t align, void **ptr,
+                                    void *data),
+    void *data,
+    hsa_ext_code_object_writer_t *code_object_writer);
+
+/**
+ * @brief Destroy a code object writer.
+ *
+ * @details Code object writer handle becomes invalid after completion of this
+ * function. File/memory populated by code object writer is not closed, removed,
+ * or deallocated during execution of this function, and can be used as
+ * application sees fit.
+ *
+ * @param[in] code_object_writer Valid code object writer handle to destroy.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_CODE_OBJECT_WRITER @p
+ * code_object_writer is invalid.
+ */
+hsa_status_t HSA_API hsa_ext_code_object_writer_destroy(
+    hsa_ext_code_object_writer_t code_object_writer);
 
 /**
  * @brief HSAIL (BRIG) module. The HSA Programmer's Reference Manual contains
@@ -151,14 +339,11 @@ hsa_status_t HSA_API hsa_ext_program_create(
  * still valid after the HSAIL program has been destroyed, and can be used as
  * intended. Resources allocated outside and associated with the HSAIL program
  * (such as HSAIL modules that are added to the HSAIL program) can be released
- * after the finalization program has been destroyed.
+ * after the HSAIL program has been destroyed.
  *
  * @param[in] program HSAIL program.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
  *
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_PROGRAM The HSAIL program is
  * invalid.
@@ -187,9 +372,6 @@ hsa_status_t HSA_API hsa_ext_program_destroy(
  * of @p module is not default, then it should match that of @p program.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
  *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
  * resources required for the operation.
@@ -230,19 +412,15 @@ hsa_status_t HSA_API hsa_ext_program_add_module(
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_PROGRAM The program is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p callback is NULL.
-*/
+ */
 hsa_status_t HSA_API hsa_ext_program_iterate_modules(
     hsa_ext_program_t program,
     hsa_status_t (*callback)(hsa_ext_program_t program, hsa_ext_module_t module,
                              void* data),
     void* data);
-
 
 /**
  * @brief HSAIL program attributes.
@@ -278,9 +456,6 @@ typedef enum {
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_PROGRAM The HSAIL program is invalid.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is an invalid
@@ -293,6 +468,8 @@ hsa_status_t HSA_API hsa_ext_program_get_info(
     void *value);
 
 /**
+ * @deprecated
+ *
  * @brief Finalizer-determined call convention.
  */
 typedef enum {
@@ -303,6 +480,8 @@ typedef enum {
 } hsa_ext_finalizer_call_convention_t;
 
 /**
+ * @deprecated
+
  * @brief Control directives specify low-level information about the
  * finalization process.
  */
@@ -417,6 +596,8 @@ typedef struct hsa_ext_control_directives_s {
 } hsa_ext_control_directives_t;
 
 /**
+ * @deprecated
+ *
  * @brief Finalize an HSAIL program for a given instruction set architecture.
  *
  * @details Finalize all of the kernels and indirect functions that belong to
@@ -480,6 +661,84 @@ hsa_status_t HSA_API hsa_ext_program_finalize(
     hsa_code_object_type_t code_object_type,
     hsa_code_object_t *code_object);
 
+/**
+ * @brief Generate program code object from given program.
+ *
+ * @details Generate program code object from given program by finalizing all
+ * defined program allocation variables in given program. Generated code object
+ * is written by provided code object writer [which operates on either file or
+ * memory], therefore lifetime of code object writer [and lifetime of underlying
+ * file or memory] must exceed execution of this function.
+ *
+ * @param[in] program Valid program handle to finalize.
+ *
+ * @param[in] options Standard and vendor-specific options. Must be
+ * NULL-terminated characted array. Uknown options are ignored. May be NULL.
+ *
+ * @param[out] code_object_writer Valid code object writer handle.
+ *
+ * @retval ::HSA_STATUS_SUCCESS Function is executed succesfully.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_PROGRAM @p program is invalid.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_CODE_OBJECT_WRITER
+ * @p code_object_writer is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
+ * required.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_FINALIZATION_FAILED Failure to finalize
+ * @p program.
+ */
+hsa_status_t HSA_API hsa_ext_program_code_object_finalize(
+    hsa_ext_program_t program,
+    const char *options,
+    hsa_ext_code_object_writer_t code_object_writer);
+
+/**
+ * @brief Generate agent code object from given program for given instruction
+ * set architecture.
+ *
+ * @details Generate agent code object from given program for given instruction
+ * set architecture by finalizing all defined agent allocation variables,
+ * functions, indirect functions, and kernels in given program for given
+ * instruction set architecture. Generated code object is written by provided
+ * code object writer [which operates on either file or memory], therefore
+ * lifetime of code object writer [and lifetime of underlying file or memory]
+ * must exceed execution of this function.
+ *
+ * @param[in] program Valid program handle to finalize.
+ *
+ * @param[in] isa Valid instruction set architecture handle to finalize for.
+ *
+ * @param[in] options Standard and vendor-specific options. Must be
+ * NULL-terminated characted array. Uknown options are ignored. May be NULL.
+ *
+ * @param[out] code_object_writer Valid code object writer handle.
+ *
+ * @retval ::HSA_STATUS_SUCCESS Function is executed succesfully.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_PROGRAM @p program is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ISA @p isa is invalid.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH @p options do not match
+ * one or more control directives in one or more BRIG modules in @p program.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_CODE_OBJECT_WRITER
+ * @p code_object_writer is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
+ * required.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_FINALIZATION_FAILED Failure to finalize
+ * @p program.
+ */
+hsa_status_t HSA_API hsa_ext_agent_code_object_finalize(
+    hsa_ext_program_t program,
+    hsa_isa_t isa,
+    const char *options,
+    hsa_ext_code_object_writer_t code_object_writer);
 /** @} */
 
 #define hsa_ext_finalizer_1_00
@@ -825,7 +1084,7 @@ hsa_status_t HSA_API hsa_ext_image_data_get_info(
  * implementation-independent image descriptor and a agent-specific image
  * data.
  *
- * @details Image created with different access permissions but the same image
+ * @details Images created with different access permissions but the same image
  * descriptor can share the same image data if
  * ::HSA_EXT_IMAGE_CAPABILITY_ACCESS_INVARIANT_DATA_LAYOUT is reported by
  * ::hsa_ext_image_get_capability for the image format specified in the image
@@ -1651,7 +1910,7 @@ hsa_status_t hsa_ext_get_perf_counter_info(
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p ctx is NULL.
  */
 hsa_status_t hsa_ext_create_session_context(
-    hsa_ext_prof_session_ctx* ctx);
+    hsa_ext_prof_session_ctx_t* ctx);
 
 /**
  * @brief Destroy a session context.
@@ -1664,7 +1923,7 @@ hsa_status_t hsa_ext_create_session_context(
  * initialized.
  */
 hsa_status_t hsa_ext_destroy_session_context(
-    hsa_ext_prof_session_ctx ctx);
+    hsa_ext_prof_session_ctx_t ctx);
 
 /**
  * @brief Enable sampling for the performance counter at the given index. Calls to ::hsa_ext_start_profile_session between this call and a corresponding successful ::hsa_ext_disable_perf_counter call will cause this performance counter to be populated.
@@ -1686,7 +1945,7 @@ hsa_status_t hsa_ext_destroy_session_context(
  * Attempt to enable performance counter during a profiling session.
  */
 hsa_status_t hsa_ext_enable_perf_counter(
-    hsa_ext_prof_session_ctx ctx,
+    hsa_ext_prof_session_ctx_t ctx,
     uint32_t counter_idx);
 
 /**
@@ -1709,7 +1968,7 @@ hsa_status_t hsa_ext_enable_perf_counter(
  * Attempt to disable performance counter during a profiling session.
  */
 hsa_status_t hsa_ext_disable_perf_counter(
-    hsa_ext_prof_session_ctx ctx,
+    hsa_ext_prof_session_ctx_t ctx,
     uint32_t counter_idx);
 
 
@@ -1731,7 +1990,7 @@ hsa_status_t hsa_ext_disable_perf_counter(
  * @retval ::HSA_STATUS_ERROR_INVALID_INDEX @p counter_idx is out-of-bounds.
  */
 hsa_status_t hsa_ext_perf_counter_enabled(
-    hsa_ext_prof_session_ctx ctx,
+    hsa_ext_prof_session_ctx_t ctx,
     uint32_t counter_idx,
     bool* enabled);
 
@@ -1752,13 +2011,13 @@ hsa_status_t hsa_ext_perf_counter_enabled(
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL.
  */
 hsa_status_t hsa_ext_prof_session_counter_set_valid(
-    hsa_ext_prof_session_ctx ctx,
+    hsa_ext_prof_session_ctx_t ctx,
     bool* result);
 
  /**
  * @brief Check if the set of currently enabled performance counters in a given session context can be sampled in a single profiling session. This call does not enable or disable any performance counters; the client is responsible for discovering a valid set.
  *
- * @param[in] ctxs Pointer to an array of :hsa_ext_prof_session_ctx objects of size @p n_ctxs
+ * @param[in] ctxs Pointer to an array of :hsa_ext_prof_session_ctx_t objects of size @p n_ctxs
  *
  * @param[in] n_ctxs The size of the @p ctxs array.
  *
@@ -1773,7 +2032,7 @@ hsa_status_t hsa_ext_prof_session_counter_set_valid(
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL.
  */
 hsa_status_t hsa_ext_prof_session_set_valid(
-    hsa_ext_prof_session_ctx* ctxs,
+    hsa_ext_prof_session_ctx_t* ctxs,
     size_t n_ctxs,
     bool* result);
 
@@ -1790,7 +2049,7 @@ hsa_status_t hsa_ext_prof_session_set_valid(
  * @retval ::HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS The set of enabled performance counters is invalid for reading in a single profiling session, or there is a session currently enabled which cannot be executed concurrently with the given session context.
  */
 hsa_status_t hsa_ext_enable_profile_session(
-    hsa_ext_prof_session_ctx ctx);
+    hsa_ext_prof_session_ctx_t ctx);
 
 /**
  * @brief Disable a profiling session. Reading performance counters for that session is no longer valid.
@@ -1804,7 +2063,7 @@ hsa_status_t hsa_ext_enable_profile_session(
  *
  */
 hsa_status_t hsa_ext_disable_profile_session(
-    hsa_ext_prof_session_ctx ctx);
+    hsa_ext_prof_session_ctx_t ctx);
 
 /**
  * @brief Start a profiling session. Performance counters enabled through calls to ::hsa_ext_enable_perf_counter without an intervening call to ::hsa_ext_disable_perf_counter for the same counter index will count until a successful call to ::hsa_stop_profiling_session with the same session context.
@@ -1822,7 +2081,7 @@ hsa_status_t hsa_ext_disable_profile_session(
  * This session context has not been enabled with a call to ::hsa_ext_enable_profile_session, or has since been disabled with a call to ::hsa_ext_disable_profile_session.
  */
 hsa_status_t hsa_ext_start_profile_session(
-    hsa_ext_prof_session_ctx ctx);
+    hsa_ext_prof_session_ctx_t ctx);
 
  /**
  * @brief Stop a profiling session, freezing the counters which were enabled. Reading of performance counters which do not support in-session reading is now valid until a call to ::hsa_ext_disable_profile_session with the same session context. If the session is already stopped, this function has no effect. The session can be started again with a call to ::hsa_ext_start_profile_session; the state of the counters will be carried over from the point at which this function was called.
@@ -1839,7 +2098,7 @@ hsa_status_t hsa_ext_start_profile_session(
  *
  */
 hsa_status_t hsa_ext_stop_profile_session(
-    hsa_ext_prof_session_ctx ctx);
+    hsa_ext_prof_session_ctx_t ctx);
 
  /**
  * @brief Read the value of a given performance counter as a uint32_t. The value type of a performance counter can be queried using hsa_ext_get_perf_counter_info.
@@ -1863,7 +2122,7 @@ hsa_status_t hsa_ext_stop_profile_session(
  * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_enable_profile_session and not have been since disabled with a call to ::hsa_ext_disable_profile_session. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_stop_profile_session.
  */
 hsa_status_t hsa_ext_read_perf_counter_uint32(
-    hsa_ext_prof_session_ctx ctx,
+    hsa_ext_prof_session_ctx_t ctx,
     uint32_t counter_idx,
     uint32_t* result);
 
@@ -1889,7 +2148,7 @@ hsa_status_t hsa_ext_read_perf_counter_uint32(
  * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_enable_profile_session and not have been since disabled with a call to ::hsa_ext_disable_profile_session. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_stop_profile_session.
  */
 hsa_status_t hsa_ext_read_perf_counter_uint64(
-    hsa_ext_prof_session_ctx ctx,
+    hsa_ext_prof_session_ctx_t ctx,
     uint32_t counter_idx,
     uint64_t* result);
 
@@ -2182,6 +2441,9 @@ hsa_status_t hsa_ext_enable_application_event_producer(
 hsa_status_t hsa_ext_enable_agent_events(
     hsa_agent_t agent);
 
+
+typedef int hsa_io_t;
+
 /**
  * @brief Enable given io node for collecting events.
  *
@@ -2208,7 +2470,6 @@ hsa_status_t hsa_ext_enable_io_events(
  * initialized.
  *
  * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
- */
  */
 hsa_status_t hsa_ext_set_event_buffer_size_hint(
     size_t size_hint);
@@ -2415,7 +2676,7 @@ hsa_status_t hsa_ext_get_timeline_event_name(
  */
 hsa_status_t hsa_ext_get_timeline_event_metadata(
     hsa_ext_timeline_event_t event,
-    hsa_ext_metadata_t** metadata_list,
+    hsa_ext_event_metadata_t** metadata_list,
     size_t* n);
 
 

@@ -266,7 +266,7 @@ hsa_status_t get_kernarg(hsa_region_t region, void* data) {
     }
     hsa_region_global_flag_t flags;
     hsa_region_get_info(region, HSA_REGION_INFO_GLOBAL_FLAGS, &flags);
-    if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG) {
+    if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG_INIT) {
         hsa_region_t* ret = (hsa_region_t*) data;
         *ret = region;
         return HSA_STATUS_INFO_BREAK;
