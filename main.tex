@@ -852,6 +852,13 @@ multiple reasons:
 \input{api/altlatex/group-signals}
 
 \section{Multi-signal wait}
+This section contains two alternative APIs for dealing with the problem of
+waiting on multiple signals until at least one of them satisfies a given
+condition. The first approach is reduced to a single function (either
+\hsaref{hsa_signals_wait_any_scacquire} or
+\hsaref{hsa_signals_wait_any_relaxed}, depending on the desired memory
+order). The second API approach uses the abstraction of a signal group, includes
+all the declarations starting at \hsaref{hsa_signal_group_t}.
 \subsection{API}
 \input{api/altlatex/group-multi-signal-wait}
 
@@ -1676,8 +1683,8 @@ for the corresponding private region.
 
 \subsection{API}
 \input{api/altlatex/group-instruction-set-architecture}
-\input{api/altlatex/group-symbol-attributes}
 \input{api/altlatex/group-executable}
+\input{api/altlatex/group-code-object}
 \newpage
 
 \section{Common Definitions}\label{sec:other}
@@ -1927,8 +1934,8 @@ A draft of the profiling events API.
 \input{api/altlatex/group-ext-event-system}
 
 % Deprecated stuff
-\chapter{Deprecated Declarations}
-\input{api/altlatex/deprecated}
+% \chapter{Deprecated Declarations}
+%\input{api/altlatex/deprecated}
 
 
 % Glossary

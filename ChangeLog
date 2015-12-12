@@ -1,4 +1,16 @@
+2015-12-11  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+	* Deprecated declarations back into API sections (instead of being
+	bundled together towards the end of the document)
+	* Added more detail on the multi-signal wait APIs and associated
+	text
+	* Multiple fixes in the Instruction Set Architecture and
+	Executables section: added support for mutiple wavefronts per ISA,
+	added missing return error codes, text improvements, etc.
+	* Clarified that hsa_memory_assign_agents can only receive R/W or
+	R/O permissions.
+
 2015-12-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
 	* Bug 519 - Define topology information for nodes to allow caches
 	and profiling information to be attached to nodes
 	* Bug 569 - hsa_memory_copy and coarse grain memory regions
@@ -7,6 +19,7 @@
 	* Added proposed APIs for multiple signal wait
 
 2015-11-01  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
 	* Bug 534 - Image extension query issues
 	* Bug 559 - hsa_executable_[agent_]global_variable_define address
 	parameter clarification

@@ -240,12 +240,14 @@ def apply_replacement_directive(replacement_index, txts):
   return ''.join(ret)
 
 def process_struct_or_union(typedef, tex, defs):
-  if is_deprecated(typedef):
-    deprecated.append(('structunion', typedef))
-    return
+  depre = is_deprecated(typedef)
+
+  # if is_deprecated(typedef):
+  #   deprecated.append(('structunion', typedef))
+  #   return
 
   typename = node2tex(typedef.find('name'))
-  tex.write('\\subsubsection{' + typename + '}\n')
+  tex.write('\\subsubsection{' + typename + (" (deprecated)" if depre else "") + '}\n')
 
   # brief
   tex.write('\\vspace{-2.5mm}')
@@ -318,7 +320,8 @@ def process_struct_or_union(typedef, tex, defs):
   tex.write("\n\\end{longtable}" + "\n\n")
 
   # detailed description
-  paras = typedef.findall('detaileddescription/para')
+  allpara = typedef.findall('detaileddescription/para')
+  paras = allpara[1:] if depre else allpara
   paraslst = map(lambda para: node2tex(para), paras)
   if paraslst:
     tex.write('\\vspace{-4mm}')
@@ -331,16 +334,17 @@ def check_name(enumname,valname):
     sys.exit("\nError: enumeration constant  " + valname + " is declared within " + enumname + ", but there is a naming mismatch.")
 
 def process_enum(enum, tex, defs):
-  if is_deprecated(enum):
-    deprecated.append(('enum', enum))
-    return
+  depre = is_deprecated(enum)
+  # if is_deprecated(enum):
+  #   deprecated.append(('enum', enum))
+  #   return
 
   typename = node2tex(enum.find('name'))
   # anonymous enums start with @
   anonymous =  typename.startswith("@")
   typename = '' if anonymous else typename
   section_title = node2tex(enum.find('.//simplesect[@kind="remark"]/para')) if anonymous else typename
-  tex.write('\\subsubsection{' + section_title + '}\n')
+  tex.write('\\subsubsection{' + section_title + (" (deprecated)" if depre else "") + '}\n')
 
   vals = []
   valsdescs = []
@@ -479,9 +483,10 @@ def print_signature(func, tex):
   return ret
 
 def process_function(func, tex, listings, commands, variants):
-  if is_deprecated(func):
-    deprecated.append(('func', func))
-    return
+  depre = is_deprecated(func)
+  # if is_deprecated(func):
+  #   deprecated.append(('func', func))
+  #   return
   map(lambda f : register_function(f, tex, listings, commands), variants)
   funname = node2tex(func.find('name'))
   tex.write('\\subsubsection{')
@@ -489,6 +494,7 @@ def process_function(func, tex, listings, commands, variants):
      tex.write(funname)
   else:
      tex.write(function_name_minus_memory_order(funname))
+  tex.write(" (deprecated)" if depre else "")
   tex.write('}\n')
 
   check_argument_refs(func)
@@ -550,7 +556,8 @@ def process_function(func, tex, listings, commands, variants):
     tex.write(node2tex(ret) + "\n\n")
 
   # detailed description
-  paras = func.findall('detaileddescription/para')
+  allpara = func.findall('detaileddescription/para')
+  paras = allpara[1:] if depre else allpara
   paraslst = []
   for para in paras:
     # information about parameters is also in the detaileddescription, so skip that
@@ -691,7 +698,7 @@ def main():
   commands.close()
 
   # print deprecation info
-  print_deprecated_table()
+  # print_deprecated_table()
   return
 
 

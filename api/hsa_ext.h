@@ -79,7 +79,7 @@ enum {
    */
   HSA_EXT_STATUS_ERROR_FINALIZATION_FAILED = 0x2005,
   /**
-   * @deprecated
+   * @deprecated Control directives are no longer used.
    *
    * Mismatch between a directive in the control directive structure and in
    * the HSAIL kernel.
@@ -113,63 +113,18 @@ hsa_status_t HSA_API hsa_ext_finalizer_iterate_isa(
     void* data);
 
 /**
- * @brief Retrieve instruction set architecture handle for given instruction set
- * architecture name.
- *
- * @param[in] name Vendor-specific instruction set architecture name associated
- * with particular instruction set architecture handle, must start with vendor
- * name followed by colon and vendor-specific part (vendor:vendor_specific, for
- * example, AMD:AMDGPU:8:0:0). Must be NULL-terminated character array. Refer
- * to desired vendor's specification for vendor-specific name.
- *
- * @param[out] isa Memory location to store retrieved istruction set
- * architecture handle.
- *
- * @retval ::HSA_STATUS_SUCCESS Function is executed succesfully.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p name is NULL. @p isa is
- * NULL.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ISA_NAME Given instruction set
- * architecture name does not correspond to any instruction set architecture.
- *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
- * required.
+ * @copydoc hsa_isa_from_name
  */
 hsa_status_t HSA_API hsa_ext_isa_from_name(
     const char *name,
     hsa_isa_t *isa);
 
 /**
- * @brief Get current value of attribute for given instruction set architecture
- * handle.
- *
- * @param[in] isa Valid instruction set architecture handle.
- *
- * @param[in] attribute Instruction set architecture attribute to query.
- *
- * @param[in] index Index for attributes which contain more than one piece of
- * information available (i.e. attributes which have attribute_COUNT attribute).
- * Must have a value between 0 (inclusive) and value of attribute
- * attribute_COUNT (not inclusive).
- *
- * @param[out] value Application-provided memory location to store value of
- * attribute. If memory location provided is not large enough to hold value of
- * @p attribute, behavior is undefined.
- *
- * @retval ::HSA_STATUS_SUCCESS Function is executed succesfully.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is invalid. @p value
- * is NULL.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ISA @p isa is invalid.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_INDEX @p index out of range.
+ * @copydoc hsa_isa_get_info
  */
 hsa_status_t HSA_API hsa_ext_isa_get_info(
     hsa_isa_t isa,
     hsa_isa_info_t attribute,
-    size_t index,
     void *value);
 
 /** @} */
@@ -313,9 +268,6 @@ typedef struct hsa_ext_program_s {
  * created HSAIL program handle.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
  *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
  * resources required for the operation.
@@ -466,6 +418,85 @@ hsa_status_t HSA_API hsa_ext_program_get_info(
     hsa_ext_program_t program,
     hsa_ext_program_info_t attribute,
     void *value);
+
+/**
+ * @brief Generate program code object from given program.
+ *
+ * @details Generate program code object from given program by finalizing all
+ * defined program allocation variables in given program. Generated code object
+ * is written by provided code object writer [which operates on either file or
+ * memory], therefore lifetime of code object writer [and lifetime of underlying
+ * file or memory] must exceed execution of this function.
+ *
+ * @param[in] program Valid program handle to finalize.
+ *
+ * @param[in] options Standard and vendor-specific options. Must be
+ * NULL-terminated characted array. Uknown options are ignored. May be NULL.
+ *
+ * @param[out] code_object_writer Valid code object writer handle.
+ *
+ * @retval ::HSA_STATUS_SUCCESS Function is executed succesfully.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_PROGRAM @p program is invalid.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_CODE_OBJECT_WRITER
+ * @p code_object_writer is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
+ * required.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_FINALIZATION_FAILED Failure to finalize
+ * @p program.
+ */
+hsa_status_t HSA_API hsa_ext_program_code_object_finalize(
+    hsa_ext_program_t program,
+    const char *options,
+    hsa_ext_code_object_writer_t code_object_writer);
+
+/**
+ * @brief Generate agent code object from given program for given instruction
+ * set architecture.
+ *
+ * @details Generate agent code object from given program for given instruction
+ * set architecture by finalizing all defined agent allocation variables,
+ * functions, indirect functions, and kernels in given program for given
+ * instruction set architecture. Generated code object is written by provided
+ * code object writer [which operates on either file or memory], therefore
+ * lifetime of code object writer [and lifetime of underlying file or memory]
+ * must exceed execution of this function.
+ *
+ * @param[in] program Valid program handle to finalize.
+ *
+ * @param[in] isa Valid instruction set architecture handle to finalize for.
+ *
+ * @param[in] options Standard and vendor-specific options. Must be
+ * NULL-terminated characted array. Uknown options are ignored. May be NULL.
+ *
+ * @param[out] code_object_writer Valid code object writer handle.
+ *
+ * @retval ::HSA_STATUS_SUCCESS Function is executed succesfully.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_PROGRAM @p program is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ISA @p isa is invalid.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH @p options do not match
+ * one or more control directives in one or more BRIG modules in @p program.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_CODE_OBJECT_WRITER
+ * @p code_object_writer is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
+ * required.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_FINALIZATION_FAILED Failure to finalize
+ * @p program.
+ */
+hsa_status_t HSA_API hsa_ext_agent_code_object_finalize(
+    hsa_ext_program_t program,
+    hsa_isa_t isa,
+    const char *options,
+    hsa_ext_code_object_writer_t code_object_writer);
 
 /**
  * @deprecated
@@ -633,9 +664,6 @@ typedef struct hsa_ext_control_directives_s {
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
  * resources required for the operation.
  *
@@ -661,84 +689,6 @@ hsa_status_t HSA_API hsa_ext_program_finalize(
     hsa_code_object_type_t code_object_type,
     hsa_code_object_t *code_object);
 
-/**
- * @brief Generate program code object from given program.
- *
- * @details Generate program code object from given program by finalizing all
- * defined program allocation variables in given program. Generated code object
- * is written by provided code object writer [which operates on either file or
- * memory], therefore lifetime of code object writer [and lifetime of underlying
- * file or memory] must exceed execution of this function.
- *
- * @param[in] program Valid program handle to finalize.
- *
- * @param[in] options Standard and vendor-specific options. Must be
- * NULL-terminated characted array. Uknown options are ignored. May be NULL.
- *
- * @param[out] code_object_writer Valid code object writer handle.
- *
- * @retval ::HSA_STATUS_SUCCESS Function is executed succesfully.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_INVALID_PROGRAM @p program is invalid.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_INVALID_CODE_OBJECT_WRITER
- * @p code_object_writer is invalid.
- *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
- * required.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_FINALIZATION_FAILED Failure to finalize
- * @p program.
- */
-hsa_status_t HSA_API hsa_ext_program_code_object_finalize(
-    hsa_ext_program_t program,
-    const char *options,
-    hsa_ext_code_object_writer_t code_object_writer);
-
-/**
- * @brief Generate agent code object from given program for given instruction
- * set architecture.
- *
- * @details Generate agent code object from given program for given instruction
- * set architecture by finalizing all defined agent allocation variables,
- * functions, indirect functions, and kernels in given program for given
- * instruction set architecture. Generated code object is written by provided
- * code object writer [which operates on either file or memory], therefore
- * lifetime of code object writer [and lifetime of underlying file or memory]
- * must exceed execution of this function.
- *
- * @param[in] program Valid program handle to finalize.
- *
- * @param[in] isa Valid instruction set architecture handle to finalize for.
- *
- * @param[in] options Standard and vendor-specific options. Must be
- * NULL-terminated characted array. Uknown options are ignored. May be NULL.
- *
- * @param[out] code_object_writer Valid code object writer handle.
- *
- * @retval ::HSA_STATUS_SUCCESS Function is executed succesfully.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_INVALID_PROGRAM @p program is invalid.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ISA @p isa is invalid.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_DIRECTIVE_MISMATCH @p options do not match
- * one or more control directives in one or more BRIG modules in @p program.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_INVALID_CODE_OBJECT_WRITER
- * @p code_object_writer is invalid.
- *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
- * required.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_FINALIZATION_FAILED Failure to finalize
- * @p program.
- */
-hsa_status_t HSA_API hsa_ext_agent_code_object_finalize(
-    hsa_ext_program_t program,
-    hsa_isa_t isa,
-    const char *options,
-    hsa_ext_code_object_writer_t code_object_writer);
 /** @} */
 
 #define hsa_ext_finalizer_1_00
