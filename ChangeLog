@@ -1,4 +1,11 @@
+2015-12-14  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Editorial changes: deprecated enum constants and deprecation
+	text are now shown, declaration briefs are shown under signature
+	box
+
 2015-12-11  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
 	* Deprecated declarations back into API sections (instead of being
 	bundled together towards the end of the document)
 	* Added more detail on the multi-signal wait APIs and associated

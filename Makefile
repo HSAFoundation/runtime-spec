@@ -30,7 +30,7 @@ EXAMPLES:=examples/altlatex/lstinputfunlisting.tex
 DISTNAME:=hsa_runtime_$(HSA_VERSION)
 TMPDIST:=public/$(DISTNAME)
 
-all : $(EXAMPLES) $(LISTINGS) main.pdf
+all : main.pdf
 
 diff : main-diff.pdf
 
@@ -51,8 +51,8 @@ dist : checkversion diff main.pdf
 	cd public && zip -r -9 $(DISTNAME) $(DISTNAME)
 	$(RM) $(TMPDIST)
 
-%.pdf: %.tex
-	latexmk -g -xelatex -use-make $*.tex
+%.pdf: $(EXAMPLES) $(LISTINGS) %.tex
+	latexmk -halt-on-error -g -xelatex -use-make $*.tex
 
 $(EXAMPLES): example/examples.cc example/lstinputfunlisting.py
 	cd example && doxygen Doxyfile
@@ -65,7 +65,7 @@ $(LISTINGS): api/hsa.h api/hsa_ext.h api/xml2tex.py
 
 # Diff previous and current version of the document. The result is another Latex
 # file. The current version is expected to be named main-all.tex
-main-diff.tex: main-all-prev main-all.tex
+main-diff.tex: main-all.tex
 	./latexdiff-1.1.0-so.pl -t UNDERLINE --append-safecmd="hypertarget,hyperlink,reffun,refarg,reffld,reftyp,refenu,refhsl" --exclude-textcmd="chapter,section,subsection,subsubsection" --config="PICTUREENV=(?:picture|DIFnomarkup|tikzpicture|lstlisting|figure)[\w\d*@]*" main-all-prev.tex main-all.tex  > main-diff.tex
 
 main-all-prev:

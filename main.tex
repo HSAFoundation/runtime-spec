@@ -8,6 +8,7 @@
 % Use Open Sans font
 \usepackage[default]{opensans}
 
+% Margins
 \usepackage[top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm]{geometry}
 
 \usepackage[toc,page]{appendix}
@@ -20,11 +21,19 @@
 
 \newcommand{\doctitle}{HSA Runtime Programmer's Reference Manual}
 
-% overwrite global draft option so the source is shown in draft mode
+% overwrite global draft option so the source is shown in final mode
 \usepackage[final]{listings}
 
 % allow tables across page breaks
 \usepackage{longtable}
+
+% Danger sign
+\usepackage{stackengine}
+\usepackage{scalerel}
+\newcommand\danger[1][1.75ex]{%
+  \renewcommand\stacktype{L}%
+  \scaleto{\stackon[1.3pt]{\color{black}$\triangle$}{\tiny !}}{#1}%
+}
 
 % Use Tikz for simple diagrams
 \usepackage{tikz}
@@ -140,6 +149,8 @@
 % alternate rowcolors for all long-tables
 \let\oldlongtable\longtable
 \let\endoldlongtable\endlongtable
+\setlength\LTleft{0pt}
+\setlength\LTright{0pt}
 \newenvironment{mylongtable}{\rowcolors{0}{lightgray}{lightgray}\longtable} {
 \endlongtable}
 

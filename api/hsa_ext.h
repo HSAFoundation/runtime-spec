@@ -158,7 +158,7 @@ typedef struct hsa_ext_code_object_writer_s {
  * only used for populating it. Lifetime of file descriptor must exceed lifetime
  * of its code object writer.
  *
- * @param[in] file_descriptor File descriptor for opened file. File must be
+ * @param[in] file File descriptor for opened file. File must be
  * opened with at least write permissions. If file is non-empty, file will be
  * truncated.
  *
@@ -167,7 +167,7 @@ typedef struct hsa_ext_code_object_writer_s {
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_FILE_DESCRIPTOR @p file_descriptor is
+ * @retval ::HSA_STATUS_ERROR_INVALID_FILE @p file is
  * invalid.
  *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES Failure to allocate resources
@@ -176,7 +176,7 @@ typedef struct hsa_ext_code_object_writer_s {
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p code_object_writer is NULL.
  */
 hsa_status_t HSA_API hsa_ext_code_object_writer_create_from_file(
-    hsa_file_t file_descriptor,
+    hsa_file_t file,
     hsa_ext_code_object_writer_t *code_object_writer);
 
 /**
