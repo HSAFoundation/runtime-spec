@@ -247,16 +247,11 @@ def apply_replacement_directive(replacement_index, txts):
   return ''.join(ret)
 
 def process_struct_or_union(typedef, tex, defs):
-  depre = is_deprecated(typedef)
-
-  # if is_deprecated(typedef):
-  #   deprecated.append(('structunion', typedef))
-  #   return
-
   typename = node2tex(typedef.find('name'))
   tex.write('\\subsubsection{' + typename  + '}\n')
 
   # deprecated warning
+  depre = is_deprecated(typedef)
   if depre:
     tex.write('\\vspace{-2.5mm}')
     tex.write("\\danger\\:\\textit{Deprecated");
@@ -354,9 +349,6 @@ def check_name(enumname,valname):
 
 def process_enum(enum, tex, defs):
   depre = is_deprecated(enum)
-  # if is_deprecated(enum):
-  #   deprecated.append(('enum', enum))
-  #   return
 
   typename = node2tex(enum.find('name'))
   # anonymous enums start with @
@@ -415,7 +407,7 @@ def process_enum(enum, tex, defs):
     explanation = deprecation_text_node(enum)
     tex.write("" if not explanation else ": ")
     tex.write(explanation)
-    tex.write("}\n\n")
+    tex.write("}\n")
 
   # enum box: name and values
   tex.write('\\vspace{-2.5mm}')
@@ -536,10 +528,10 @@ def process_function(func, tex, listings, commands, variants):
     explanation = deprecation_text_node(func)
     tex.write("" if not explanation else ": ")
     tex.write(explanation)
-    tex.write("}\n\\\\[1mm]")
+    tex.write("}\n")
 
   # signature
-  tex.write('\\vspace{-3.5mm}')
+  tex.write('\\vspace{-2.5mm}')
   tex.write("\\begin{mylongtable}{p{\\columnwidth}}" + "\n")
   tex.write("\\\\[4mm]\n".join(map(lambda f : print_signature(f, tex), variants)))
   tex.write("\\end{mylongtable}\n")

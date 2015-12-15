@@ -149,8 +149,6 @@
 % alternate rowcolors for all long-tables
 \let\oldlongtable\longtable
 \let\endoldlongtable\endlongtable
-\setlength\LTleft{0pt}
-\setlength\LTright{0pt}
 \newenvironment{mylongtable}{\rowcolors{0}{lightgray}{lightgray}\longtable} {
 \endlongtable}
 
@@ -1167,16 +1165,16 @@ agent. The packet contains the following bits of information:
   size must be increased by a suitable, implementation-specific amount.
 \end{itemize}
 
-% The application must rely on information provided by the finalizer to retrieve
-% the amount of kernarg, group, and private memory used by a kernel. Each
-% executable symbol (\hsaref{hsa_executable_symbol_t}) associated with a kernel
-% exposes the kernarg
-% (\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE}), group
-% (\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE}) and private
-% (\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE}) static storage
-% requirements, together with an indication
-% (\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK}) if a dynamic call
-% stack is used.
+The application must rely on information provided by the finalizer to retrieve
+the amount of kernarg, group, and private memory used by a kernel. Each
+executable symbol (\hsaref{hsa_executable_symbol_t}) associated with a kernel
+exposes the kernarg
+(\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE}), group
+(\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE}) and private
+(\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE}) static storage
+requirements, together with an indication
+(\hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_DYNAMIC_CALLSTACK}) if a dynamic call
+stack is used.
 
 \subsubsection{Example: populating the kernel dispatch packet}
 Examples of kernel dispatches in previous sections have omitted the setup of the
@@ -1584,10 +1582,16 @@ a kernel starts execution. The application must ensure that the amount of group
 memory requested per work-group does not exceed the maximum allocation size
 declared by the kernel agent where the kernel dispatch packet is enqueued, which
 is the value of the \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} attribute in the
-group region associated with that kernel agent. Similarly, the private memory
-usage of a kernel dispatch packet (the amount of memory used by all the
-work-items) must not exceed the value of \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE}
-for the corresponding private region.
+group region associated with that kernel agent.
+
+A kernel dispatch packet must verify that the private memory usage per work-item
+declared in \hsaref{hsa_kernel_dispatch_packet_t.private_segment_size} does not
+exceed the value of \hsaref{HSA_REGION_INFO_ALLOC_MAX_SIZE} for the
+corresponding private region, and that the private memory usage per work-group
+(the result of multiplying the overall workgroup size by
+\hsaref{hsa_kernel_dispatch_packet_t.private_segment_size}) does not exceed the
+value of \hsaref{HSA_REGION_INFO_ALLOC_MAX_PRIVATE_WORKGROUP_SIZE} for the same
+region.
 
 \subsection{API}
 \input{api/altlatex/group-memory}

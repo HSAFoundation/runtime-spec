@@ -1,8 +1,14 @@
 2015-12-14  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
+	* Bug 600 - [Memory] Add queries for size of private segment
+	memory per work-item
+
+2015-12-14  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
 	* Editorial changes: deprecated enum constants and deprecation
 	text are now shown, declaration briefs are shown under signature
 	box
+	* Latexmk compiler aborts on first error
 
 2015-12-11  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 

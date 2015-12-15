@@ -65,16 +65,15 @@ $(LISTINGS): api/hsa.h api/hsa_ext.h api/xml2tex.py
 
 # Diff previous and current version of the document. The result is another Latex
 # file. The current version is expected to be named main-all.tex
-main-diff.tex: main-all.tex
+main-diff.tex: main-all-prev main-all.tex
 	./latexdiff-1.1.0-so.pl -t UNDERLINE --append-safecmd="hypertarget,hyperlink,reffun,refarg,reffld,reftyp,refenu,refhsl" --exclude-textcmd="chapter,section,subsection,subsubsection" --config="PICTUREENV=(?:picture|DIFnomarkup|tikzpicture|lstlisting|figure)[\w\d*@]*" main-all-prev.tex main-all.tex  > main-diff.tex
 
 main-all-prev:
-	git stash
-	git checkout $(COMMIT)
-	make clean main-all.tex
-	$(CP) main-all.tex main-all-prev.tex
-	git checkout master
-	git stash pop
+	$(MKDIR) $(COMMIT)
+	git --work-tree=$(COMMIT) checkout $(COMMIT) -- .
+	cd $(COMMIT) && make main-all.tex
+	$(CP) $(COMMIT)/main-all.tex main-all-prev.tex
+	$(RM) $(COMMIT)
 
 # Generate one Latex file out of resolving all \include tags in a given main
 # file. This is is needed because `latexdiff --flatten` requires all included

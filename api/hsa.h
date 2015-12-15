@@ -3022,13 +3022,22 @@ typedef enum {
    * of ::HSA_REGION_INFO_SIZE. The type of this attribute is size_t.
    *
    * If the region is in the global or readonly segments, this is the maximum
-   * size that the application can pass to ::hsa_memory_allocate. If the region
-   * is in the group segment, this is the maximum size (per work-group) that can
-   * be requested for a given kernel dispatch. If the region is in the private
-   * segment, this is the maximum size (per work-item) that can be requested for
-   * a specific kernel dispatch.
+   * size that the application can pass to ::hsa_memory_allocate.
+   *
+   * If the region is in the group segment, this is the maximum size (per
+   * work-group) that can be requested for a given kernel dispatch. If the
+   * region is in the private segment, this is the maximum size (per work-item)
+   * that can be requested for a specific kernel dispatch, and must be at least
+   * 256 bytes.
    */
   HSA_REGION_INFO_ALLOC_MAX_SIZE = 4,
+  /**
+   * Maximum size (per work-group) of private memory that can be requested for a
+   * specific kernel dispatch. Must be at least 65536 bytes. The type of this
+   * attribute is uint32_t. The value of this attribute is undefined if the
+   * region is not in the private segment.
+   */
+  HSA_REGION_INFO_ALLOC_MAX_PRIVATE_WORKGROUP_SIZE = 8,
   /**
    * Indicates whether memory in this region can be allocated using
    * ::hsa_memory_allocate. The type of this attribute is bool.
@@ -3459,10 +3468,10 @@ typedef enum {
    */
   HSA_ISA_INFO_CALL_CONVENTION_INFO_WAVEFRONTS_PER_COMPUTE_UNIT = 4,
    /**
-   * Machine models supported by the instruction set architecture.  If the ISA
-   * supports the small machine model, the element at index
-   * ::HSA_MACHINE_MODEL_SMALL is true. If the ISA supports the large model,
-   * the element at index ::HSA_MACHINE_MODEL_LARGE is true.
+   * Machine models supported by the instruction set architecture. The type of
+   * this attribute is a bool[2]. If the ISA supports the small machine model,
+   * the element at index ::HSA_MACHINE_MODEL_SMALL is true. If the ISA supports
+   * the large model, the element at index ::HSA_MACHINE_MODEL_LARGE is true.
    */
   HSA_ISA_INFO_MACHINE_MODELS = 5,
   /**
@@ -4639,7 +4648,7 @@ hsa_status_t HSA_API hsa_executable_symbol_get_info(
 */
 hsa_status_t HSA_API hsa_executable_iterate_symbols(
     hsa_executable_t executable,
-    hsa_status_t (*callback)(hsa_executable_t executable, hsa_executable_symbol_t symbol, void* data),
+    hsa_status_t (*callback)(hsa_executable_t exec, hsa_executable_symbol_t symbol, void* data),
     void* data);
 
 /** @} */
