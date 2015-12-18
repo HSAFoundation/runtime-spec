@@ -1460,10 +1460,10 @@ fine-grained regions on every HSA system:
   the attribute \hsaref{HSA_REGION_INFO_SEGMENT} in this region is
   \hsaref{HSA_REGION_SEGMENT_GLOBAL}, and the
   \hsaref{HSA_REGION_GLOBAL_FLAG_FINE_GRAINED} flag must be set.
-\item If the HSA system exposes at least one kernel agent, a
+\item If the HSA system exposes at least one kernel agent, a fine-grained
   region that is located in the global segment and can be used to allocate
   backing storage for the kernarg segment:
-  \hsaref{HSA_REGION_GLOBAL_FLAG_KERNARG_INIT} is true, and
+  \hsaref{HSA_REGION_GLOBAL_FLAG_KERNARG} is true, and
   \hsaref{HSA_REGION_INFO_RUNTIME_ALLOC_ALLOWED} is true.
 \end{itemize}
 

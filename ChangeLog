@@ -1,4 +1,17 @@
-2015-12-14  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+2015-12-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 540 - query for floating-point MAD single/double rounding
+	mode
+	* Bug 582 - Runtime changes to support code object proposal =>
+	created hsa_isa_get_exception_policies to replace
+	hsa_agent_get_exception_policies since an agent may support more
+	than one ISA
+	* Bug 607 - [Extensions] Extension name query
+	* Bug 609 - Allow kernarg-backing memory to be coarse-grained =>
+	reversed action, only fine-grained is allowed
+	* Added more detail to deprecation messages
+
+2015-12-15  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 600 - [Memory] Add queries for size of private segment
 	memory per work-item

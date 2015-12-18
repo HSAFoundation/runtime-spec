@@ -444,6 +444,28 @@ typedef enum {
 } hsa_extension_t;
 
 /**
+ * @brief Query the name of a given extension.
+ *
+ * @param[in] extension Extension identifier. If the extension is not supported
+ * by the implementation (see ::HSA_SYSTEM_INFO_EXTENSIONS), the behavior
+ * is undefined.
+ *
+ * @param[out] name A NUL-terminated string containing the name of the
+ * extension.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p extension is not a valid
+ * extension, or @p name is NULL.
+ */
+hsa_status_t HSA_API hsa_extension_get_name(
+    uint16_t extension,
+    const char **name);
+
+/**
  * @brief Query if a given version of an extension is supported by the HSA
  * implementation.
  *
@@ -597,7 +619,9 @@ typedef enum {
   HSA_AGENT_INFO_FEATURE = 2,
   /**
    * @deprecated Query ::HSA_ISA_INFO_MACHINE_MODELS for a given intruction set
-   * architecture supported by the agent instead.
+   * architecture supported by the agent instead.  If more than one ISA is
+   * supported by the agent, the returned value corresponds to the first ISA
+   * enumerated by ::hsa_agent_iterate_isas.
    *
    * Machine model supported by the agent. The type of this attribute is
    * ::hsa_machine_model_t.
@@ -605,7 +629,9 @@ typedef enum {
   HSA_AGENT_INFO_MACHINE_MODEL = 3,
   /**
    * @deprecated Query ::HSA_ISA_INFO_PROFILES for a given intruction set
-   * architecture supported by the agent instead.
+   * architecture supported by the agent instead.  If more than one ISA is
+   * supported by the agent, the returned value corresponds to the first ISA
+   * enumerated by ::hsa_agent_iterate_isas.
    *
    * Profile supported by the agent. The type of this attribute is
    * ::hsa_profile_t.
@@ -613,7 +639,9 @@ typedef enum {
   HSA_AGENT_INFO_PROFILE = 4,
   /**
    * @deprecated Query ::HSA_ISA_INFO_DEFAULT_FLOAT_ROUNDING_MODES for a given
-   * intruction set architecture supported by the agent instead.
+   * intruction set architecture supported by the agent instead.  If more than
+   * one ISA is supported by the agent, the returned value corresponds to the
+   * first ISA enumerated by ::hsa_agent_iterate_isas.
    *
    * Default floating-point rounding mode. The type of this attribute is
    * ::hsa_default_float_rounding_mode_t, but the value
@@ -622,7 +650,9 @@ typedef enum {
   HSA_AGENT_INFO_DEFAULT_FLOAT_ROUNDING_MODE = 5,
   /**
    * @deprecated Query ::HSA_ISA_INFO_BASE_PROFILE_DEFAULT_FLOAT_ROUNDING_MODES
-   * for a given intruction set architecture supported by the agent instead.
+   * for a given intruction set architecture supported by the agent instead.  If
+   * more than one ISA is supported by the agent, the returned value corresponds
+   * to the first ISA enumerated by ::hsa_agent_iterate_isas.
    *
    * Default floating-point rounding modes supported by the agent in the Base
    * profile. The type of this attribute is a mask of
@@ -632,7 +662,9 @@ typedef enum {
   HSA_AGENT_INFO_BASE_PROFILE_DEFAULT_FLOAT_ROUNDING_MODES = 23,
   /**
    * @deprecated Query ::HSA_ISA_INFO_FAST_F16_OPERATION for a given intruction
-   * set architecture supported by the agent instead.
+   * set architecture supported by the agent instead.  If more than one ISA is
+   * supported by the agent, the returned value corresponds to the first ISA
+   * enumerated by ::hsa_agent_iterate_isas.
    *
    * Flag indicating that the f16 HSAIL operation is at least as fast as the
    * f32 operation in the current agent. The value of this attribute is
@@ -642,7 +674,10 @@ typedef enum {
   HSA_AGENT_INFO_FAST_F16_OPERATION = 24,
   /**
    * @deprecated Query ::HSA_WAVEFRONT_INFO_SIZE for a given wavefront and
-   * intruction set architecture supported by the agent instead.
+   * intruction set architecture supported by the agent instead.  If more than
+   * one ISA is supported by the agent, the returned value corresponds to the
+   * first ISA enumerated by ::hsa_agent_iterate_isas and the first wavefront
+   * enumerated by ::hsa_isa_iterate_wavefronts for that ISA.
    *
    * Number of work-items in a wavefront. Must be a power of 2 in the range
    * [1,256]. The value of this attribute is undefined if the agent is not
@@ -651,7 +686,9 @@ typedef enum {
   HSA_AGENT_INFO_WAVEFRONT_SIZE = 6,
   /**
    * @deprecated Query ::HSA_ISA_INFO_WORKGROUP_MAX_DIM for a given intruction
-   * set architecture supported by the agent instead.
+   * set architecture supported by the agent instead.  If more than one ISA is
+   * supported by the agent, the returned value corresponds to the first ISA
+   * enumerated by ::hsa_agent_iterate_isas.
    *
    * Maximum number of work-items of each dimension of a work-group.  Each
    * maximum must be greater than 0. No maximum can exceed the value of
@@ -662,7 +699,9 @@ typedef enum {
   HSA_AGENT_INFO_WORKGROUP_MAX_DIM = 7,
   /**
    * @deprecated Query ::HSA_ISA_INFO_WORKGROUP_MAX_SIZE for a given intruction
-   * set architecture supported by the agent instead.
+   * set architecture supported by the agent instead.  If more than one ISA is
+   * supported by the agent, the returned value corresponds to the first ISA
+   * enumerated by ::hsa_agent_iterate_isas.
    *
    * Maximum total number of work-items in a work-group. The value of this
    * attribute is undefined if the agent is not a kernel agent. The type
@@ -683,7 +722,9 @@ typedef enum {
   HSA_AGENT_INFO_GRID_MAX_DIM = 9,
   /**
    * @deprecated Query ::HSA_ISA_INFO_GRID_MAX_SIZE for a given intruction set
-   * architecture supported by the agent instead.
+   * architecture supported by the agent instead.  If more than one ISA is
+   * supported by the agent, the returned value corresponds to the first ISA
+   * enumerated by ::hsa_agent_iterate_isas.
    *
    * Maximum total number of work-items in a grid. The value of this attribute
    * is undefined if the agent is not a kernel agent. The type of this
@@ -692,7 +733,9 @@ typedef enum {
   HSA_AGENT_INFO_GRID_MAX_SIZE = 10,
   /**
    * @deprecated Query ::HSA_ISA_INFO_FBARRIER_MAX_SIZE for a given intruction
-   * set architecture supported by the agent instead.
+   * set architecture supported by the agent instead.  If more than one ISA is
+   * supported by the agent, the returned value corresponds to the first ISA
+   * enumerated by ::hsa_agent_iterate_isas.
    *
    * Maximum number of fbarriers per work-group. Must be at least 32. The value
    * of this attribute is undefined if the agent is not a kernel agent. The
@@ -747,7 +790,9 @@ typedef enum {
   HSA_AGENT_INFO_CACHE_SIZE = 18,
   /**
    * @deprecated An agent may support multiple instruction set
-   * architectures. See ::hsa_agent_iterate_isas.
+   * architectures. See ::hsa_agent_iterate_isas.  If more than one ISA is
+   * supported by the agent, the returned value corresponds to the first ISA
+   * enumerated by ::hsa_agent_iterate_isas.
    *
    * Instruction set architecture of the agent. The type of this attribute
    * is ::hsa_isa_t.
@@ -838,6 +883,11 @@ typedef enum {
 } hsa_exception_policy_t;
 
 /**
+ * @deprecated Use ::hsa_isa_get_exception_policies for a given intruction set
+ * architecture supported by the agent instead. If more than one ISA is
+ * supported by the agent, this function uses the first value returned by
+ * ::hsa_agent_iterate_isas.
+ *
  * @brief Retrieve the exception policy support for a given combination of
  * agent and profile
  *
@@ -1088,7 +1138,7 @@ hsa_signal_value_t HSA_API hsa_signal_load_relaxed(
     hsa_signal_t signal);
 
 /**
- * @deprecated Use ::hsa_signal_load_scacquire instead.
+ * @deprecated Renamed as ::hsa_signal_load_scacquire.
  *
  * @copydoc hsa_signal_load_scacquire
 */
@@ -1117,7 +1167,7 @@ void HSA_API hsa_signal_store_screlease(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_store_screlease instead.
+ * @deprecated Renamed as ::hsa_signal_store_screlease.
  *
  * @copydoc hsa_signal_store_screlease
  */
@@ -1168,7 +1218,7 @@ hsa_signal_value_t HSA_API hsa_signal_exchange_scacq_screl(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_exchange_scacq_screl instead.
+ * @deprecated Renamed as ::hsa_signal_exchange_scacq_screl.
  *
  * @copydoc hsa_signal_exchange_scacq_screl
  */
@@ -1184,7 +1234,7 @@ hsa_signal_value_t HSA_API hsa_signal_exchange_scacquire(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_exchange_scacquire instead.
+ * @deprecated Renamed as ::hsa_signal_exchange_scacquire.
  *
  * @copydoc hsa_signal_exchange_scacquire
  */
@@ -1206,7 +1256,7 @@ hsa_signal_value_t HSA_API hsa_signal_exchange_screlease(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_exchange_screlease instead.
+ * @deprecated Renamed as ::hsa_signal_exchange_screlease.
  *
  * @copydoc hsa_signal_exchange_screlease
  */
@@ -1239,7 +1289,7 @@ hsa_signal_value_t HSA_API hsa_signal_cas_scacq_screl(
 
 
 /**
- * @deprecated Use ::hsa_signal_cas_scacq_screl instead.
+ * @deprecated Renamed as ::hsa_signal_cas_scacq_screl.
  *
  * @copydoc hsa_signal_cas_scacq_screl
  */
@@ -1257,7 +1307,7 @@ hsa_signal_value_t HSA_API hsa_signal_cas_scacquire(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_cas_scacquire instead.
+ * @deprecated Renamed as ::hsa_signal_cas_scacquire.
  *
  * @copydoc hsa_signal_cas_scacquire
  */
@@ -1283,7 +1333,7 @@ hsa_signal_value_t HSA_API hsa_signal_cas_screlease(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_cas_screlease instead.
+ * @deprecated Renamed as ::hsa_signal_cas_screlease.
  *
  * @copydoc hsa_signal_cas_screlease
  */
@@ -1309,7 +1359,7 @@ void HSA_API hsa_signal_add_scacq_screl(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_add_scacq_screl instead.
+ * @deprecated Renamed as ::hsa_signal_add_scacq_screl.
  *
  * @copydoc hsa_signal_add_scacq_screl
  */
@@ -1325,7 +1375,7 @@ void HSA_API hsa_signal_add_scacquire(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_add_scacquire instead.
+ * @deprecated Renamed as ::hsa_signal_add_scacquire.
  *
  * @copydoc hsa_signal_add_scacquire
  */
@@ -1349,7 +1399,7 @@ void HSA_API hsa_signal_add_screlease(
 
 
 /**
- * @deprecated Use ::hsa_signal_add_screlease instead.
+ * @deprecated Renamed as ::hsa_signal_add_screlease.
  *
  * @copydoc hsa_signal_add_screlease
  */
@@ -1375,7 +1425,7 @@ void HSA_API hsa_signal_subtract_scacq_screl(
 
 
 /**
- * @deprecated Use ::hsa_signal_subtract_scacq_screl instead.
+ * @deprecated Renamed as ::hsa_signal_subtract_scacq_screl.
  *
  * @copydoc hsa_signal_subtract_scacq_screl
  */
@@ -1391,7 +1441,7 @@ void HSA_API hsa_signal_subtract_scacquire(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_subtract_scacquire instead.
+ * @deprecated Renamed as ::hsa_signal_subtract_scacquire.
  *
  * @copydoc hsa_signal_subtract_scacquire
  */
@@ -1415,7 +1465,7 @@ void HSA_API hsa_signal_subtract_screlease(
 
 
 /**
- * @deprecated Use ::hsa_signal_subtract_screlease instead.
+ * @deprecated Renamed as ::hsa_signal_subtract_screlease.
  *
  * @copydoc hsa_signal_subtract_screlease
  */
@@ -1441,7 +1491,7 @@ void HSA_API hsa_signal_and_scacq_screl(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_and_scacq_screl instead.
+ * @deprecated Renamed as ::hsa_signal_and_scacq_screl.
  *
  * @copydoc hsa_signal_and_scacq_screl
  */
@@ -1457,7 +1507,7 @@ void HSA_API hsa_signal_and_scacquire(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_and_scacquire instead.
+ * @deprecated Renamed as ::hsa_signal_and_scacquire.
  *
  * @copydoc hsa_signal_and_scacquire
  */
@@ -1481,7 +1531,7 @@ void HSA_API hsa_signal_and_screlease(
 
 
 /**
- * @deprecated Use ::hsa_signal_and_screlease instead.
+ * @deprecated Renamed as ::hsa_signal_and_screlease.
  *
  * @copydoc hsa_signal_and_screlease
  */
@@ -1507,7 +1557,7 @@ void HSA_API hsa_signal_or_scacq_screl(
 
 
 /**
- * @deprecated Use ::hsa_signal_or_scacq_screl instead.
+ * @deprecated Renamed as ::hsa_signal_or_scacq_screl.
  *
  * @copydoc hsa_signal_or_scacq_screl
  */
@@ -1523,7 +1573,7 @@ void HSA_API hsa_signal_or_scacquire(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_or_scacquire instead.
+ * @deprecated Renamed as ::hsa_signal_or_scacquire.
  *
  * @copydoc hsa_signal_or_scacquire
  */
@@ -1546,7 +1596,7 @@ void HSA_API hsa_signal_or_screlease(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_or_screlease instead.
+ * @deprecated Renamed as ::hsa_signal_or_screlease.
  *
  * @copydoc hsa_signal_or_screlease
  */
@@ -1573,7 +1623,7 @@ void HSA_API hsa_signal_xor_scacq_screl(
 
 
 /**
- * @deprecated Use ::hsa_signal_xor_scacq_screl instead.
+ * @deprecated Renamed as ::hsa_signal_xor_scacq_screl.
  *
  * @copydoc hsa_signal_xor_scacq_screl
  */
@@ -1589,7 +1639,7 @@ void HSA_API hsa_signal_xor_scacquire(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_xor_scacquire instead.
+ * @deprecated Renamed as ::hsa_signal_xor_scacquire.
  *
  * @copydoc hsa_signal_xor_scacquire
  */
@@ -1612,7 +1662,7 @@ void HSA_API hsa_signal_xor_screlease(
     hsa_signal_value_t value);
 
 /**
- * @deprecated Use ::hsa_signal_xor_screlease instead.
+ * @deprecated Renamed as ::hsa_signal_xor_screlease.
  *
  * @copydoc hsa_signal_xor_screlease
  */
@@ -1714,7 +1764,7 @@ hsa_signal_value_t HSA_API hsa_signal_wait_relaxed(
     hsa_wait_state_t wait_state_hint);
 
 /**
- * @deprecated Use ::hsa_signal_wait_scacquire instead.
+ * @deprecated Renamed as ::hsa_signal_wait_scacquire.
  *
  * @copydoc hsa_signal_wait_scacquire
  */
@@ -2288,7 +2338,7 @@ hsa_status_t HSA_API hsa_queue_inactivate(
     hsa_queue_t *queue);
 
 /**
- * @deprecated Use ::hsa_queue_load_read_index_scacquire instead.
+ * @deprecated Renamed as ::hsa_queue_load_read_index_scacquire.
  *
  * @copydoc hsa_queue_load_read_index_scacquire
  */
@@ -2312,7 +2362,7 @@ uint64_t HSA_API hsa_queue_load_read_index_relaxed(
     const hsa_queue_t *queue);
 
 /**
- * @deprecated Use ::hsa_queue_load_write_index_scacquire instead.
+ * @deprecated Renamed as ::hsa_queue_load_write_index_scacquire.
  *
  * @copydoc hsa_queue_load_write_index_scacquire
  */
@@ -2352,7 +2402,7 @@ void HSA_API hsa_queue_store_write_index_relaxed(
     uint64_t value);
 
 /**
- * @deprecated Use ::hsa_queue_store_write_index_screlease instead.
+ * @deprecated Renamed as ::hsa_queue_store_write_index_screlease.
  *
  * @copydoc hsa_queue_store_write_index_screlease
  */
@@ -2368,7 +2418,7 @@ void HSA_API hsa_queue_store_write_index_screlease(
     uint64_t value);
 
 /**
- * @deprecated Use ::hsa_queue_cas_write_index_scacq_screl instead.
+ * @deprecated Renamed as ::hsa_queue_cas_write_index_scacq_screl.
  *
  * @copydoc hsa_queue_cas_write_index_scacq_screl
  */
@@ -2397,7 +2447,7 @@ uint64_t HSA_API hsa_queue_cas_write_index_scacq_screl(
     uint64_t value);
 
 /**
- * @deprecated Use ::hsa_queue_cas_write_index_scacquire instead.
+ * @deprecated Renamed as ::hsa_queue_cas_write_index_scacquire.
  *
  * @copydoc hsa_queue_cas_write_index_scacquire
  */
@@ -2423,7 +2473,7 @@ uint64_t HSA_API hsa_queue_cas_write_index_relaxed(
     uint64_t value);
 
 /**
- * @deprecated Use ::hsa_queue_cas_write_index_screlease instead.
+ * @deprecated Renamed as ::hsa_queue_cas_write_index_screlease.
  *
  * @copydoc hsa_queue_cas_write_index_screlease
  */
@@ -2441,7 +2491,7 @@ uint64_t HSA_API hsa_queue_cas_write_index_screlease(
     uint64_t value);
 
 /**
- * @deprecated Use ::hsa_queue_add_write_index_scacq_screl instead.
+ * @deprecated Renamed as ::hsa_queue_add_write_index_scacq_screl.
  *
  * @copydoc hsa_queue_add_write_index_scacq_screl
  */
@@ -2463,7 +2513,7 @@ uint64_t HSA_API hsa_queue_add_write_index_scacq_screl(
     uint64_t value);
 
 /**
- * @deprecated Use ::hsa_queue_add_write_index_scacquire instead.
+ * @deprecated Renamed as ::hsa_queue_add_write_index_scacquire.
  *
  * @copydoc hsa_queue_add_write_index_scacquire
  */
@@ -2486,7 +2536,7 @@ uint64_t HSA_API hsa_queue_add_write_index_relaxed(
     uint64_t value);
 
 /**
- * @deprecated Use ::hsa_queue_add_write_index_screlease instead.
+ * @deprecated Renamed as ::hsa_queue_add_write_index_screlease.
  *
  * @copydoc hsa_queue_add_write_index_screlease
  */
@@ -2519,7 +2569,7 @@ void HSA_API hsa_queue_store_read_index_relaxed(
     uint64_t value);
 
 /**
- * @deprecated Use ::hsa_queue_store_read_index_screlease instead.
+ * @deprecated Renamed as ::hsa_queue_store_read_index_screlease.
  *
  * @copydoc hsa_queue_store_read_index_screlease
  */
@@ -2629,7 +2679,7 @@ typedef enum {
    */
    HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE = 9,
    /**
-    * @deprecated Use ::HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE instead.
+    * @deprecated Renamed as ::HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE.
     */
    HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE = 9,
   /**
@@ -2643,7 +2693,7 @@ typedef enum {
    */
    HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE = 11,
    /**
-    * @deprecated Use ::HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE instead.
+    * @deprecated Renamed as ::HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE.
     */
    HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE = 11
  } hsa_packet_header_t;
@@ -2656,12 +2706,12 @@ typedef enum {
    HSA_PACKET_HEADER_WIDTH_BARRIER = 1,
    HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE = 2,
    /**
-    * @deprecated Use HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE instead.
+    * @deprecated Use HSA_PACKET_HEADER_WIDTH_SCACQUIRE_FENCE_SCOPE.
     */
    HSA_PACKET_HEADER_WIDTH_ACQUIRE_FENCE_SCOPE = 2,
    HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE = 2,
    /**
-    * @deprecated Use HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE instead.
+    * @deprecated Use HSA_PACKET_HEADER_WIDTH_SCRELEASE_FENCE_SCOPE.
     */
    HSA_PACKET_HEADER_WIDTH_RELEASE_FENCE_SCOPE = 2
  } hsa_packet_header_width_t;
@@ -2973,15 +3023,11 @@ typedef enum {
  */
 typedef enum {
   /**
-   * @deprecated Use ::HSA_REGION_GLOBAL_FLAG_KERNARG_INIT instead.
-   *
+   * The application can use memory in the region to store kernel arguments, and
+   * provide the values for the kernarg segment of a kernel dispatch. If this
+   * flag is set, then ::HSA_REGION_GLOBAL_FLAG_FINE_GRAINED must be set.
    */
   HSA_REGION_GLOBAL_FLAG_KERNARG = 1,
-  /**
-   * The application can use memory in the region to store kernel arguments, and
-   * provide the values for the kernarg segment of a kernel dispatch.
-   */
-  HSA_REGION_GLOBAL_FLAG_KERNARG_INIT = 1,
   /**
    * Updates to memory in this region are immediately visible to all the
    * agents under the terms of the HSA memory model. If this
@@ -3561,6 +3607,115 @@ hsa_status_t HSA_API hsa_isa_get_info(
     void* value);
 
 /**
+ * @brief Retrieve the exception policy support for a given combination of
+ * instruction set architecture and profile
+ *
+ * @param[in] isa A valid instruction set architecture.
+ *
+ * @param[in] profile Profile.
+ *
+ * @param[out] mask Pointer to a memory location where the HSA runtime stores a
+ * mask of ::hsa_exception_policy_t values. Must not be NULL.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ISA The instruction set architecture is
+ * invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p profile is not a valid
+ * profile, or @p mask is NULL.
+ *
+ */
+hsa_status_t HSA_API hsa_isa_get_exception_policies(
+    hsa_isa_t isa,
+    hsa_profile_t profile,
+    uint16_t *mask);
+
+/**
+ * @brief Floating-point types.
+ */
+typedef enum {
+  /**
+   * 16-bit floating-point type.
+   */
+  HSA_FP_TYPE_16 = 1,
+  /**
+   * 32-bit floating-point type.
+   */
+  HSA_FP_TYPE_32 = 2,
+  /**
+   * 64-bit floating-point type.
+   */
+  HSA_FP_TYPE_64 = 4
+} hsa_fp_type_t;
+
+/**
+ * @brief Flush to zero modes.
+ */
+typedef enum {
+  /**
+   * Flush to zero.
+   */
+  HSA_FLUSH_MODE_FTZ = 1,
+  /**
+   * Do not flush to zero.
+   */
+  HSA_FLUSH_MODE_NON_FTZ = 2
+} hsa_flush_mode_t;
+
+/**
+ * @brief Round methods.
+ */
+typedef enum {
+  /**
+   * Single round method.
+   */
+  HSA_ROUND_METHOD_SINGLE = 1,
+  /**
+   * Double round method.
+   */
+  HSA_ROUND_METHOD_DOUBLE = 2
+} hsa_round_method_t;
+
+
+/**
+ * @brief Retrieve the round method (single or double) used to implement the
+ * floating-point multiply add instruction (mad) for a given combination of
+ * instruction set architecture, floating-point type, and flush to zero
+ * modifier.
+ *
+ * @param[in] isa Instruction Set Architecture.
+ *
+ * @param[in] fp_type Floating-point type.
+ *
+ * @param[in] flush_mode Flush to zero modifier.
+ *
+ * @param[out] round_method Pointer to a memory location where the HSA
+ * runtime stores the round method used by the implementation. Must not be NULL.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ISA The instruction set architecture is
+ * invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p fp_type is not a valid
+ * floating-point type, or @p flush_mode is not a valid flush to zero modifier,
+ * or @p round_method is NULL.
+ *
+ */
+hsa_status_t HSA_API hsa_isa_get_round_method(
+    hsa_isa_t isa,
+    hsa_fp_type_t fp_type,
+    hsa_flush_mode_t flush_mode,
+    hsa_round_method_t *round_method);
+
+/**
  * @brief An opaque handle representing a wavefront.
  */
 typedef struct hsa_wavefront_s {
@@ -3854,59 +4009,6 @@ hsa_status_t HSA_API hsa_executable_create(
  */
 hsa_status_t HSA_API hsa_executable_destroy(
     hsa_executable_t executable);
-
-/**
- * @deprecated
- *
- * @brief Load code object into the executable.
- *
- * @details Every global/readonly variable that is external must be defined
- * before loading the code object. Internal global/readonly variable is
- * allocated once the code object, that is being loaded, references this
- * variable and this variable is not allocated.
- *
- * Any module linkage declaration must have been defined either by a define
- * variable or by loading a code object that has a symbol with module linkage
- * definition.
- *
- * @param[in] executable Executable.
- *
- * @param[in] agent Agent to load code object for. The agent must support the
- * default floating-point rounding mode used by @p code_object.
- *
- * @param[in] code_object Code object to load.  The lifetime of the code object
- * must exceed that of the executable: if @p code_object is destroyed before @p
- * executable, the behavior is undefined.
- *
- * @param[in] options Vendor-specific options. May be NULL.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
- * resources required for the operation.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_EXECUTABLE The executable is invalid.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_CODE_OBJECT @p code_object is invalid.
- *
- * @retval ::HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS @p agent is not compatible
- * with @p code_object (for example, @p agent does not support the default
- * floating-point rounding mode specified by @p code_object), or @p code_object
- * is not compatible with @p executable (for example, @p code_object and @p
- * executable have different machine models or profiles).
- *
- * @retval ::HSA_STATUS_ERROR_FROZEN_EXECUTABLE @p executable is frozen.
- */
-hsa_status_t HSA_API hsa_executable_load_code_object(
-    hsa_executable_t executable,
-    hsa_agent_t agent,
-    hsa_code_object_t code_object,
-    const char *options);
 
 /**
  * @brief Opaque handle to loaded code object.
@@ -4871,6 +4973,59 @@ hsa_status_t HSA_API hsa_code_object_get_info(
     hsa_code_object_t code_object,
     hsa_code_object_info_t attribute,
     void *value);
+
+/**
+ * @deprecated
+ *
+ * @brief Load code object into the executable.
+ *
+ * @details Every global/readonly variable that is external must be defined
+ * before loading the code object. Internal global/readonly variable is
+ * allocated once the code object, that is being loaded, references this
+ * variable and this variable is not allocated.
+ *
+ * Any module linkage declaration must have been defined either by a define
+ * variable or by loading a code object that has a symbol with module linkage
+ * definition.
+ *
+ * @param[in] executable Executable.
+ *
+ * @param[in] agent Agent to load code object for. The agent must support the
+ * default floating-point rounding mode used by @p code_object.
+ *
+ * @param[in] code_object Code object to load.  The lifetime of the code object
+ * must exceed that of the executable: if @p code_object is destroyed before @p
+ * executable, the behavior is undefined.
+ *
+ * @param[in] options Vendor-specific options. May be NULL.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
+ * resources required for the operation.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_EXECUTABLE The executable is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_CODE_OBJECT @p code_object is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS @p agent is not compatible
+ * with @p code_object (for example, @p agent does not support the default
+ * floating-point rounding mode specified by @p code_object), or @p code_object
+ * is not compatible with @p executable (for example, @p code_object and @p
+ * executable have different machine models or profiles).
+ *
+ * @retval ::HSA_STATUS_ERROR_FROZEN_EXECUTABLE @p executable is frozen.
+ */
+hsa_status_t HSA_API hsa_executable_load_code_object(
+    hsa_executable_t executable,
+    hsa_agent_t agent,
+    hsa_code_object_t code_object,
+    const char *options);
 
 /**
  * @deprecated
