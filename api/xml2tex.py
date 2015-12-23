@@ -209,7 +209,7 @@ def process_typedef(typedef, tex, defs):
   tex.write("\\end{mylongtable}\n")
 
   # brief
-  tex.write('\\vspace{-2.5mm}')
+  tex.write('\\vspace{-4mm}')
   # if there is more than one paragraph, it goes into detaileddescription
   paras = typedef.findall('detaileddescription/para/parblock/para')
   paras = typedef.findall('briefdescription/para') if not paras else paras
@@ -253,7 +253,7 @@ def process_struct_or_union(typedef, tex, defs):
   # deprecated warning
   depre = is_deprecated(typedef)
   if depre:
-    tex.write('\\vspace{-2.5mm}')
+    tex.write('\\vspace{-4mm}')
     tex.write("\\danger\\:\\textit{Deprecated");
     explanation = deprecation_text_node(typedef)
     tex.write("" if not explanation else ": ")
@@ -261,7 +261,7 @@ def process_struct_or_union(typedef, tex, defs):
     tex.write("}\n")
 
   # name
-  tex.write('\\vspace{-2.5mm}')
+  tex.write('\\vspace{-4mm}')
   tex.write("\\begin{mylongtable}{p{\\columnwidth}}" + "\n")
   tex.write("\\rule{0pt}{3ex}")
   typ = typedef.find('type').text;
@@ -402,7 +402,7 @@ def process_enum(enum, tex, defs):
 
   # deprecated warning
   if depre:
-    tex.write('\\vspace{-2.5mm}')
+    tex.write('\\vspace{-4mm}')
     tex.write("\\danger\\:\\textit{Deprecated");
     explanation = deprecation_text_node(enum)
     tex.write("" if not explanation else ": ")
@@ -410,7 +410,7 @@ def process_enum(enum, tex, defs):
     tex.write("}\n")
 
   # enum box: name and values
-  tex.write('\\vspace{-2.5mm}')
+  tex.write('\\vspace{-4mm}')
   tex.write("\\begin{mylongtable}{p{\\columnwidth}}" + "\n")
   tex.write("\\rule{0pt}{3ex}")
   if typename is '':
@@ -523,7 +523,7 @@ def process_function(func, tex, listings, commands, variants):
 
   # deprecated warning
   if depre:
-    tex.write('\\vspace{-2.5mm}')
+    tex.write('\\vspace{-4mm}')
     tex.write("\\danger\\:\\textit{Deprecated");
     explanation = deprecation_text_node(func)
     tex.write("" if not explanation else ": ")
@@ -531,13 +531,13 @@ def process_function(func, tex, listings, commands, variants):
     tex.write("}\n")
 
   # signature
-  tex.write('\\vspace{-2.5mm}')
+  tex.write('\\vspace{-4mm}')
   tex.write("\\begin{mylongtable}{p{\\columnwidth}}" + "\n")
   tex.write("\\\\[4mm]\n".join(map(lambda f : print_signature(f, tex), variants)))
   tex.write("\\end{mylongtable}\n")
 
   # brief
-  tex.write("\\vspace{-2.5mm}")
+  tex.write("\\vspace{-4mm}")
   tex.write(node2tex(func.find('briefdescription/para')))
   tex.write("\n\n")
 

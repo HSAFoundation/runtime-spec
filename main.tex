@@ -1740,7 +1740,8 @@ names must be registered with the HSA Foundation, must be unique, and may be
 abbreviated to improve the readability of the symbols. An extension name must
 not contain upper case characters. For instance, if vendor \textit{HAL} wants to
 create an extension related to label \textit{foo}, the resulting extension name
-is \textit{hsa_hal_foo}.
+is \textit{hsa_hal_foo}. The corresponding HSAIL name for a vendor-specific
+extension is <\textit{vendor(s) name}>::<\textit{label}>.
 
 All the functions and types declared in the extension must be prefixed by the
 extension name, and follow HSA naming conventions. For example, a

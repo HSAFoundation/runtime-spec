@@ -1022,7 +1022,9 @@ hsa_status_t HSA_API hsa_agent_iterate_caches(
  *
  * @param[out] result Pointer to a memory location where the HSA runtime stores
  * the result of the check. The result is true if the specified version of the
- * extension is supported, and false otherwise.
+ * extension is supported, and false otherwise. The result must be false if
+ * ::hsa_system_extension_supported returns false for the same extension
+ * version.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -3529,14 +3531,24 @@ typedef enum {
   HSA_ISA_INFO_PROFILES = 6,
   /**
    * Default floating-point rounding modes supported by the instruction set
-   * architecture. The type of this attribute is a mask of
-   * ::hsa_default_float_rounding_mode_t.
+   * architecture. The type of this attribute is a bool[3]. The value at a given
+   * index is true if the corresponding rounding mode in
+   * ::hsa_default_float_rounding_mode_t is supported. At least one default mode
+   * has to be supported.
+   *
+   * If the default mode is supported, then
+   * ::HSA_ISA_INFO_BASE_PROFILE_DEFAULT_FLOAT_ROUNDING_MODES must report that
+   * both the zero and the near roundings modes are supported.
    */
   HSA_ISA_INFO_DEFAULT_FLOAT_ROUNDING_MODES = 7,
   /**
    * Default floating-point rounding modes supported by the instruction set
-   * architecture in the Base profile. The type of this attribute is a mask of
-   * ::hsa_default_float_rounding_mode_t.
+   * architecture in the Base profile. The type of this attribute is a
+   * bool[3]. The value at a given index is true if the corresponding rounding
+   * mode in ::hsa_default_float_rounding_mode_t is supported. The value at
+   * index HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT must be false.  At least one
+   * of the values at indexes ::HSA_DEFAULT_FLOAT_ROUNDING_MODE_ZERO or
+   * HSA_DEFAULT_FLOAT_ROUNDING_MODE_NEAR must be true.
    */
   HSA_ISA_INFO_BASE_PROFILE_DEFAULT_FLOAT_ROUNDING_MODES = 8,
   /**
@@ -4021,39 +4033,45 @@ typedef struct hsa_loaded_code_object_s {
 } hsa_loaded_code_object_t;
 
 /**
- * @brief Load program code object into the executable.
+ * @brief Load a program code object into an executable.
  *
- * @details Loads program code object from given code object reader into given
- * executable. Program code object contains all defined program allocation
- * variables.
+ * @details A program code object contains information about resources that are
+ * accessible by all kernels agents that run the executable, and can be loaded
+ * at most once into an executable.
+ *
+ * If the program code object uses extensions, the implementation must support
+ * them for this operation to return successfully.
  *
  * @param[in] executable Executable.
  *
- * @param[in] code_object_reader Code object reader that holds code object to
- * load. The lifetime of the code object reader must exceed the lifetime of
- * @p executable. If @p code_object_reader or underlying file/memory is released
- * before @p executable, the behavior is undefined.
+ * @param[in] code_object_reader A code object reader that holds the program
+ * code object to load. If a code object reader is destroyed before all the
+ * associated executables are destroyed, the behavior is undefined.
  *
  * @param[in] options Vendor-specific options. Must be a NULL-terminated
  * characted array. Unknown options are ignored. May be NULL.
  *
- * @param[out] loaded_code_object Memory location to store a handle for loaded
- * code object.
+ * @param[out] loaded_code_object Pointer to a memory location where the HSA
+ * runtime stores the loaded code object handle. May be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
- * resources required for the operation.
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is failure to allocate the
+ * resources required by the implementation.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_EXECUTABLE The executable is invalid.
  *
- * @retval ::HSA_STATUS_ERROR_FROZEN_EXECUTABLE @p executable is frozen.
+ * @retval ::HSA_STATUS_ERROR_FROZEN_EXECUTABLE The executable is frozen.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_CODE_OBJECT_READER @p code_object_reader
  * is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS The program code object is
+ * not compatible with the executable or the implementation (for example, the
+ * code object uses an extension that is not supported by the implementation).
  */
 hsa_status_t HSA_API hsa_executable_load_program_code_object(
     hsa_executable_t executable,
@@ -4062,7 +4080,7 @@ hsa_status_t HSA_API hsa_executable_load_program_code_object(
     hsa_loaded_code_object_t *loaded_code_object);
 
 /**
- * @brief Load agent code object from a code object reader into an executable.
+ * @brief Load an agent code object into an executable.
  *
  * @details The agent code object contains all defined agent
  * allocation variables, functions, indirect functions, and kernels in given
@@ -4072,45 +4090,51 @@ hsa_status_t HSA_API hsa_executable_load_program_code_object(
  * variable or by loading a code object that has a symbol with module linkage
  * definition.
  *
+ * The default floating-point rounding mode of the code object associated with
+ * @p code_object_reader should match that of the executable
+ * (::HSA_EXECUTABLE_INFO_DEFAULT_FLOAT_ROUNDING_MODE), or be default (in which
+ * case the value of ::HSA_EXECUTABLE_INFO_DEFAULT_FLOAT_ROUNDING_MODE is used).
+ * If the agent code object uses extensions, the implementation and the agent
+ * must support them for this operation to return successfully.
+ *
  * @param[in] executable Executable.
  *
- * @param[in] agent Agent to load code object for. The agent must support
- * extensions, machine model, profile, default floating-point rounding mode used
- * in the code object. See PRM for more details.
+ * @param[in] agent Agent to load code object for. A code object can be loaded
+ * into an executable at most once for a given agent. The instruction set
+ * architecture of the code object must be supported by the agent.
  *
- * @param[in] code_object_reader Code object reader that holds code object to
- * load. The lifetime of the code object reader must exceed the lifetime of
- * @p executable. If @p code_object_reader or underlying file/memory is released
- * before @p executable, the behavior is undefined.
+ * @param[in] code_object_reader A code object reader that holds the code object
+ * to load. If a code object reader is destroyed before all the associated
+ * executables are destroyed, the behavior is undefined.
  *
  * @param[in] options Vendor-specific options. Must be a NULL-terminated
  * characted array. Unknown options are ignored. May be NULL.
  *
- * @param[out] loaded_code_object Memory location to store a handle for loaded
- * code object.
+ * @param[out] loaded_code_object Pointer to a memory location where the HSA
+ * runtime stores the loaded code object handle. May be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
- * resources required for the operation.
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is failure to allocate the
+ * resources required by the implementation.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_EXECUTABLE The executable is invalid.
  *
+ * @retval ::HSA_STATUS_ERROR_FROZEN_EXECUTABLE The executable is frozen.
+ *
  * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
- *
- * @retval ::HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS @p agent is not compatible
- * with @p code_object_reader (for example, @p agent does not support the
- * default floating-point rounding mode specified in the code object), or code
- * object is not compatible with @p executable (for example, code object and @p
- * executable have different machine models or profiles).
- *
- * @retval ::HSA_STATUS_ERROR_FROZEN_EXECUTABLE @p executable is frozen.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_CODE_OBJECT_READER @p code_object_reader
  * is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS The code object read by @p
+ * code_object_reader is not compatible with the agent (for example, the agent
+ * does not support the instruction set architecture of the code object), the
+ * executable (for example, there is a default floating-point mode mismatch
+ * between the two), or the implementation.
  */
 hsa_status_t HSA_API hsa_executable_load_agent_code_object(
     hsa_executable_t executable,

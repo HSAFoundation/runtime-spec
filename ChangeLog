@@ -1,5 +1,15 @@
 2015-12-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
+	* Bug 553 - [Finalizer] Allow code objects to have default
+	floating-point rounding mode of defaul
+	* Bug 582 - Runtime changes to support code object proposal =>
+	improved documentation of the code object loading functions
+	* Bug 610 - [Extensions] Runtime versus HSAIL extension naming
+	* Bug 612 - [Extensions] Extension support rules for system and
+	agent
+
+2015-12-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
 	* Bug 540 - query for floating-point MAD single/double rounding
 	mode
 	* Bug 582 - Runtime changes to support code object proposal =>
