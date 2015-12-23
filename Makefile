@@ -39,7 +39,7 @@ checkversion :
 
 # Generate the public files
 # syntax: make HSA_VERSION=<current version, any string will do> COMMIT=<hash corresponding to previous version>
-# Ex: make HSA_VERSION=1_1_20151231 COMMIT=26862995d24908be0e7a870e71807b8a7d6c1996 dist
+# Ex: make dist HSA_VERSION=1_1_20151231 COMMIT=26862995d24908be0e7a870e71807b8a7d6c1996
 dist : checkversion diff main.pdf
 	$(MKDIR) $(TMPDIST)/include/hsa
 	$(CP) main.pdf $(TMPDIST)/$(DISTNAME).pdf
