@@ -1,3 +1,11 @@
+2016-01-12  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 563 - [Signals] Add wait_any API in order to wait for
+	multiple signals at once
+	* Bug 568 - [Finalizer] BRIG headers currently not being
+	distributed - should they become part of the Runtime bundle?
+	* Bug 633 - Definition of handle equality
+
 2015-12-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 553 - [Finalizer] Allow code objects to have default

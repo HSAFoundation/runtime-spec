@@ -143,7 +143,8 @@ hsa_status_t HSA_API hsa_ext_isa_get_info(
  */
 typedef struct hsa_ext_code_object_writer_s {
   /**
-   * Opaque handle.
+   *  Opaque handle. Two handles reference the same object of the enclosing type
+   *  if and only if they are equal.
    */
   uint64_t handle;
 } hsa_ext_code_object_writer_t;
@@ -247,7 +248,8 @@ typedef BrigModule_t hsa_ext_module_t;
  */
 typedef struct hsa_ext_program_s {
   /**
-   * Opaque handle.
+   *  Opaque handle. Two handles reference the same object of the enclosing type
+   *  if and only if they are equal.
    */
   uint64_t handle;
 } hsa_ext_program_t;
@@ -740,7 +742,8 @@ typedef struct hsa_ext_finalizer_1_00_pfn_s {
  */
 typedef struct hsa_ext_image_s {
   /**
-   * Opaque handle.
+   *  Opaque handle. For a given agent, two handles reference the same object of
+   *  the enclosing type if and only if they are equal.
    */
     uint64_t handle;
 
@@ -1351,7 +1354,8 @@ hsa_status_t HSA_API hsa_ext_image_clear(
  */
 typedef struct hsa_ext_sampler_s {
   /**
-   * Opaque handle.
+   *  Opaque handle. For a given agent, two handles reference the same object of
+   *  the enclosing type if and only if they are equal.
    */
     uint64_t handle;
 } hsa_ext_sampler_t;

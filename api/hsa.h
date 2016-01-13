@@ -189,7 +189,11 @@ typedef enum {
     /**
      * The wavefront is invalid.
      */
-    HSA_STATUS_ERROR_INVALID_WAVEFRONT = 0x1023
+    HSA_STATUS_ERROR_INVALID_WAVEFRONT = 0x1023,
+    /**
+     * The signal group is invalid.
+     */
+    HSA_STATUS_ERROR_INVALID_SIGNAL_GROUP = 0x1024
 } hsa_status_t;
 
 /**
@@ -538,7 +542,8 @@ hsa_status_t hsa_system_get_extension_table(
  */
 typedef struct hsa_agent_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_agent_t;
@@ -919,7 +924,8 @@ hsa_status_t hsa_agent_get_exception_policies(
  */
 typedef struct hsa_cache_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_cache_t;
@@ -1055,7 +1061,8 @@ hsa_status_t hsa_agent_extension_supported(
  */
 typedef struct hsa_signal_s {
   /**
-   * Opaque handle. The value 0 is reserved.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal. The value 0 is reserved.
    */
   uint64_t handle;
 } hsa_signal_t;
@@ -1086,7 +1093,7 @@ typedef struct hsa_signal_s {
  * can be reused or freed after the function returns.
  *
  * @param[out] signal Pointer to a memory location where the HSA runtime will
- * store the newly created signal handle.
+ * store the newly created signal handle. Must not be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -1777,97 +1784,36 @@ hsa_signal_value_t HSA_API hsa_signal_wait_acquire(
     uint64_t timeout_hint,
     hsa_wait_state_t wait_state_hint);
 
-/** @} */
-
-
-/** \defgroup multi-signal-wait Multi-signal wait API
- *  @{
- */
-
-/**
- * @brief Wait until the value of one of the signals in a list satisfies the
- * specified condition.
- *
- * @details The function is guaranteed to return if the value of one of the
- * signals satisfies the associated condition at some point in time during the
- * wait, but the value returned to the application might not satisfy the
- * condition. The application must ensure that signals are used in such way that
- * wait wakeup conditions are not invalidated before dependent threads have
- * woken up.
- *
- * When this operation internally loads the value of the passed signal, it uses
- * the memory order indicated in the function name.
- *
- * @param[in] num_signals Size of @p signals. Must not be 0.
- *
- * @param[in] signals List of signals to wait on. Must not be NULL.
- *
- * @param[in] conditions List of conditions. Each condition is used to compare
- * the value of the signal at the index in @p signals with the comparison value
- * at the same index in @p compare_values. Must have the same size as @p
- * signals.
- *
- * @param[in] compare_values List of comparison values. Must have the same size
- * as @p signals.
- *
- * @param[out] signal Signal that satisfied the associated condition.
- *
- * @param[out] value Observed value for @p signal, which might no longer satisfy
- * the specified condition.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- */
-hsa_status_t HSA_API hsa_signals_wait_any_scacquire(
-    uint32_t num_signals,
-    const hsa_signal_t *signals,
-    const hsa_signal_condition_t *conditions,
-    const hsa_signal_value_t *compare_values,
-    hsa_signal_t *signal,
-    hsa_signal_value_t *value);
-
-/**
- * @copydoc hsa_signals_wait_any_scacquire
- */
-hsa_status_t HSA_API hsa_signals_wait_any_relaxed(
-    uint32_t num_signals,
-    const hsa_signal_t *signals,
-    const hsa_signal_condition_t *conditions,
-    const hsa_signal_value_t *compare_values,
-    hsa_signal_t *signal,
-    hsa_signal_value_t *value);
-
 /**
  * @brief Group of signals.
  */
 typedef struct hsa_signal_group_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_signal_group_t;
 
-
 /**
- * @brief Create a signal group out of a list of signals, conditions and
- * comparison values.
+ * @brief Create a signal group.
  *
- * @param[in] num_signals Size of @p signals. Can be 0.
+ * @param[in] num_signals Size of @p signals. Must not be 0.
  *
- * @param[in] signals List of signals to wait on. If @p num_signals is 0, this
- * argument is ignored.
+ * @param[in] signals List of signals in the group. The list must not contain
+ * any repeated elements. Must not be NULL.
  *
- * @param[in] conditions List of conditions. Each condition is used to compare
- * the value of the signal at the index in @p signals with the comparison value
- * at the same index in @p compare_values. Must have the same size as @p
- * signals.
+ * @param[in] num_consumers Size of @p consumers. Must not be 0.
  *
- * @param[in] compare_values List of comparison values. Must have the same size
- * as @p signals.
+ * @param[in] consumers List of agents that might consume (wait on) the signal
+ * group. The list must not contain repeated elements, and must be a subset of
+ * the set of agents that are allowed to wait on all the signals in the
+ * group. If an agent not listed in @p consumers waits on the returned group,
+ * the behavior is undefined. The memory associated with @p consumers can be
+ * reused or freed after the function returns. Must not be NULL.
  *
- * @param[out] signal_group Pointer to newly created signal group.
+ * @param[out] signal_group Pointer to newly created signal group. Must not be
+ * NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -1876,12 +1822,16 @@ typedef struct hsa_signal_group_s {
  *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is failure to allocate
  * the resources required by the implementation.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p num_signals is 0, @p signals
+ * is NULL, @p num_consumers is 0, @p consumers is NULL, or @p signal_group is
+ * NULL.
  */
 hsa_status_t HSA_API hsa_signal_group_create(
     uint32_t num_signals,
     const hsa_signal_t *signals,
-    const hsa_signal_condition_t *conditions,
-    const hsa_signal_value_t *compare_values,
+    uint32_t num_consumers,
+    const hsa_agent_t *consumers,
     hsa_signal_group_t *signal_group);
 
 /**
@@ -1893,123 +1843,57 @@ hsa_status_t HSA_API hsa_signal_group_create(
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_SIGNAL_GROUP @p signal_group is invalid.
  */
 hsa_status_t HSA_API hsa_signal_group_destroy(
     hsa_signal_group_t signal_group);
 
 /**
- * @brief Add signals and their associated wait conditions to a signal group.
+ * @brief Wait until the value of at least one of the signals in a signal group
+ * satisfies its associated condition.
  *
- * @param[in] signal_group Signal group.
- *
- * @param[in] num_signals Size of @p signals. Must not be 0.
- *
- * @param[in] signals List of signals to wait on. Must not be NULL.
- *
- * @param[in] conditions List of conditions. Each condition is used to compare
- * the value of the signal at the index in @p signals with the comparison value
- * at the same index in @p compare_values. Must have the same size as @p
- * signals.
- *
- * @param[in] compare_values List of comparison values. Must have the same size
- * as @p signals.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is failure to allocate
- * the resources required by the implementation.
- *
- */
-hsa_status_t HSA_API hsa_signal_group_add_signals(
-    hsa_signal_group_t signal_group,
-    uint32_t num_signals,
-    const hsa_signal_t *signals,
-    const hsa_signal_condition_t *conditions,
-    const hsa_signal_value_t *compare_values);
-
-/**
- * @brief Remove signals and their associated wait conditions from a signal group.
- *
- * @param[in] signal_group Signal group.
- *
- * @param[in] num_signals Size of @p signals. Must not be 0.
- *
- * @param[in] signals List of signals to remove from the group. Must not be
- * NULL. If any of the signals in @p signals is not part of the signal group,
- * the behavior is undefined.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- */
-hsa_status_t HSA_API hsa_signal_group_remove_signals(
-    hsa_signal_group_t signal_group,
-    uint32_t num_signals,
-    const hsa_signal_t* signals);
-
-/**
- * @brief Modify the wait conditions for a set of signals included in a signal
- * group.
- *
- * @param[in] signal_group Signal group.
- *
- * @param[in] num_signals Size of @p signals. Must not be 0.
- *
- * @param[in] signals List of signals to wait on. Must not be NULL. If any of
- * the signals in @p signals is not part of the signal group, the behavior is
- * undefined.
- *
- * @param[in] conditions List of new conditions. Each condition is used to
- * compare the value of the signal at the index in @p signals with the
- * comparison value at the same index in @p compare_values. Must have the same
- * size as @p signals.
- *
- * @param[in] compare_values List of new comparison values. Must have the same
- * size as @p signals.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
- */
-hsa_status_t HSA_API hsa_signal_group_modify_signals(
-    hsa_signal_group_t signal_group,
-    uint32_t num_signals,
-    const hsa_signal_t *signals,
-    const hsa_signal_condition_t *conditions,
-    const hsa_signal_value_t *compare_values);
-
-/**
- * @brief Wait until the value of one of the signals in a signal group satisfies
- * its associated condition.
- *
- * @details The function is guaranteed to return if the value of one of the
- * signals in the group satisfies its associated condition at some point in time
- * during the wait, but the value returned to the application might not satisfy
- * the condition. The application must ensure that signals in the group are used
- * in such way that wait wakeup conditions are not invalidated before dependent
- * threads have woken up.
+ * @details The function is guaranteed to return if the value of at least one of
+ * the signals in the group satisfies its associated condition at some point in
+ * time during the wait, but the signal value returned to the application may no
+ * longer satisfy the condition. The application must ensure that signals in the
+ * group are used in such way that wait wakeup conditions are not invalidated
+ * before dependent threads have woken up.
  *
  * When this operation internally loads the value of the passed signal, it uses
  * the memory order indicated in the function name.
  *
  * @param[in] signal_group Signal group.
  *
+ * @param[in] conditions List of conditions. Each condition, and the value at
+ * the same index in @p compare_values, is used to compare the value of the
+ * signal at that index in @p signal_group (the signal passed by the application
+ * to ::hsa_signal_group_create at that particular index). The size of @p
+ * conditions must not be smaller than the number of signals in @p signal_group;
+ * any extra elements are ignored. Must not be NULL.
+ *
+ * @param[in] compare_values List of comparison values.  The size of @p
+ * compare_values must not be smaller than the number of signals in @p
+ * signal_group; any extra elements are ignored. Must not be NULL.
+ *
  * @param[out] signal Signal in the group that satisfied the associated
- * condition.
+ * condition. If several signals satisfied their condition, the function can
+ * return any of those signals. Must not be NULL.
  *
  * @param[out] value Observed value for @p signal, which might no longer satisfy
- * the specified condition.
+ * the specified condition. Must not be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_SIGNAL_GROUP @p signal_group is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p conditions is NULL, @p
+ * compare_values is NULL, @p signal is NULL, or @p value is NULL.
  */
 hsa_status_t HSA_API hsa_signal_group_wait_any_scacquire(
     hsa_signal_group_t signal_group,
+    const hsa_signal_condition_t *conditions,
+    const hsa_signal_value_t *compare_values,
     hsa_signal_t *signal,
     hsa_signal_value_t *value);
 
@@ -2018,6 +1902,8 @@ hsa_status_t HSA_API hsa_signal_group_wait_any_scacquire(
  */
 hsa_status_t HSA_API hsa_signal_group_wait_any_relaxed(
     hsa_signal_group_t signal_group,
+    const hsa_signal_condition_t *conditions,
+    const hsa_signal_value_t *compare_values,
     hsa_signal_t *signal,
     hsa_signal_value_t *value);
 
@@ -2035,7 +1921,8 @@ hsa_status_t HSA_API hsa_signal_group_wait_any_relaxed(
  */
 typedef struct hsa_region_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_region_t;
@@ -3415,7 +3302,8 @@ hsa_status_t HSA_API hsa_memory_deregister(
  */
 typedef struct hsa_isa_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_isa_t;
@@ -3732,7 +3620,8 @@ hsa_status_t HSA_API hsa_isa_get_round_method(
  */
 typedef struct hsa_wavefront_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_wavefront_t;
@@ -3850,7 +3739,8 @@ hsa_status_t HSA_API hsa_isa_iterate_wavefronts(
  */
 typedef struct hsa_code_object_reader_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_code_object_reader_t;
@@ -3941,7 +3831,8 @@ hsa_status_t HSA_API hsa_code_object_reader_destroy(
  */
 typedef struct hsa_executable_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_executable_t;
@@ -4027,7 +3918,8 @@ hsa_status_t HSA_API hsa_executable_destroy(
  */
 typedef struct hsa_loaded_code_object_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_loaded_code_object_t;
@@ -4398,7 +4290,8 @@ hsa_status_t HSA_API hsa_executable_validate(
  */
 typedef struct hsa_executable_symbol_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_executable_symbol_t;
@@ -4792,7 +4685,8 @@ hsa_status_t HSA_API hsa_executable_iterate_symbols(
  */
 typedef struct hsa_code_object_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_code_object_t;
@@ -5062,7 +4956,8 @@ hsa_status_t HSA_API hsa_executable_load_code_object(
  */
 typedef struct hsa_code_symbol_s {
   /**
-   * Opaque handle.
+   * Opaque handle. Two handles reference the same object of the enclosing type
+   * if and only if they are equal.
    */
   uint64_t handle;
 } hsa_code_symbol_t;

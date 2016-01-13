@@ -860,18 +860,6 @@ multiple reasons:
 
 \input{api/altlatex/group-signals}
 
-\section{Multi-signal wait}
-This section contains two alternative APIs for dealing with the problem of
-waiting on multiple signals until at least one of them satisfies a given
-condition. The first approach is reduced to a single function (either
-\hsaref{hsa_signals_wait_any_scacquire} or
-\hsaref{hsa_signals_wait_any_relaxed}, depending on the desired memory
-order). The second API approach uses the abstraction of a signal group, includes
-all the declarations starting at \hsaref{hsa_signal_group_t}.
-\subsection{API}
-\input{api/altlatex/group-multi-signal-wait}
-
-
 \section{Queues} \label{sec:queues}
 
 HSA hardware supports command execution through user mode queues. A user mode
@@ -1595,6 +1583,10 @@ region.
 
 \subsection{API}
 \input{api/altlatex/group-memory}
+
+% \section{Other}
+% \subsection{API}
+% \input{api/altlatex/group-alternative-memory}
 
 
 \section{Instruction Set Architectures and Executables}\label{sec:codeobjects}
