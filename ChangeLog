@@ -1,3 +1,6 @@
+2016-01-15  Simon Brand <simon@codeplay.com>
+	* Near-final versions of Performance Counter and Events API
+
 2015-11-01  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 	* Bug 534 - Image extension query issues
 	* Bug 559 - hsa_executable_[agent_]global_variable_define address

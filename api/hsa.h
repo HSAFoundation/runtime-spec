@@ -419,7 +419,17 @@ typedef enum {
   /**
    * Images extension.
    */
-  HSA_EXTENSION_IMAGES = 1
+  HSA_EXTENSION_IMAGES = 1,
+
+  /**
+   * Performance counter extension.
+   */
+  HSA_EXTENSION_PERFORMANCE_COUNTERS = 2,
+
+  /**
+   * Profiling events extension.
+   */
+  HSA_EXTENSION_PROFILING_EVENTS = 3,
 } hsa_extension_t;
 
 /**
