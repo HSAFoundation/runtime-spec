@@ -30,7 +30,7 @@ EXAMPLES:=examples/altlatex/lstinputfunlisting.tex
 DISTNAME:=hsa_runtime_$(HSA_VERSION)
 TMPDIST:=public/$(DISTNAME)
 
-all : $(EXAMPLES) $(LISTINGS) main.pdf
+all : main.pdf
 
 diff : main-diff.pdf
 
@@ -38,8 +38,9 @@ checkversion :
 	$(if $(HSA_VERSION),,$(error Error: variable HSA_VERSION is not set))
 
 # Generate the public files
-# Ex: make HSA_VERSION=1_01 dist
-dist : checkversion diff
+# syntax: make HSA_VERSION=<current version, any string will do> COMMIT=<hash corresponding to previous version>
+# Ex: make dist HSA_VERSION=1_1_20151231 COMMIT=26862995d24908be0e7a870e71807b8a7d6c1996
+dist : checkversion diff main.pdf
 	$(MKDIR) $(TMPDIST)/include/hsa
 	$(CP) main.pdf $(TMPDIST)/$(DISTNAME).pdf
 	$(CP) main-diff.pdf $(TMPDIST)/$(DISTNAME)_diff.pdf
@@ -50,8 +51,8 @@ dist : checkversion diff
 	cd public && zip -r -9 $(DISTNAME) $(DISTNAME)
 	$(RM) $(TMPDIST)
 
-%.pdf: %.tex
-	latexmk -g -xelatex -use-make $*.tex
+%.pdf: $(EXAMPLES) $(LISTINGS) %.tex
+	latexmk -halt-on-error -g -xelatex -use-make $*.tex
 
 $(EXAMPLES): example/examples.cc example/lstinputfunlisting.py
 	cd example && doxygen Doxyfile
@@ -68,12 +69,11 @@ main-diff.tex: main-all-prev main-all.tex
 	./latexdiff-1.1.0-so.pl -t UNDERLINE --append-safecmd="hypertarget,hyperlink,reffun,refarg,reffld,reftyp,refenu,refhsl" --exclude-textcmd="chapter,section,subsection,subsubsection" --config="PICTUREENV=(?:picture|DIFnomarkup|tikzpicture|lstlisting|figure)[\w\d*@]*" main-all-prev.tex main-all.tex  > main-diff.tex
 
 main-all-prev:
-	git stash
-	git checkout $(COMMIT)
-	make clean main-all.tex
-	$(CP) main-all.tex main-all-prev.tex
-	git checkout master
-	git stash pop
+	$(MKDIR) $(COMMIT)
+	git --work-tree=$(COMMIT) checkout $(COMMIT) -- .
+	cd $(COMMIT) && make main-all.tex
+	$(CP) $(COMMIT)/main-all.tex main-all-prev.tex
+	$(RM) $(COMMIT)
 
 # Generate one Latex file out of resolving all \include tags in a given main
 # file. This is is needed because `latexdiff --flatten` requires all included

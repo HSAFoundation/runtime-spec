@@ -1,6 +1,62 @@
 2016-01-15  Simon Brand <simon@codeplay.com>
 	* Near-final versions of Performance Counter and Events API
 
+2015-12-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 553 - [Finalizer] Allow code objects to have default
+	floating-point rounding mode of defaul
+	* Bug 582 - Runtime changes to support code object proposal =>
+	improved documentation of the code object loading functions
+	* Bug 610 - [Extensions] Runtime versus HSAIL extension naming
+	* Bug 612 - [Extensions] Extension support rules for system and
+	agent
+
+2015-12-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 540 - query for floating-point MAD single/double rounding
+	mode
+	* Bug 582 - Runtime changes to support code object proposal =>
+	created hsa_isa_get_exception_policies to replace
+	hsa_agent_get_exception_policies since an agent may support more
+	than one ISA
+	* Bug 607 - [Extensions] Extension name query
+	* Bug 609 - Allow kernarg-backing memory to be coarse-grained =>
+	reversed action, only fine-grained is allowed
+	* Added more detail to deprecation messages
+
+2015-12-15  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 600 - [Memory] Add queries for size of private segment
+	memory per work-item
+
+2015-12-14  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Editorial changes: deprecated enum constants and deprecation
+	text are now shown, declaration briefs are shown under signature
+	box
+	* Latexmk compiler aborts on first error
+
+2015-12-11  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Deprecated declarations back into API sections (instead of being
+	bundled together towards the end of the document)
+	* Added more detail on the multi-signal wait APIs and associated
+	text
+	* Multiple fixes in the Instruction Set Architecture and
+	Executables section: added support for mutiple wavefronts per ISA,
+	added missing return error codes, text improvements, etc.
+	* Clarified that hsa_memory_assign_agents can only receive R/W or
+	R/O permissions.
+
+2015-12-06  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 519 - Define topology information for nodes to allow caches
+	and profiling information to be attached to nodes
+	* Bug 569 - hsa_memory_copy and coarse grain memory regions
+	* Bug 582 - Runtime changes to support code object proposal
+	* Bug 609 - Allow kernarg-backing memory to be coarse-grained
+	* Added proposed APIs for multiple signal wait
+
 2015-11-01  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 	* Bug 534 - Image extension query issues
 	* Bug 559 - hsa_executable_[agent_]global_variable_define address
