@@ -1430,6 +1430,11 @@ deallocator cannot be used to release memory allocated using standard libraries
 
 \subsection{Global memory}\label{sec:memory:global}
 
+\danger\:\textit{Some of the concepts explained in this section may be
+  significantly changed in future versions of the specification. In particular,
+  the Foundation is revising the semantics, terminology, and application
+  interfaces of coarse-grained memory.}
+
 Regions associated with the global segment are divided into two broad
 categories: fine-grained and coarse-grained. The main difference between these
 memory types is that fine-grained memory is directly accessible to all the
@@ -1591,102 +1596,105 @@ region.
 
 \section{Instruction Set Architectures and Executables}\label{sec:codeobjects}
 
-% When the application populates a kernel dispatch packet, it must specify a
-% kernel object, a handle to the machine code to be executed. Kernel object
-% handles are created by first compiling the kernel source down to an HSA runtime,
-% ISA-specific representation called \textit{code object}, and then loading the
-% code object into another HSA runtime object, the \textit{executable}. The
-% application can performs queries on the executable object using the HSA runtime
-% API in order to obtain the kernel object.
+When the application populates a kernel dispatch packet, it must specify a
+kernel object, a handle to the machine code to be executed. Kernel object
+handles are created by first compiling the kernel source down to a
+vendor-specific, ISA-specific representation called \textit{code object}, and
+then loading the code object into another HSA runtime object (the
+\textit{executable}) using a third object called \textit{code object
+  reader}. The application can performs queries on the executable object using
+the HSA runtime API in order to obtain the kernel object.
 
-% \begin{figure}[b]
-%   \centering
-%   \tikzstyle{obj}=[rectangle,draw,fill=black!15,align=center,minimum width=3cm,minimum height=.75cm]
-%   \tikzstyle{emptyobj}=[circle,fill=black,align=center,minimum width=.1cm]
-%   \tikzstyle{outobj}=[rectangle,draw,fill=black!5,align=center,minimum width=3cm,minimum height=.75cm]
-%   \tikzstyle{storage}=[cylinder,draw, fill=black!5,shape border rotate=90,aspect=0.7, minimum height=1.7cm,minimum width=1.5cm,]
-%   \begin{tikzpicture}[thick,auto, node distance=1.5cm]
-%     \scriptsize
-%     \node[emptyobj] (finalization) {};
-%     \node[obj,below=2cm of finalization] (codeobject) {\hsaref{hsa_code_object_t}};
-%     \node[outobj,right=4cm of codeobject] (blob) {memory blob};
-%     \node[storage,right=2cm of blob] (disk) {disk};
-%     \node[obj,below=2.5cm of codeobject] (executable) {hsa_executable_t};
-%     \node[emptyobj,right=5cm of executable] (empty) {};
-%     \node[obj,below=1.5cm of executable] (executable_symbol) {hsa_executable_symbol_t};
-%     \node[obj,right=5cm of executable_symbol] (kernel) {kernel object};
-%     \path[->]
+\begin{figure}[b]
+  \centering
+  \tikzstyle{obj}=[rectangle,draw,fill=black!15,align=center,minimum width=3cm,minimum height=.75cm]
+  \tikzstyle{emptyobj}=[circle,fill=black,align=center,minimum width=.1cm]
+  \tikzstyle{outobj}=[rectangle,draw,fill=black!5,align=center,minimum width=3cm,minimum height=.75cm]
+  \tikzstyle{storage}=[cylinder,draw, fill=black!5,shape border rotate=90,aspect=0.2, minimum height=1cm,minimum width=1.5cm, text width=1.5cm, align=center]
+  \begin{tikzpicture}[thick,auto, node distance=1.5cm]
+    \scriptsize
 
-%        (finalization) edge node[anchor=center,fill=white,opacity=1]{(1) compilation process} (codeobject)
+    \node[emptyobj] (finalization) {};
+    \node[outobj,above right = 1.5cm and 5cm of finalization] (blob) {code object \\ (in memory)};
+    \node[storage,below  = 2cm  of blob] (disk) {code object \\ (in file)};
+    \node[obj, right=13cm of finalization] (object_reader) {code object reader};
 
-%        (codeobject.east) edge[bend left] node[align=center,above] {(2) \hsaref{hsa_code_object_serialize}} (blob.west)
-%        (blob.west) edge[bend left] node[align=center,below] {(2) \hsaref{hsa_code_object_deserialize}} (codeobject.east)
+    \node[emptyobj, below =5cm of finalization] (create_exe) {};
+    \node[obj,right=5cm of create_exe] (executable) {hsa_executable_t};
+    \node[obj,right=13cm of create_exe] (executable_symbol) {hsa_executable_symbol_t};
+    \node[obj,below=2cm of executable_symbol] (kernel) {kernel object};
+    \path[->]
 
-%        (blob.east) edge[bend left] node[align=center,above] {write} (disk.west)
-%        (disk.west) edge[bend left] node[align=center,below] {read} (blob.east)
+       (finalization) edge node[anchor=center,fill=white,opacity=1]{(1) compilation process} (blob)
+       (finalization) edge node[anchor=center,fill=white,opacity=1]{(1) compilation process} (disk)
+       (blob) edge node[anchor=center,fill=white,opacity=1]{(2) \hsaref{hsa_code_object_reader_create_from_memory}} (object_reader)
+       (disk) edge node[anchor=center,fill=white,opacity=1]{(2) \hsaref{hsa_code_object_reader_create_from_file}} (object_reader)
 
-%        (codeobject) edge node[anchor=center,fill=white,opacity=1]{(4) \hsaref{hsa_executable_load_code_object}}(executable)
-%        (empty) edge node[anchor=center,fill=white,opacity=1]{(3) \hsaref{hsa_executable_create}}(executable)
-%        (executable) edge node[anchor=center,fill=white,opacity=1]{(5) \hsaref{hsa_executable_get_symbol}}(executable_symbol)
-%        (executable_symbol) edge node[anchor=center,fill=white,opacity=1]{(6) \hsaref{hsa_executable_symbol_get_info}}(kernel)
-%     ;
-%   \end{tikzpicture}
-%   \caption{Retrieving a kernel object handle from a code object. The functions
-%     \textit{write} and \textit{read} represent operating system calls to write
-%     and read a number of bytes to a file.}
-%   \label{fig:codeobject_workflow}
-% \end{figure}
+       (create_exe) edge node[anchor=center,fill=white,opacity=1]{(3) \hsaref{hsa_executable_create_alt}}(executable)
 
-% The following algorithm is one example of the stages that could be passed
-% through to generate a kernel object and assumes use of the HSAIL finalization
-% extension described in Section~\ref{sec:finalizer}. Other methods for producing
-% a code object are valid but are not directly described in this document.
-% \begin{enumerate}
-% \item The application is in possesion of one or more HSAIL modules that are the
-%   result of compiling a high-level language such as OpenMP or OpenCL. One of the
-%   HSAIL modules contains the kernel to be executed. Manipulation of BRIG is out
-%   of the scope of the HSA runtime API, so the application must resort to
-%   external libraries in order to locate a kernel in an HSAIL module. Using the
-%   HSA runtime extension described in Section~\ref{sec:finalizer}, the
-%   application finalizes the HSAIL program, which results on a code descriptor
-%   handle of type \hsaref{hsa_code_object_t}.
-% \item Code object handles are ISA-specific representations that contain the code
-%   for a set of kernels and indirect functions. The application can obtain a code
-%   object not only by finalizing an HSAIL program, but also by compiling a
-%   vendor-specific intermediate representation. Code objects can be serialized
-%   (\hsaref{hsa_code_object_serialize}) and deserialized
-%   (\hsaref{hsa_code_object_deserialize}), which enables the application to
-%   perform offline compilation. Each code object is associated with multiple
-%   symbols (\hsaref{hsa_code_symbol_t}), which are the representation of a
-%   variable, kernel, or indirect function in the original source program. The
-%   application cannot use the kernel symbols contained in a code object to
-%   populate the \hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field in the
-%   kernel dispatch packet. Instead, the application must use an
-%   \textit{executable kernel symbol}, which is part of an executable.
+       (object_reader.south) edge[bend left] node[anchor=center,fill=white, opacity=1] {(4) \hsaref{hsa_executable_load_program_code_object} or \hsaref{hsa_executable_load_agent_code_object}} (executable.north)
 
-% \item The application creates an executable handle using
-%   \hsaref{hsa_executable_create}. The HSA runtime uses the executable handle
-%   \hsaref{hsa_executable_t} to load a set of code object handles, possibly
-%   associated with different instruction set architectures.
-% \item The code object is added (and loaded) to the executable by invoking
-%   \hsaref{hsa_executable_load_code_object}.
-% \item The application queries the executable in order to retrieve the executable
-%   symbol corresponding to the given kernel and agent. This can be achieved
-%   by passing the kernel's name, the kernel's module name, and the agent to
-%   \hsaref{hsa_executable_get_symbol}.
-% \item Executable symbols that represent kernels expose the attribute
-%   \hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT}, which is a handle to the
-%   machine code that is ultimately used to launch a kernel. The application uses
-%   the getter function \hsaref{hsa_executable_symbol_get_info} to retrieve the
-%   value of executable symbol attributes.
-% \item The application uses the kernel object value to populate the
-%   \hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field of a kernel dispatch
-%   packet. The application may use some other information in the symbol (for
-%   example, the kernel's memory usage) to fill other fields of the kernel
-%   dispatch packet.
-% \end{enumerate}
+       %(executable) edge[loop below, looseness=10] node[below, opacity=1]{(5) \hsaref{hsa_executable_freeze}}(executable)
+       (executable) edge node[anchor=center,fill=white,opacity=1]{(5) \hsaref{hsa_executable_get_symbol}}(executable_symbol)
+       (executable_symbol) edge node[anchor=center,fill=white,opacity=1]{(6) \hsaref{hsa_executable_symbol_get_info}}(kernel)
+    ;
+  \end{tikzpicture}
+  \caption{Retrieving a kernel object handle from a code object.}
+  \label{fig:codeobject_workflow}
+\end{figure}
 
-% This basic workflow is represented in Figure \ref{fig:codeobject_workflow}.
+The following algorithm is one example of the stages that could be passed
+through to generate a kernel object and assumes use of the HSAIL finalization
+extension described in Section~\ref{sec:finalizer}. Other methods for producing
+a code object are valid but are not directly described in this document.
+\begin{enumerate}
+\item The application is in possesion of one or more HSAIL modules that are the
+  result of compiling a high-level language such as OpenMP or OpenCL. One of the
+  HSAIL modules contains the kernel to be executed. Manipulation of BRIG is out
+  of the scope of the HSA runtime API, so the application must resort to
+  external libraries in order to locate a kernel in an HSAIL module. Using the
+  HSA runtime extension described in Section~\ref{sec:finalizer}, the
+  application finalizes the HSAIL program, which results on a code object, a
+  vendor-specific representation of the program. Code objects are ISA-specific
+  representations that can be stored in memory or disk, and contain the code for
+  a set of kernels and indirect functions. The application can obtain a code
+  object not only by finalizing an HSAIL program, but also by compiling a
+  vendor-specific intermediate representation.
+
+\item Code objects can be stored in memory or in a file. The application must
+  use a \textit{code object reader} to access the code object and eventually
+  load it into an executable (see step 4). The application must use the
+  functions \hsaref{hsa_code_object_reader_create_from_memory} and
+  \hsaref{hsa_code_object_reader_create_from_file} to create a code object
+  reader that is associated with a unique code object that is resident in memory
+  or disk.
+
+\item The application creates an executable object using
+  \hsaref{hsa_executable_create_alt}.
+
+\item The code object is added (and loaded) to the executable created in the
+  previous step by invoking \hsaref{hsa_executable_load_program_code_object} and
+  \hsaref{hsa_executable_load_agent_code_object}.
+
+\item The application queries the executable in order to retrieve the executable
+  symbol corresponding to the given kernel and agent. This can be achieved
+  by passing the kernel's name, the kernel's module name, and the agent to
+  \hsaref{hsa_executable_get_symbol}.
+
+\item Executable symbols that represent kernels expose the attribute
+  \hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT}, which is a handle to the
+  machine code that is ultimately used to launch a kernel. The application uses
+  the getter function \hsaref{hsa_executable_symbol_get_info} to retrieve the
+  value of executable symbol attributes.
+
+  The application uses the kernel object value to populate the
+  \hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field of a kernel dispatch
+  packet. The application may use some other information in the symbol (for
+  example, the kernel's memory usage) to fill other fields of the kernel
+  dispatch packet.
+\end{enumerate}
+
+This basic workflow is represented in Figure \ref{fig:codeobject_workflow}.
 
 \subsection{API}
 \input{api/altlatex/group-instruction-set-architecture}
@@ -2071,11 +2079,11 @@ A draft of the profiling events API.
 
 \bibitem{prm}
 \newblock{HSA Programmer's Reference Manual.}
-\newblock{v1.0, HSA Foundation.}
+\newblock{v1.1, HSA Foundation.}
 
 \bibitem{sar}
 \newblock{HSA Platform System Architecture Specification.}
-\newblock{v1.0, HSA Foundation.}
+\newblock{v1.1, HSA Foundation.}
 
 \end{thebibliography}
 % add bibliography to Table of Contents

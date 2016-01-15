@@ -3180,58 +3180,6 @@ hsa_status_t HSA_API hsa_memory_assign_agent(
     hsa_access_permission_t access);
 
 /**
- * @brief Change the ownership of a global, coarse-grained buffer.
- *
- * @details The contents of a coarse-grained buffer are visible to an agent only
- * after ownership has been explicitely transferred to that agent. Once the
- * operation completes, the previous owner(s) cannot longer access the data in
- * the buffer unless they are included in the assignment list.
- *
- * An implementation of the HSA runtime is allowed, but not required, to change
- * the physical location of the buffer when ownership is transferred to a
- * different agent. In general the application must not assume this
- * behavior. The virtual location (address) of the passed buffer is never
- * modified.
- *
- * @param[in] ptr Base address of a global buffer. The pointer should match an
- * address previously returned by ::hsa_memory_allocate. The size of the buffer
- * affected by the ownership change is identical to the size of that previous
- * allocation. If @p ptr points to a fine-grained global buffer, no operation is
- * performed and the function returns success. If @p ptr does not point to
- * global memory, the behavior is undefined.
- *
- * @param[in] num_agents Size of @p agents. Must not be 0.
- *
- * @param[in] agents List of agents that become owners of the buffer. The
- * application is responsible for ensuring that all the agents in @p agents have
- * access to the region that contains the buffer. It is allowed to change
- * ownership to an agent that is already the owner of the buffer, with the same
- * or different access permissions. Must not be NULL.
- *
- * @param[in] access Access permissions requested for the new owners. If the
- * permissions is ::HSA_ACCESS_PERMISSION_RW, then @p num_agents must be 1. If
- * @p num_agents is more than 1, then the permissions must be
- * ::HSA_ACCESS_PERMISSION_RO. The only access permissions that are currently
- * allowed are ::HSA_ACCESS_PERMISSION_RW and ::HSA_ACCESS_PERMISSION_RO.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
- * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES The HSA runtime is unable to
- * acquire the resources required by the operation.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p ptr is NULL, @p num_agents is
- * 0, or @p access is not a valid access value.
- */
-hsa_status_t HSA_API hsa_memory_assign_agents(
-    void *ptr,
-    uint32_t num_agents,
-    const hsa_agent_t *agents,
-    hsa_access_permission_t access);
-
-/**
  *
  * @brief Register a global, fine-grained buffer.
  *
@@ -3340,7 +3288,9 @@ hsa_status_t HSA_API hsa_isa_from_name(
 
 /**
  * @brief Iterate over the instruction sets supported by the given agent, and
- * invoke an application-defined callback on every iteration.
+ * invoke an application-defined callback on every iteration. The iterator is
+ * deterministic: if an agent supports several instruction set architectures,
+ * they are traversed in the same order in every invocation of this function.
  *
  * @param[in] agent A valid agent.
  *
@@ -3478,6 +3428,49 @@ typedef enum {
 } hsa_isa_info_t;
 
 /**
+ * @deprecated The concept of call convention has been deprecated. If the
+ * application wants to query the value of an attribute for a given instruction
+ * set architecture, use ::hsa_isa_get_info_alt instead. If the application
+ * wants to query an attribute that is specific to a given combination of ISA
+ * and wavefront, use ::hsa_wavefront_get_info.
+ *
+ * @brief Get the current value of an attribute for a given instruction set
+ * architecture (ISA).
+ *
+ * @param[in] isa A valid instruction set architecture.
+ *
+ * @param[in] attribute Attribute to query.
+ *
+ * @param[in] index Call convention index. Used only for call convention
+ * attributes, otherwise ignored. Must have a value between 0 (inclusive) and
+ * the value of the attribute ::HSA_ISA_INFO_CALL_CONVENTION_COUNT (not
+ * inclusive) in @p isa.
+ *
+ * @param[out] value Pointer to an application-allocated buffer where to store
+ * the value of the attribute. If the buffer passed by the application is not
+ * large enough to hold the value of @p attribute, the behavior is undefined.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ISA The instruction set architecture is
+ * invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_INDEX The index is out of range.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is an invalid
+ * instruction set architecture attribute, or @p value is
+ * NULL.
+ */
+hsa_status_t HSA_API hsa_isa_get_info(
+    hsa_isa_t isa,
+    hsa_isa_info_t attribute,
+    uint32_t index,
+    void* value);
+
+/**
  * @brief Get the current value of an attribute for a given instruction set
  * architecture (ISA).
  *
@@ -3501,7 +3494,7 @@ typedef enum {
  * instruction set architecture attribute, or @p value is
  * NULL.
  */
-hsa_status_t HSA_API hsa_isa_get_info(
+hsa_status_t HSA_API hsa_isa_get_info_alt(
     hsa_isa_t isa,
     hsa_isa_info_t attribute,
     void* value);
@@ -3858,13 +3851,17 @@ typedef enum {
 } hsa_executable_state_t;
 
 /**
+ * @deprecated Use ::hsa_executable_create_alt instead, which allows the
+ * application to specify the default floating-point rounding mode of the
+ * executable and assumes an unfrozen initial state.
+ *
  * @brief Create an empty executable.
  *
  * @param[in] profile Profile used in the executable.
  *
- * @param[in] default_float_rounding_mode Default floating-point rounding mode
- * used in the executable. Allowed rounding modes are near and zero (default is
- * not allowed).
+ * @param[in] executable_state Executable state. If the state is
+ * ::HSA_EXECUTABLE_STATE_FROZEN, the resulting executable is useless because no
+ * code objects can be loaded, and no variables can be defined.
  *
  * @param[in] options Vendor-specific options. Unknown options are ignored. Must
  * be a NUL-terminated string. May be NULL.
@@ -3884,6 +3881,39 @@ typedef enum {
  * @p executable is NULL.
  */
 hsa_status_t HSA_API hsa_executable_create(
+    hsa_profile_t profile,
+    hsa_executable_state_t executable_state,
+    const char *options,
+    hsa_executable_t *executable);
+
+/**
+ * @brief Create an empty executable.
+ *
+ * @param[in] profile Profile used in the executable.
+ *
+ * @param[in] default_float_rounding_mode Default floating-point rounding mode
+ * used in the executable. Allowed rounding modes are near and zero (default is
+ * not allowed).
+ *
+ * @param[in] options Vendor-specific options. Unknown options are ignored. Must
+ * be a NUL-terminated string. May be NULL.
+ *
+ * @param[out] executable Memory location where the HSA runtime stores newly
+ * created executable handle. The initial state of the executable is
+ * ::HSA_EXECUTABLE_STATE_UNFROZEN.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is a failure to allocate
+ * resources required for the operation.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p profile is invalid, or
+ * @p executable is NULL.
+ */
+hsa_status_t HSA_API hsa_executable_create_alt(
     hsa_profile_t profile,
     hsa_default_float_rounding_mode_t default_float_rounding_mode,
     const char *options,
