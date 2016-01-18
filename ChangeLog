@@ -1,3 +1,11 @@
+2016-01-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 612 - [Extensions] Extension support rules for system and
+	agent
+	* Bug 627 - [Extensions] Update list of supported extensions
+	* Bug 641 - [Instruction Set Architectures and Executables] Pass
+	options to executable validation
+
 2016-01-15  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 616 - [Memory] Allow concurrent read only accesses to

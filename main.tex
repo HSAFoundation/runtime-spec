@@ -1714,9 +1714,9 @@ Extensions to the HSA core runtime API can be HSA-approved, or vendor-specific.
 HSA-approved extensions are not required to be supported by a conforming HSA
 implementation, but are expected to be widely available; they define
 functionality that is likely to move into the core API in a future version of
-the HSA specification. Currently, there are two HSA-approved extensions:
-Finalization (discussed in Section~\ref{sec:finalizer}), and Images
-(discussed in Section~\ref{sec:images}).
+the HSA specification. Two examples of HSA-approved extensions are Finalization
+(discussed in Section~\ref{sec:finalizer}), and Images (discussed in
+Section~\ref{sec:images}).
 
 Extensions approved by the HSA Foundation can be promoted to the core API in
 later versions. When this occurs, the extension specification is added to the
@@ -1731,28 +1731,29 @@ as a transition aid.
 Each extension must be assigned a name of the form:
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
 \item \textit{hsa_ext_} (HSA-approved extension)
-\item \textit{hsa_}<\textit{vendor(s) name}>_<\textit{label}> (other)
+\item \textit{hsa_ven_}<\textit{vendor(s) name}>_<\textit{label}> (other)
 \end{itemize}
 The label is one or more words separated by underscores, providing a short name
 for the extension. A label must be short, meaningful, and should not collide
 with the vendor name, the \textit{hsa} token, or the \textit{ext} token. Vendor
 names must be registered with the HSA Foundation, must be unique, and may be
-abbreviated to improve the readability of the symbols. An extension name must
-not contain upper case characters. For instance, if vendor \textit{HAL} wants to
-create an extension related to label \textit{foo}, the resulting extension name
-is \textit{hsa_hal_foo}. The corresponding HSAIL name for a vendor-specific
+abbreviated to improve the readability of the symbols. A vendor name must not
+contain any underscore character. An extension name must not contain upper case
+characters. For instance, if vendor \textit{HAL} wants to create an extension
+related to label \textit{foo}, the resulting extension name is
+\textit{hsa_ven_hal_foo}. The corresponding HSAIL name for a vendor-specific
 extension is <\textit{vendor(s) name}>::<\textit{label}>.
 
 All the functions and types declared in the extension must be prefixed by the
 extension name, and follow HSA naming conventions. For example, a
-vendor-specific extension \textit{hsa_hal_foo} could declare the following
+vendor-specific extension \textit{hsa_ven_hal_foo} could declare the following
 identifiers:
 \begin{lstlisting}
-hsa_status_t hsa_hal_foo_do_something();
+hsa_status_t hsa_ven_hal_foo_do_something();
 
 typedef enum {
-    HSA_HAL_FOO_CATEGORY_VALUE = 1,
-} hsa_hal_foo_category_t;
+    HSA_VEN_HAL_FOO_CATEGORY_VALUE = 1,
+} hsa_ven_hal_foo_category_t;
 \end{lstlisting}
 
 An extension can add new enumeration constants to an existing core
@@ -1763,22 +1764,22 @@ assigned by the HSA Foundation.
 
 Every extension must create a preprocessor definition that matches the extension
 name. The value associated with the identifier encodes the version number. For
-example, the \textit{hsa_hal_foo} extension (version 1.1) would include the
+example, the \textit{hsa_ven_hal_foo} extension (version 1.1) would include the
 following preprocessing directive in the header:
 \begin{lstlisting}
-#define hsa_hal_foo 001001
+#define hsa_ven_hal_foo 001001
 \end{lstlisting}
 
 If the extension API exposes any functions, the extension interface must declare
 a function table (structure) in which each field is a pointer to a
 function exported by the extension. The function pointer table must have as many
 entries as functions are exported by the extension API. For example, the header
-associated with the extension \textit{hsa_hal_foo} would contain the following
+associated with the extension \textit{hsa_ven_hal_foo} would contain the following
 declaration:
 \begin{lstlisting}
-typedef struct hsa_hal_foo_pfn_s {
-  hsa_status_t (*hsa_hal_foo_pfn_do_something)();
-} hsa_hal_foo_pfn_t;
+typedef struct hsa_ven_hal_foo_pfn_s {
+  hsa_status_t (*hsa_ven_hal_foo_pfn_do_something)();
+} hsa_ven_hal_foo_pfn_t;
 \end{lstlisting}
 
 The HSA Foundation assigns a unique integer ID in the [0, 0x400) interval to
@@ -1786,7 +1787,7 @@ each extension. The identifier remains the same throughout all the versions of
 the same extension. In the HSA runtime API, the application uses the identifier
 to refer to a specific extension. Identifiers are listed in the
 \hsaref{hsa_extension_t} enumeration. For example, the extension
-\textit{hsa_hal_foo} would add the enumeration constant HSA_EXTENSION_HAL_FOO
+\textit{hsa_ven_hal_foo} would add the enumeration constant HSA_EXTENSION_HAL_FOO
 associated with a unique constant expression (the identifier).
 
 \subsection{Extension support: HSA runtime and agents}
@@ -1805,15 +1806,13 @@ implementations may choose to also export its functions statically from the
 object libraries implementing those functions. However, portable applications
 cannot rely on this behavior. In the following code snippet, the application
 invokes an extension function once the HSA runtime has populated the function
-pointer table corresponding to the version 1.0 of the \textit{hsa_hal_foo}
+pointer table corresponding to the version 1.0 of the \textit{hsa_ven_hal_foo}
 extension.
 
 \lstinputfunlisting[1]{extension_example}
 
 An agent indicates which extensions it supports in the
-\hsaref{HSA_AGENT_INFO_EXTENSIONS} bit-mask attribute. The agent may support
-an extension even if the implementation does not support it (see
-\hsaref{HSA_SYSTEM_INFO_EXTENSIONS}), and vice versa. The application can query
+\hsaref{HSA_AGENT_INFO_EXTENSIONS} bit-mask attribute. The application can query
 if a version of the extension is supported by an agent using
 \hsaref{hsa_agent_extension_supported}.
 
@@ -1863,7 +1862,6 @@ if a version of the extension is supported by an agent using
 %   \label{fig:finalization}
 % \end{figure}
 
-\newpage
 \subsection{API}
 \input{api/altlatex/group-ext-alt-finalizer-extensions}
 \input{api/altlatex/group-ext-alt-finalizer-program}

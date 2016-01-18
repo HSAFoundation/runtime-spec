@@ -3191,12 +3191,15 @@ hsa_status_t HSA_API hsa_memory_assign_agent(
  *
  * Registration is only recommended for buffers in the global segment that have
  * not been allocated using the HSA allocator (::hsa_memory_allocate), but an OS
- * allocator instead.
+ * allocator instead. Registering an OS-allocated buffer in the base profile is
+ * equivalent to a no-op.
  *
  * Registrations should not overlap.
  *
- * @param[in] ptr A buffer in global memory. If a NULL pointer is passed, no
- * operation is performed.
+ * @param[in] ptr A buffer in global, fine-grained memory. If a NULL pointer is
+ * passed, no operation is performed. If the buffer has been allocated using
+ * ::hsa_memory_allocate, or has already been registered, no operation is
+ * performed.
  *
  * @param[in] size Requested registration size in bytes. A size of 0 is
  * only allowed if @p ptr is NULL.
@@ -3863,8 +3866,9 @@ typedef enum {
  * ::HSA_EXECUTABLE_STATE_FROZEN, the resulting executable is useless because no
  * code objects can be loaded, and no variables can be defined.
  *
- * @param[in] options Vendor-specific options. Unknown options are ignored. Must
- * be a NUL-terminated string. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. Must be a
+ * NUL-terminated string. May be NULL.
  *
  * @param[out] executable Memory location where the HSA runtime stores newly
  * created executable handle.
@@ -3895,8 +3899,10 @@ hsa_status_t HSA_API hsa_executable_create(
  * used in the executable. Allowed rounding modes are near and zero (default is
  * not allowed).
  *
- * @param[in] options Vendor-specific options. Unknown options are ignored. Must
- * be a NUL-terminated string. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. A standard
+ * options begins with the "-hsa_" prefix. Must be a NUL-terminated string. May
+ * be NULL.
  *
  * @param[out] executable Memory location where the HSA runtime stores newly
  * created executable handle. The initial state of the executable is
@@ -3970,8 +3976,9 @@ typedef struct hsa_loaded_code_object_s {
  * code object to load. If a code object reader is destroyed before all the
  * associated executables are destroyed, the behavior is undefined.
  *
- * @param[in] options Vendor-specific options. Must be a NULL-terminated
- * characted array. Unknown options are ignored. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Must be a
+ * NULL-terminated characted array. Unknown options are ignored. A standard
+ * options begins with the "-hsa_" prefix. May be NULL.
  *
  * @param[out] loaded_code_object Pointer to a memory location where the HSA
  * runtime stores the loaded code object handle. May be NULL.
@@ -4029,8 +4036,9 @@ hsa_status_t HSA_API hsa_executable_load_program_code_object(
  * to load. If a code object reader is destroyed before all the associated
  * executables are destroyed, the behavior is undefined.
  *
- * @param[in] options Vendor-specific options. Must be a NULL-terminated
- * characted array. Unknown options are ignored. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Must be a
+ * NULL-terminated characted array. Unknown options are ignored. A standard
+ * options begins with the "-hsa_" prefix. May be NULL.
  *
  * @param[out] loaded_code_object Pointer to a memory location where the HSA
  * runtime stores the loaded code object handle. May be NULL.
@@ -4076,8 +4084,9 @@ hsa_status_t HSA_API hsa_executable_load_agent_code_object(
  *
  * @param[in] executable Executable.
  *
- * @param[in] options Vendor-specific options. Must be a NULL-terminated
- * characted array. Unknown options are ignored. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Must be a
+ * NULL-terminated characted array. Unknown options are ignored. A standard
+ * options begins with the "-hsa_" prefix. May be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -4094,7 +4103,6 @@ hsa_status_t HSA_API hsa_executable_load_agent_code_object(
 hsa_status_t HSA_API hsa_executable_freeze(
     hsa_executable_t executable,
     const char *options);
-
 
 /**
  * @brief Executable attributes.
@@ -4291,7 +4299,8 @@ hsa_status_t HSA_API hsa_executable_readonly_variable_define(
  * machine model, profile, and default floating-point rounding mode. Checks that
  * all declarations have definitions. Checks declaration-definition
  * compatibility (see the HSA Programming Reference Manual for compatibility
- * rules).
+ * rules). Invoking this function is equivalent to invoking
+ * ::hsa_executable_validate_alt with no options.
  *
  * @param[in] executable Executable. Must be in frozen state.
  *
@@ -4309,6 +4318,36 @@ hsa_status_t HSA_API hsa_executable_readonly_variable_define(
  */
 hsa_status_t HSA_API hsa_executable_validate(
     hsa_executable_t executable,
+    uint32_t* result);
+
+/**
+ * @brief Validate an executable. Checks that all code objects have matching
+ * machine model, profile, and default floating-point rounding mode. Checks that
+ * all declarations have definitions. Checks declaration-definition
+ * compatibility (see the HSA Programming Reference Manual for compatibility
+ * rules).
+ *
+ * @param[in] executable Executable. Must be in frozen state.
+ *
+ * @param[in] options Standard and vendor-specific options. Must be a
+ * NULL-terminated characted array. Unknown options are ignored. A standard
+ * options begins with the "-hsa_" prefix. May be NULL.
+
+ * @param[out] result Memory location where the HSA runtime stores the
+ * validation result. If the executable passes validation, the result is 0.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_EXECUTABLE @p executable is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL.
+ */
+hsa_status_t HSA_API hsa_executable_validate_alt(
+    hsa_executable_t executable,
+    const char *options,
     uint32_t* result);
 
 /**
@@ -4753,7 +4792,8 @@ typedef struct hsa_callback_data_s {
  * @param[in] callback_data Application data that is passed to @p
  * alloc_callback. May be NULL.
  *
- * @param[in] options Vendor-specific options. May be NULL.
+ * @param[in] options Standard and vendor-specific options. A standard option
+ * begins with the "-hsa_" prefix. May be NULL.
  *
  * @param[out] serialized_code_object Memory location where the HSA runtime
  * stores a pointer to the serialized code object. Must not be NULL.
@@ -4797,7 +4837,8 @@ hsa_status_t HSA_API hsa_code_object_serialize(
  * @param[in] serialized_code_object_size The size (in bytes) of @p
  * serialized_code_object. Must not be 0.
  *
- * @param[in] options Vendor-specific options. May be NULL.
+ * @param[in] options Standard and vendor-specific options. A standard option
+ * begins with the "-hsa_" prefix. May be NULL.
  *
  * @param[out] code_object Memory location where the HSA runtime stores the
  * deserialized code object.
@@ -4945,7 +4986,8 @@ hsa_status_t HSA_API hsa_code_object_get_info(
  * must exceed that of the executable: if @p code_object is destroyed before @p
  * executable, the behavior is undefined.
  *
- * @param[in] options Vendor-specific options. May be NULL.
+ * @param[in] options Standard and vendor-specific options. A standard option
+ * begins with the "-hsa_" prefix. May be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
