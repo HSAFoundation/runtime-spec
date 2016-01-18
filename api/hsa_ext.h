@@ -1687,7 +1687,7 @@ enum {
 };
 
 /**
- * @brief Performance counter types (Ed. is this enum necessary? We could just use a bool, but what if we want to support float perf counters?)
+ * @brief Performance counter types
  */
 typedef enum {
     /**
@@ -1697,26 +1697,49 @@ typedef enum {
     /**
      * This performance counter's value is an unsigned 64 bit integer.
      */
-    HSA_EXT_PERF_COUNTER_TYPE_UINT64 = 1
+    HSA_EXT_PERF_COUNTER_TYPE_UINT64 = 1,
+
+    /**
+     * This performance counter's value is a float.
+     */
+    HSA_EXT_PERF_COUNTER_TYPE_FLOAT = 2,
+
+    /**
+     * This performance counter's value is a double.
+     */
+    HSA_EXT_PERF_COUNTER_TYPE_DOUBLE = 3
+
 } hsa_ext_perf_counter_type_t;
 
 
 /**
- * @brief Element which a performance counter is associated with (Ed. What else needs to be here? Anything that doesn't belong?)
+ * @brief System element which a performance counter is associated with
  */
 typedef enum {
     /**
-     * This performance counter is associated with a topology node.
+     * This performance counter is associated with an agent.
      */
-    HSA_EXT_PERF_COUNTER_ASSOC_NODE = 0,
-     /**
+    HSA_EXT_PERF_COUNTER_ASSOC_AGENT_NODE = 1,
+
+    /**
+     * This performance counter is associated with a memory region.
+     */
+    HSA_EXT_PERF_COUNTER_ASSOC_MEMORY_NODE = 2,
+
+    /**
+     * This performance counter is associated with a cache.
+     */
+    HSA_EXT_PERF_COUNTER_ASSOC_CACHE_NODE = 3,
+    
+    /**
      * This performance counter is associated with a queue.
      */
-    HSA_EXT_PERF_COUNTER_ASSOC_QUEUE = 1,
-     /**
+    HSA_EXT_PERF_COUNTER_ASSOC_QUEUE = 4,
+    
+    /**
      * This performance counter is associated with the whole system.
      */
-    HSA_EXT_PERF_COUNTER_ASSOC_SYSTEM = 2,
+    HSA_EXT_PERF_COUNTER_ASSOC_SYSTEM = 5,
 } hsa_ext_perf_counter_assoc_t;
 
 /**
@@ -1727,10 +1750,15 @@ typedef enum {
      * This performance counter applies to the whole system.
      */
     HSA_EXT_PERF_COUNTER_GRANULARITY_SYSTEM = 0,
-     /**
+    /**
      * This performance counter applies to a single process.
      */
     HSA_EXT_PERF_COUNTER_GRANULARITY_PROCESS = 1,
+
+    /**
+     * This performance counter applies to a single HSA kernel dispatch.
+     */
+    HSA_EXT_PERF_COUNTER_GRANULARITY_DISPATCH = 2,
 } hsa_ext_perf_counter_granularity_t;
 
 /**
@@ -1760,7 +1788,59 @@ typedef enum {
     /**
      * The value is a percentage
      */
-    HSA_EXT_PERF_COUNTER_VALUE_TYPE_PERCENTAGE = 1
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_PERCENTAGE = 1,
+    
+    /**
+     * The value is measured in Watts
+     */
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_WATTS = 2,
+
+    /**
+     * The value is measured in Milliwatts
+     */
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_MILLIWATTS = 3,
+
+    /**
+     * The value is measured in Bytes
+     */
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_BYTES = 4,
+
+    /**
+     * The value is measured in Kilobytes
+     */
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_KILOBYTES = 5,
+
+    /**
+     * The value is measured in Kilobits per Second
+     */
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_KBPS = 6,
+
+    /**
+     * The value is measured in Celsius
+     */
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_CELSIUS = 7,
+
+    /**
+     * The value is measured in Fahrenheit
+     */
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_FAHRENHEIT = 8,
+
+    /**
+     * The value is measured in Milliseconds
+     */
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_MILLISECONDS = 9,
+
+
+    /**
+     * Agents can have vendor-defined types for their performance counter values. This marks the lowest value of the range in which they can be defined.
+     */
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_AGENT_SPECIFIC_LOW = 128,
+
+    /**
+     * Agents can have vendor-defined types for their performance counter values. This marks the highest value of the range in which they can be defined.
+     */
+    HSA_EXT_PERF_COUNTER_VALUE_TYPE_AGENT_SPECIFIC_HIGH = 255
+
 } hsa_ext_perf_counter_value_type_t;
 
 /**
@@ -1784,29 +1864,32 @@ typedef enum {
      * Indicates whether the performance counter supports sampling while a session is running. The type of this attribute is bool.
      */
     HSA_EXT_PERF_COUNTER_INFO_SUPPORTS_ASYNC = 3,
-    /**
-     * (Ed. Is this a simple association to make? How should we find out which agent the counter is associated with, if it is associated with an agent?) What HSA construct the performance counter is associated with. The type of this attribute is ::hsa_ext_perf_counter_assoc_t.
-     */
-    HSA_EXT_PERF_COUNTER_INFO_ASSOCIATION = 5,
+
     /**
      * Performance counter granularity. The type of this attribute is ::hsa_ext_perf_counter_granularity_t.
      */
-    HSA_EXT_PERF_COUNTER_INFO_GRANULARITY = 6,
+    HSA_EXT_PERF_COUNTER_INFO_GRANULARITY = 4,
     /**
      * The persistence of value represented by this counter. The type of this attribute is ::hsa_ext_perf_counter_value_persistence_t.
      */
-    HSA_EXT_PERF_COUNTER_INFO_VALUE_PERSISTENCE = 7
+    HSA_EXT_PERF_COUNTER_INFO_VALUE_PERSISTENCE = 5,
+
+    /**
+     * The type of value represented by this counter. The type of this attribute is ::hsa_ext_perf_counter_value_type_t.
+     */
+    HSA_EXT_PERF_COUNTER_INFO_VALUE_TYPE = 6
+
 } hsa_ext_perf_counter_info_t;
 
 /**
  * @brief An opaque handle to a profiling session context, which is used to represent a set of enabled performance counters.
  */
-typedef struct hsa_ext_prof_session_ctx_s {
+typedef struct hsa_ext_perf_counter_session_ctx_s {
   /**
    * Opaque handle.
    */
   uint64_t handle;
-} hsa_ext_prof_session_ctx_t;
+} hsa_ext_perf_counter_session_ctx_t;
 
 
 /**
@@ -1821,14 +1904,14 @@ typedef struct hsa_ext_prof_session_ctx_s {
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL.
  */
-hsa_status_t HSA_API hsa_ext_get_num_perf_counters(
+hsa_status_t HSA_API hsa_ext_perf_counter_get_num(
     uint32_t* result);
 
 /**
  * @brief Get the current value of an attribute of a profiling counter.
  *
  * @param[in] counter_idx Performance counter index.
- * Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_get_num_perf_counters (not inclusive).
+ * Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_perf_counter_get_num (not inclusive).
  *
  * @param[in] attribute Attribute to query.
  *
@@ -1843,15 +1926,45 @@ hsa_status_t HSA_API hsa_ext_get_num_perf_counters(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_INDEX @p counter_idx is out-of-bounds.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is an invalid performance counter attribute, or @p value is NULL. (Ed. Should these be separated? It's probably easy enough to perform a NULL check on value.)
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is an invalid performance counter attribute, or @p value is NULL.
  */
-hsa_status_t hsa_ext_get_perf_counter_info(
+hsa_status_t hsa_ext_perf_counter_get_info(
     uint32_t counter_idx,
     hsa_ext_perf_counter_info_t attribute,
     void* value);
 
 /**
- * @brief Create a session context. This should be destroyed with a call to ::hsa_ext_destroy_session_context.
+ * @brief Iterate the constructs associated with the given performance counter, and invoke an application-defined callback on each iteration.
+ *
+ * @param[in] counter_idx Performance counter index.
+ * Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_perf_counter_get_num (not inclusive).
+ *
+ * @param[in] callback Callback to be invoked once per HSAIL module in the
+ * program. The HSA runtime passes three arguments to the callback: the associated construct's type, the associated construct's id, and the application data. The semantics of the id depends on the construct type. If the type is an agent, memory region, or cache, the id is an opaque handle to an agent, memory region, or cache, respectively. If the type is a queue, the id is a queue id. If the type is the whole system, the id is 0. If @p callback returns a status
+ * other than ::HSA_STATUS_SUCCESS for a particular iteration, the traversal
+ * stops and ::hsa_ext_program_iterate_modules returns that status value.
+ *
+ * @param[in] data Application data that is passed to @p callback on every
+ * iteration. May be NULL.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_INDEX @p counter_idx is out-of-bounds.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p callback is NULL.
+ */    
+hsa_status_t HSA_API hsa_ext_perf_counter_iterate_associations(
+    uint32_t counter_idx,
+    hsa_status_t (*callback)(hsa_ext_perf_counter_assoc_t assoc_type, uint64_t assoc_id,
+                             void* data),
+    void* data);
+    
+
+/**
+ * @brief Create a session context. This should be destroyed with a call to ::hsa_ext_perf_counter_session_context_destroy.
  *
  * @param[out] ctx Memory location where the HSA runtime stores the newly created session context handle.
  *
@@ -1865,29 +1978,29 @@ hsa_status_t hsa_ext_get_perf_counter_info(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p ctx is NULL.
  */
-hsa_status_t hsa_ext_create_session_context(
-    hsa_ext_prof_session_ctx_t* ctx);
+hsa_status_t hsa_ext_perf_counter_session_context_create(
+    hsa_ext_perf_counter_session_ctx_t* ctx);
 
 /**
  * @brief Destroy a session context.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has already been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has already been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  */
-hsa_status_t hsa_ext_destroy_session_context(
-    hsa_ext_prof_session_ctx_t ctx);
+hsa_status_t hsa_ext_perf_counter_session_context_destroy(
+    hsa_ext_perf_counter_session_ctx_t ctx);
 
 /**
- * @brief Enable sampling for the performance counter at the given index. Calls to ::hsa_ext_start_profile_session between this call and a corresponding successful ::hsa_ext_disable_perf_counter call will cause this performance counter to be populated.
+ * @brief Enable sampling for the performance counter at the given index. Calls to ::hsa_ext_perf_counter_session_start between this call and a corresponding successful ::hsa_ext_perf_counter_disable call will cause this performance counter to be populated.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
  * @param[in] counter_idx Performance counter index.
- * Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_get_num_perf_counters (not inclusive).
+ * Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_perf_counter_get_num (not inclusive).
  * If the specified counter is already enabled, this function has no effect.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
@@ -1900,17 +2013,17 @@ hsa_status_t hsa_ext_destroy_session_context(
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SESSION_STATE
  * Attempt to enable performance counter during a profiling session.
  */
-hsa_status_t hsa_ext_enable_perf_counter(
-    hsa_ext_prof_session_ctx_t ctx,
+hsa_status_t hsa_ext_perf_counter_enable(
+    hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx);
 
 /**
- * @brief Disable sampling for the performance counter at the given index. Calls to ::hsa_ext_start_profile_session will no longer populate this performance counter until the corresponding call to ::hsa_ext_enable_perf_counter is succesfully executed.
+ * @brief Disable sampling for the performance counter at the given index. Calls to ::hsa_ext_perf_counter_session_start will no longer populate this performance counter until the corresponding call to ::hsa_ext_perf_counter_enable is successfully executed.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
  * @param[in] counter_idx Performance counter index.
- * Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_get_num_perf_counters (not inclusive).
+ * Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_perf_counter_get_num (not inclusive).
  * If the specified counter is already disabled, this function has no effect.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
@@ -1923,18 +2036,18 @@ hsa_status_t hsa_ext_enable_perf_counter(
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SESSION_STATE
  * Attempt to disable performance counter during a profiling session.
  */
-hsa_status_t hsa_ext_disable_perf_counter(
-    hsa_ext_prof_session_ctx_t ctx,
+hsa_status_t hsa_ext_perf_counter_disable(
+    hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx);
 
 
 /**
  * @brief Check if the performance counter at the given index is currently enabled.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
  * @param[in] counter_idx Performance counter index.
- * Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_get_num_perf_counters (not inclusive).
+ * Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_perf_counter_get_num (not inclusive).
  *
  * @param[out] enabled Pointer to a memory location where the HSA runtime stores the result of the check. The result is true if the performance counter at the given index is currently enabled and false otherwise.
  *
@@ -1944,16 +2057,18 @@ hsa_status_t hsa_ext_disable_perf_counter(
  * initialized.
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_INDEX @p counter_idx is out-of-bounds.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p enabled is NULL.
  */
-hsa_status_t hsa_ext_perf_counter_enabled(
-    hsa_ext_prof_session_ctx_t ctx,
+hsa_status_t hsa_ext_perf_counter_is_enabled(
+    hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx,
     bool* enabled);
 
 /**
  * @brief Check if the set of currently enabled performance counters in a given session context can be sampled in a single profiling session. This call does not enable or disable any performance counters; the client is responsible for discovering a valid set.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
  * @param[out] result Pointer to a memory location where the HSA runtime stores the result of the check.
  * The result is true if the enabled performance counter set can be sampled in a single profiling session and false otherwise.
@@ -1966,14 +2081,14 @@ hsa_status_t hsa_ext_perf_counter_enabled(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL.
  */
-hsa_status_t hsa_ext_prof_session_counter_set_valid(
-    hsa_ext_prof_session_ctx_t ctx,
+hsa_status_t hsa_ext_perf_counter_session_context_set_valid(
+    hsa_ext_perf_counter_session_ctx_t ctx,
     bool* result);
 
  /**
- * @brief Check if the set of currently enabled performance counters in a given session context can be sampled in a single profiling session. This call does not enable or disable any performance counters; the client is responsible for discovering a valid set.
+ * @brief Check if the given set of session contexts can be enabled and executed concurrently. 
  *
- * @param[in] ctxs Pointer to an array of :hsa_ext_prof_session_ctx_t objects of size @p n_ctxs
+ * @param[in] ctxs Pointer to an array of ::hsa_ext_perf_counter_session_ctx_t objects of size @p n_ctxs
  *
  * @param[in] n_ctxs The size of the @p ctxs array.
  *
@@ -1985,17 +2100,17 @@ hsa_status_t hsa_ext_prof_session_counter_set_valid(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p ctxs is NULL or @p result is NULL.
  */
-hsa_status_t hsa_ext_prof_session_set_valid(
-    hsa_ext_prof_session_ctx_t* ctxs,
+hsa_status_t hsa_ext_perf_counter_session_set_valid(
+    hsa_ext_perf_counter_session_ctx_t* ctxs,
     size_t n_ctxs,
     bool* result);
 
 /**
- * @brief Enable a profiling session. Performance counters enabled through calls to ::hsa_ext_enable_perf_counter without an intervening call to ::hsa_ext_disable_perf_counter for the same counter index will be readied for counting and sampling. Performance counters which have the attribute ::HSA_EXT_PERF_COUNTER_VALUE_PERSISTENCE_RESETS for ::HSA_EXT_PERF_COUNTER_INFO_VALUE_PERSISTENCE will reset to 0.
+ * @brief Enable a profiling session. Performance counters enabled through calls to ::hsa_ext_perf_counter_enable without an intervening call to ::hsa_ext_perf_counter_disable for the same counter index will be readied for counting and sampling. Performance counters which have the attribute ::HSA_EXT_PERF_COUNTER_VALUE_PERSISTENCE_RESETS for ::HSA_EXT_PERF_COUNTER_INFO_VALUE_PERSISTENCE will reset to 0.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -2004,13 +2119,13 @@ hsa_status_t hsa_ext_prof_session_set_valid(
  *
  * @retval ::HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS The set of enabled performance counters is invalid for reading in a single profiling session, or there is a session currently enabled which cannot be executed concurrently with the given session context.
  */
-hsa_status_t hsa_ext_enable_profile_session(
-    hsa_ext_prof_session_ctx_t ctx);
+hsa_status_t hsa_ext_perf_counter_session_enable(
+    hsa_ext_perf_counter_session_ctx_t ctx);
 
 /**
  * @brief Disable a profiling session. Reading performance counters for that session is no longer valid.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -2018,13 +2133,13 @@ hsa_status_t hsa_ext_enable_profile_session(
  * initialized.
  *
  */
-hsa_status_t hsa_ext_disable_profile_session(
-    hsa_ext_prof_session_ctx_t ctx);
+hsa_status_t hsa_ext_perf_counter_session_disable(
+    hsa_ext_perf_counter_session_ctx_t ctx);
 
 /**
- * @brief Start a profiling session. Performance counters enabled through calls to ::hsa_ext_enable_perf_counter without an intervening call to ::hsa_ext_disable_perf_counter for the same counter index will count until a successful call to ::hsa_stop_profiling_session with the same session context.
+ * @brief Start a profiling session. Performance counters enabled through calls to ::hsa_ext_perf_counter_enable without an intervening call to ::hsa_ext_perf_counter_disable for the same counter index will count until a successful call to ::hsa_ext_perf_counter_session_stop with the same session context.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -2034,15 +2149,15 @@ hsa_status_t hsa_ext_disable_profile_session(
  * @retval ::HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS The set of enabled performance counters is invalid for reading in a single profiling session, or there is a session currently running which cannot be executed concurrently with the given session context.
  *
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SESSION_STATE
- * This session context has not been enabled with a call to ::hsa_ext_enable_profile_session, or has since been disabled with a call to ::hsa_ext_disable_profile_session.
+ * This session context has not been enabled with a call to ::hsa_ext_perf_counter_session_enable, or has since been disabled with a call to ::hsa_ext_perf_counter_session_disable.
  */
-hsa_status_t hsa_ext_start_profile_session(
-    hsa_ext_prof_session_ctx_t ctx);
+hsa_status_t hsa_ext_perf_counter_session_start(
+    hsa_ext_perf_counter_session_ctx_t ctx);
 
  /**
- * @brief Stop a profiling session, freezing the counters which were enabled. Reading of performance counters which do not support in-session reading is now valid until a call to ::hsa_ext_disable_profile_session with the same session context. If the session is already stopped, this function has no effect. The session can be started again with a call to ::hsa_ext_start_profile_session; the state of the counters will be carried over from the point at which this function was called.
+ * @brief Stop a profiling session, freezing the counters which were enabled. Reading of performance counters which do not support in-session reading is now valid until a call to ::hsa_ext_perf_counter_session_disable with the same session context. If the session is already stopped, this function has no effect. The session can be started again with a call to ::hsa_ext_perf_counter_session_start; the state of the counters will be carried over from the point at which this function was called.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -2053,15 +2168,15 @@ hsa_status_t hsa_ext_start_profile_session(
  * The session has already been ended or has not been started.
  *
  */
-hsa_status_t hsa_ext_stop_profile_session(
-    hsa_ext_prof_session_ctx_t ctx);
+hsa_status_t hsa_ext_perf_counter_session_stop(
+    hsa_ext_perf_counter_session_ctx_t ctx);
 
  /**
- * @brief Read the value of a given performance counter as a uint32_t. The value type of a performance counter can be queried using hsa_ext_get_perf_counter_info.
+ * @brief Read the value of a given performance counter as a uint32_t. The value type of a performance counter can be queried using ::hsa_ext_perf_counter_get_info.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
- * @param[in] counter_idx Performance counter index. Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_get_num_perf_counters (not inclusive).
+ * @param[in] counter_idx Performance counter index. Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_perf_counter_get_num (not inclusive).
  *
  * @param[out] result Pointer to a memory location where the HSA runtime stores the result of the check.
  *
@@ -2075,19 +2190,19 @@ hsa_status_t hsa_ext_stop_profile_session(
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL or @p counter_idx points to a performance counter whose data type is not uint32_t.
  *
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SAMPLING_CONTEXT
- * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_enable_profile_session and not have been since disabled with a call to ::hsa_ext_disable_profile_session. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_stop_profile_session.
+ * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_perf_counter_session_enable and not have been since disabled with a call to ::hsa_ext_perf_counter_session_disable. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_perf_counter_session_stop.
  */
-hsa_status_t hsa_ext_read_perf_counter_uint32(
-    hsa_ext_prof_session_ctx_t ctx,
+hsa_status_t hsa_ext_perf_counter_read_uint32(
+    hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx,
     uint32_t* result);
 
  /**
- * @brief Read the value of a given performance counter as a uint64_t. The value type of a performance counter can be queried using hsa_ext_get_perf_counter_info.
+ * @brief Read the value of a given performance counter as a uint64_t. The value type of a performance counter can be queried using ::hsa_ext_perf_counter_get_info.
  *
- * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_create_session_context or has been destroyed with ::hsa_ext_destroy_session_context is undefined behaviour.
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
  *
- * @param[in] counter_idx Performance counter index. Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_get_num_perf_counters (not inclusive).
+ * @param[in] counter_idx Performance counter index. Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_perf_counter_get_num (not inclusive).
  *
  * @param[out] result Pointer to a memory location where the HSA runtime stores the result of the check.
  *
@@ -2101,12 +2216,64 @@ hsa_status_t hsa_ext_read_perf_counter_uint32(
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL or @p counter_idx points to a performance counter whose data type is not uint64_t.
  *
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SAMPLING_CONTEXT
- * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_enable_profile_session and not have been since disabled with a call to ::hsa_ext_disable_profile_session. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_stop_profile_session.
+ * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_perf_counter_session_enable and not have been since disabled with a call to ::hsa_ext_perf_counter_session_disable. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_perf_counter_session_stop.
  */
-hsa_status_t hsa_ext_read_perf_counter_uint64(
-    hsa_ext_prof_session_ctx_t ctx,
+hsa_status_t hsa_ext_perf_counter_read_uint64(
+    hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx,
     uint64_t* result);
+
+/**
+ * @brief Read the value of a given performance counter as a float. The value type of a performance counter can be queried using ::hsa_ext_perf_counter_get_info.
+ *
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
+ *
+ * @param[in] counter_idx Performance counter index. Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_perf_counter_get_num (not inclusive).
+ *
+ * @param[out] result Pointer to a memory location where the HSA runtime stores the result of the check.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_INDEX @p counter_idx is out-of-bounds.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL or @p counter_idx points to a performance counter whose data type is not float.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SAMPLING_CONTEXT
+ * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_perf_counter_session_enable and not have been since disabled with a call to ::hsa_ext_perf_counter_session_disable. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_perf_counter_session_stop.
+ */
+hsa_status_t hsa_ext_perf_counter_read_float(
+    hsa_ext_perf_counter_session_ctx_t ctx,
+    uint32_t counter_idx,
+    float* result);
+
+/**
+ * @brief Read the value of a given performance counter as a double. The value type of a performance counter can be queried using ::hsa_ext_perf_counter_get_info.
+ *
+ * @param[in] ctx Session context. Using an object which has not been created using ::hsa_ext_perf_counter_session_context_create or has been destroyed with ::hsa_ext_perf_counter_session_context_destroy is undefined behaviour.
+ *
+ * @param[in] counter_idx Performance counter index. Must have a value between 0 (inclusive) and the value returned by ::hsa_ext_perf_counter_get_num (not inclusive).
+ *
+ * @param[out] result Pointer to a memory location where the HSA runtime stores the result of the check.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_INDEX @p counter_idx is out-of-bounds.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL or @p counter_idx points to a performance counter whose data type is not double.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SAMPLING_CONTEXT
+ * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_perf_counter_session_enable and not have been since disabled with a call to ::hsa_ext_perf_counter_session_disable. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_perf_counter_session_stop.
+ */
+hsa_status_t hsa_ext_perf_counter_read_double(
+    hsa_ext_perf_counter_session_ctx_t ctx,
+    uint32_t counter_idx,
+    double* result);
 
 /** @} */
 
@@ -2119,12 +2286,12 @@ hsa_status_t hsa_ext_read_perf_counter_uint64(
  */
 enum {
   /**
-   * The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+   * The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
    */
     HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED = 0x5000,
 
   /**
-   * The HSA runtime has already been initialized through a call to ::hsa_init or ::hsa_ext_init_with_timeline_events
+   * The HSA runtime has already been initialized through a call to ::hsa_init or ::hsa_ext_profiling_event_init
    */
     HSA_EXT_STATUS_ERROR_ALREADY_INITIALIZED = 0x5001,
 
@@ -2138,6 +2305,10 @@ enum {
    */
     HSA_EXT_STATUS_ERROR_EVENT_NOT_REGISTERED = 0x5003,
 
+  /**
+   * The producer mask was updated or some specific producers were enabled but the requested producers cannot be enabled at this point.
+   */
+    HSA_EXT_STATUS_ERROR_CANNOT_USE_PRODUCERS = 0x5004,
 };
 
 /**
@@ -2147,78 +2318,159 @@ typedef enum {
     /**
      * Do not collect events from any event producers.
      */
-    HSA_EXT_EVENT_PRODUCER_NONE = 0,
+    HSA_EXT_PROFILING_EVENT_PRODUCER_NONE = 0,
 
     /**
      * Collect events from agent nodes.
      */
-    HSA_EXT_EVENT_PRODUCER_AGENT_NODE = 1,
+    HSA_EXT_PROFILING_EVENT_PRODUCER_AGENT_NODE = 1,
 
     /**
      * Collect events from memory nodes.
      */
-    HSA_EXT_EVENT_PRODUCER_MEMORY_NODE = 2,
+    HSA_EXT_PROFILING_EVENT_PRODUCER_MEMORY_NODE = 2,
 
     /**
      * Collect events from cache nodes.
      */
-    HSA_EXT_EVENT_PRODUCER_CACHE_NODE = 4,
-
-    /**
-     * Collect events from i/o nodes.
-     */
-    HSA_EXT_EVENT_PRODUCER_IO_NODE = 8,
+    HSA_EXT_PROFILING_EVENT_PRODUCER_CACHE_NODE = 4,
 
     /**
      * Collect events from applications.
      */
-    HSA_EXT_EVENT_PRODUCER_APPLICATION = 16,
+    HSA_EXT_PROFILING_EVENT_PRODUCER_APPLICATION = 8,
+
+    /**
+     * Collect events from HSAIL kernels.
+     */
+    HSA_EXT_PROFILING_EVENT_PRODUCER_HSAIL = 16,
 
     /**
      * Collect events from signals.
      */
-    HSA_EXT_EVENT_PRODUCER_SIGNAL = 32,
+    HSA_EXT_PROFILING_EVENT_PRODUCER_SIGNAL = 32,
 
     /**
      * Collect events from the runtime API.
      */
-    HSA_EXT_EVENT_PRODUCER_RUNTIME_API = 64,
+    HSA_EXT_PROFILING_EVENT_PRODUCER_RUNTIME_API = 64,
 
     /**
      * Collect events from all producers.
      */
-    HSA_EXT_EVENT_PRODUCER_ALL = 127,
-} hsa_ext_event_producer_t;
+    HSA_EXT_PROFILING_EVENT_PRODUCER_ALL = 127,
+} hsa_ext_profiling_event_producer_t;
 
 
+/**
+ * The type of the value which a metadata field holds.
+ */
 typedef enum {
-    HSA_EXT_EVENT_METADATA_TYPE_UINT32 = 0,
-    HSA_EXT_EVENT_METADATA_TYPE_UINT64 = 1,
-    HSA_EXT_EVENT_METADATA_TYPE_INT32 = 2,
-    HSA_EXT_EVENT_METADATA_TYPE_INT64 = 3,
-    HSA_EXT_EVENT_METADATA_TYPE_FLOAT = 4,
-    HSA_EXT_EVENT_METADATA_TYPE_DOUBLE = 5,
-    HSA_EXT_EVENT_METADATA_TYPE_STRING = 6,
-    HSA_EXT_EVENT_METADATA_TYPE_OTHER = 7,
-} hsa_ext_event_metadata_type_t;
-
-/**
- * A timeline event
- */
-typedef struct hsa_ext_timeline_event_s {
-  /**
-   * Opaque handle.
-   */
-  uint64_t handle;
-} hsa_ext_timeline_event_t;
-
-/**
- * @brief An event metadata entry
- */
-
-typedef struct hsa_ext_event_metadata {
     /**
-     * Name of the metadata entry. A NUL-terminated string
+     * The value is an unsigned 32 bit integer
+     */
+    HSA_EXT_PROFILING_EVENT_METADATA_TYPE_UINT32 = 0,
+
+    /**
+     * The value is an unsigned 64 bit integer
+     */
+    HSA_EXT_PROFILING_EVENT_METADATA_TYPE_UINT64 = 1,
+
+    /**
+     * The value is a signed 32 bit integer.
+     */
+    HSA_EXT_PROFILING_EVENT_METADATA_TYPE_INT32 = 2,
+    
+    /**
+     * The value is an signed 64 bit integer.
+     */
+    HSA_EXT_PROFILING_EVENT_METADATA_TYPE_INT64 = 3,
+
+    /**
+     * The value is a 32 bit floating point value.
+     */
+    HSA_EXT_PROFILING_EVENT_METADATA_TYPE_FLOAT = 4,
+
+    /**
+     * The value is a 64 bit floating point value.
+     */
+    HSA_EXT_PROFILING_EVENT_METADATA_TYPE_DOUBLE = 5,
+
+    /**
+     * The value is a NUL-terminated C-like string.
+     */
+    HSA_EXT_PROFILING_EVENT_METADATA_TYPE_STRING = 6
+} hsa_ext_profiling_event_metadata_type_t;
+
+/**
+ * A profiling event
+ */
+typedef struct hsa_ext_profiling_event_s {
+    /**
+     * The type of the producer.
+     */
+    hsa_ext_profiling_event_producer_t producer_type;
+
+    /**
+     * The identifier for the producer. This should be interpreted in a way dependent on the producer type.
+     *
+     *
+     * HSA_EXT_PROFILING_EVENT_PRODUCER_AGENT_NODE -> hsa_agent_t handle
+     *
+     *
+     * HSA_EXT_PROFILING_EVENT_PRODUCER_MEMORY_NODE -> hsa_region_t handle
+     *
+     *
+     * HSA_EXT_PROFILING_EVENT_PRODUCER_CACHE_NODE -> hsa_cache_t handle
+     *
+     *
+     * HSA_EXT_PROFILING_EVENT_PRODUCER_APPLICATION -> application event producer id
+     *
+     *
+     * HSA_EXT_PROFILING_EVENT_PRODUCER_SIGNAL -> hsa_signal_t handle
+     *
+     * HSA_EXT_PROFILING_EVENT_PRODUCER_HSAIL -> irrelevant
+     *
+     * HSA_EXT_PROFILING_EVENT_PRODUCER_RUNTIME_API -> irrelevant
+     */
+    uint64_t producer_id;
+
+    /**
+     * Producer-local event id.
+     */
+    uint64_t event_id;
+
+    /**
+     * Description of the event.
+     */
+    const char* description;
+    /**
+     * Length of the description in chars.
+     */
+    size_t description_length;
+
+    /**
+     * HSA system timestamp at which the event was triggered.
+     */
+    uint64_t timestamp;
+
+    /**
+     * Pointer to the metadata associated with the event. The pointee should have the same structure as if a C struct was defined with the event metadata as member data, defined in the same order in which they were specified to ::hsa_ext_profiling_event_register_application_event.
+     */
+    void* metadata;
+
+    /**
+     * Size of the metadata in bytes.
+     */    
+    size_t metadata_size;
+} hsa_ext_profiling_event_t;
+
+/**
+ * @brief Description of a metadata field
+ */
+typedef struct hsa_ext_profiling_event_metadata_field_desc_s {
+    /**
+     * Name of the metadata entry. A NUL-terminated string.
      */
     const char* data_name;
 
@@ -2228,51 +2480,44 @@ typedef struct hsa_ext_event_metadata {
     size_t name_length;
 
     /**
-     * The metadata
-     */
-    void* data;
-
-    /**
-     * Size of the metadata in bytes
-     */
-    size_t data_size;
-
-    /**
      * Type of the metadata
      */
-    hsa_ext_event_metadata_type_t metadata_type;
-} hsa_ext_event_metadata_t;
+    hsa_ext_profiling_event_metadata_type_t metadata_type;
+
+} hsa_ext_profiling_event_metadata_field_desc_t;
 
 /**
- * @brief Initialize the HSA runtime with the timeline events system available for enabling for a given set of event producer types.
+ * @brief Initialize the HSA runtime with the profiling events system available for enabling for a given set of event producer types.
  *
- * @details Has the same effects as ::hsa_init in addition to the enabling of the timeline events system.
+ * @details Has the same effects as ::hsa_init in addition to the enabling of the profiling events system.
  *
- * @param[in] producer_mask Mask of event producers to enable for timeline event collection. This is a bit-field of ::hsa_ext_event_producer_t values. Any unknown set bits are ignored.
+ * @param[in] producer_mask Mask of event producers to enable for profiling event collection. This is a bit-field of ::hsa_ext_profiling_event_producer_t values. Any unknown set bits are ignored.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is failure to allocate
  * the resources required by the implementation.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_ALREADY_INITIALIZED The HSA runtime has already been initialized through a call to ::hsa_init or ::hsa_ext_init_with_timeline_events
+ * @retval ::HSA_EXT_STATUS_ERROR_ALREADY_INITIALIZED The HSA runtime has already been initialized through a call to ::hsa_init or ::hsa_ext_profiling_event_init
  */
-hsa_status_t hsa_ext_init_with_timeline_events(
+hsa_status_t hsa_ext_profiling_event_init(
     uint32_t producer_mask);
 
 /**
  * @brief Set a new producer type mask for coarse-grained filtering of events.
  *
- * @param[in] producer_mask Mask of event producers to enable for timeline event collection. This is a bit-field of ::hsa_ext_event_producer_t values.
+ * @param[in] producer_mask Mask of event producers to enable for profiling event collection. This is a bit-field of ::hsa_ext_profiling_event_producer_t values. Any unknown set bits are ignored.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function. Any unknown set bits are ignored.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function. 
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_CANNOT_USE_PRODUCERS Some of the producer types requested cannot be initialized at this point.
  */
-hsa_status_t hsa_ext_set_producer_mask(
+hsa_status_t hsa_ext_profiling_event_set_producer_mask(
     uint32_t producer_mask);
 
 /**
@@ -2280,51 +2525,74 @@ hsa_status_t hsa_ext_set_producer_mask(
  *
  * @param[in] name A NUL-terminated string containing the name. Cannot be NULL. Does not need to be unique.
  *
- * @param[in] description A NUL-terminated string containing the description. Can be NULL.
+ * @param[in] description A NUL-terminated string containing the description. May be NULL.
  *
- * @param[out] producer_id Pointer to a memory location where the HSA runtime stores the unique identifier for this event producer.
+ * @param[out] app_producer_id Pointer to a memory location where the HSA runtime stores the unique identifier for this event producer.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p name is NULL.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p name is NULL, or @p app_producer_id is NULL.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  */
-hsa_status_t hsa_ext_register_application_event_producer(
+hsa_status_t hsa_ext_profiling_event_register_application_event_producer(
     const char* name,
     const char* description,
-    uint32_t* event_producer_id);
+    uint64_t* app_producer_id);
 
 /**
- * @brief Get the number of application event producers registered by ::hsa_ext_register_application_event_producer.
+ * @brief Deregister an application event producer.
  *
- * @param[out] n Pointer to a memory location where the HSA runtime stores the result of the check.
+ * @param[in] app_producer_id Application event producer ID.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p n is NULL.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p app_producer_id is not currently registered or is id 0, which is reserved for HSAIL events.
  */
-hsa_status_t hsa_ext_get_num_application_event_producers(
-    size_t* n);
+hsa_status_t hsa_ext_profiling_event_deregister_application_event_producer(
+    uint64_t app_producer_id);    
 
 /**
- * @brief Get the name of an application event producer from its identifier. An identifier can be retrieved from an event through ::hsa_ext_get_application_event_producer_id. Arbitrary identifiers can be tested below the bound given by ::hsa_ext_get_num_application_event_producers.
+ * @brief Iterate over the available application event producers, and invoke an
+ * application-defined callback on every iteration.
  *
- * @details If many event producers are being registered and the event producer
- * with the given identifier has not been producing events recently, an
- * implementation may silently reclaim and reuse that event producer
- * identifier. Code calling this function can mitigate this by processing events
- * promptly.
+ * @details This is not part of ::hsa_ext_perf_counter_get_info as counters can be associated with more than one system component.
  *
- * @param[in] event_producer_id Event producer identifier.
+ * @param[in] callback Callback to be invoked once per agent. The HSA
+ * runtime passes two arguments to the callback, the producer id and the
+ * application data.  If @p callback returns a status other than
+ * ::HSA_STATUS_SUCCESS for a particular iteration, the traversal stops and
+ * ::hsa_ext_profiling_event_iterate_application_event_producers returns that status value.
+ *
+ * @param[in] data Application data that is passed to @p callback on every
+ * iteration. May be NULL.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p callback is NULL.
+*/
+hsa_status_t hsa_ext_profiling_event_iterate_application_event_producers(
+    hsa_status_t (*callback)(uint64_t agent, void* data),
+    void* data);
+
+
+/**
+ * @brief Get the name of an event producer from its identifier.
+ *
+ * @param[in] producer_type Type of the event producer.
+ *
+ * @param[in] producer_id Event producer identifier. See ::hsa_ext_profiling_event_t for more details.
  *
  * @param[out] name A NUL-terminated string containing the event producer name.
  *
@@ -2335,22 +2603,19 @@ hsa_status_t hsa_ext_get_num_application_event_producers(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p name is NULL.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  */
-hsa_status_t hsa_ext_get_application_event_producer_name(
-    uint32_t event_producer_id,
+hsa_status_t hsa_ext_profiling_event_get_producer_name(
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id,
     const char** name);
 
 /**
- * @brief Get the description of an application event producer from its identifier. An identifier can be retrieved from an event through ::hsa_ext_get_application_event_producer_id. Arbitrary identifiers can be tested below the bound given by ::hsa_ext_get_num_application_event_producers.
+ * @brief Get the description of an application event producer from its identifier.
  *
- * @details If many event producers are being registered and the event producer
- * with the given identifier has not been producing events recently, an
- * implementation may silently reclaim and reuse that event producer
- * identifier. Code calling this function can mitigate this by processing events
- * promptly.
+ * @param[in] producer_type Type of the event producer.
  *
- * @param[in] event_producer_id Event producer identifier.
+ * @param[in] producer_id Event producer identifier. See ::hsa_ext_profiling_event_t for more details.
  *
  * @param[out] description A NUL-terminated string containing the event producer description.
  *
@@ -2361,59 +2626,82 @@ hsa_status_t hsa_ext_get_application_event_producer_name(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p description is NULL.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  */
-hsa_status_t hsa_ext_get_application_event_producer_description(
-    uint32_t event_producer_id,
+hsa_status_t hsa_ext_profiling_event_get_producer_description(
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id,
     const char** description);
 
 /**
- * @brief Enable event collection from the application event producer with the given identifier.
+ * @brief Enable event collection from the event producer with the given identifier and type.
  *
- * @param[in] event_producer_id Event producer identifier.
+ * @param[in] producer_type Type of the event producer.
+ *
+ * @param[in] producer_id Event producer identifier. See ::hsa_ext_profiling_event_t for more details.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_CANNOT_USE_PRODUCERS The producer requested cannot be enabled at this point.
  */
-hsa_status_t hsa_ext_enable_application_event_producer(
-    uint32_t event_producer_id);
+hsa_status_t hsa_ext_profiling_event_enable_for_producer(
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id);
 
 /**
- * @brief Enable given agent node for collecting events.
+ * @brief Disable event collection from the event producer with the given type and identifier.
  *
- * @param[in] agent Agent.
+ * @param[in] producer_type Type of the event producer.
+ *
+ * @param[in] producer_id Event producer identifier. See ::hsa_ext_profiling_event_t for more details.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  */
-hsa_status_t hsa_ext_enable_agent_events(
-    hsa_agent_t agent);
-
-
-typedef int hsa_io_t;
+hsa_status_t hsa_ext_profiling_event_disable_for_producer(
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id);    
 
 /**
- * @brief Enable given io node for collecting events.
+ * @brief Enable event collection from all registered event producers of a given type.
  *
- * @param[in] io IO node. (Ed. doesn't exist yet)
+ * @param[in] producer_type Type of the event producer.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_CANNOT_USE_PRODUCERS Some of the producers requested cannot be enabled at this point.
  */
-hsa_status_t hsa_ext_enable_io_events(
-    hsa_io_t io);
+hsa_status_t hsa_ext_profiling_event_enable_all_for_producer_type(
+    hsa_ext_profiling_event_producer_t producer_type);
+
+/**
+ * @brief Disable event collection from all registered event producers of a given type.
+ *
+ * @param[in] producer_type Type of the event producer.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
+ */
+hsa_status_t hsa_ext_profiling_event_disable_all_for_producer_type(
+    hsa_ext_profiling_event_producer_t producer_type);
 
 /**
  * @brief Provide a hint to the runtime for how many bytes to reserve for buffering events.
@@ -2425,58 +2713,130 @@ hsa_status_t hsa_ext_enable_io_events(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  */
-hsa_status_t hsa_ext_set_event_buffer_size_hint(
+hsa_status_t hsa_ext_profiling_event_set_buffer_size_hint(
     size_t size_hint);
 
 /**
- * @brief Create a new timeline event.
+ * @brief Register a new application profiling event.
  *
- * @param[in] event_producer_id Event producer identifier.
+ * @param[in] app_producer_id Application event producer identifier.
  *
- * @param[in] name A NUL-terminated string containing the name. Can be NULL.
+ * @param[in] event_id A producer-specific event identifier.
  *
- * @param[out] event_id Pointer to a memory location where the HSA runtime stores a producer-specific event identifier.
+ * @param[in] description A NUL-terminated string containing the description. May be NULL.
  *
+ * @param[in] description_length The length of @p description in chars.
+ *
+ * @param[in] metadata_field_descriptions Pointer to the first element of an array containing descriptions of the metadata fields. May be NULL.
+ *
+ * @param[in] n_metadata_fields The number of metadata fields.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  */
-hsa_status_t hsa_ext_register_timeline_event(
-    uint32_t event_producer_id,
-    const char* name,
-    uint64_t *event_id);
+hsa_status_t hsa_ext_profiling_event_register_application_event(
+    uint64_t app_producer_id,
+    uint64_t event_id,
+    const char* description,
+    size_t description_length,
+    hsa_ext_event_metadata_field_desc_t* metadata_field_descriptions,
+    size_t n_metadata_fields);
 
 /**
- * @brief Trigger a timeline event with an ID, name and any associated metadata.
+ * @brief Deregister an application event. Any allocated memory will not be reclaimed by the runtime until the last event with this id has been destroyed by a consumer.
+ *
+ * @param[in] app_producer_id Application event producer id. 
+ *
+ * @param[in] event_id Event id.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENT_NOT_REGISTERED The @p event_id has not been registered with ::hsa_ext_profiling_event_register_application_event
+ */
+hsa_status_t hsa_ext_profiling_event_deregister_application_event(
+    uint64_t app_producer_id,
+    uint64_t event_id);
+
+/**
+ * @brief Register a new HSAIL profiling event.
+ *
+ * @param[in] event_id A producer-specific event identifier.
+ *
+ * @param[in] description A NUL-terminated string containing the description. May be NULL.
+ *
+ * @param[in] description_length The length of @p description in chars.
+ *
+ * @param[in] metadata_field_descriptions Pointer to the first element of an array containing descriptions of the metadata fields.
+ *
+ * @param[in] n_metadata_fields The number of metadata fields.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
+ */
+hsa_status_t hsa_ext_profiling_event_register_hsail_event(
+    uint64_t event_id,
+    const char* description,
+    size_t description_length,
+    hsa_ext_event_metadata_field_desc_t* metadata_field_descriptions,
+    size_t n_metadata_fields);
+
+/**
+ * @brief Deregister an HSAIL event. Any allocated memory will not be reclaimed by the runtime until the last event with this id has been destroyed by a consumer.
+ *
+ * @param[in] event_id Event id.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENT_NOT_REGISTERED The @p event_id has not been registered with ::hsa_ext_profiling_event_register_application_event
+ */
+hsa_status_t hsa_ext_profiling_event_deregister_hsail_event(
+    uint64_t event_id);
+    
+/**
+ * @brief Trigger a profiling event with an ID, name and any associated metadata.
+ *
+ * @param[in] app_producer_id Application event producer id
  *
  * @param[in] event_id Producer-specific event identifier.
  *
- * @param[in] metadata A pointer to an array of metadata entries. Can be NULL.
- *
- * @param[in] metadata_size The number of metadata entries in @p metadata_array. If @p metadata_array is NULL, this should be 0.
+ * @param[in] metadata A pointer to the metadata, which should have the same structure as if a C struct was defined with the event metadata as member data, defined in the same order in which they were specified to ::hsa_ext_profiling_event_register_application_event. May be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENT_NOT_REGISTERED The @p event_id has not been registered with ::hsa_ext_register_timeline_event
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENT_NOT_REGISTERED The @p event_id has not been registered with ::hsa_ext_profiling_event_register_application_event
  */
-hsa_status_t hsa_ext_trigger_timeline_event(
+hsa_status_t hsa_ext_profiling_event_trigger_application_event(
+    uint64_t app_producer_id,
     uint64_t event_id,
-    hsa_ext_event_metadata_t* metadata_array,
-    size_t n_metadata);
+    void* metadata);
 
 /**
- * @brief Retrieve the next event from an event buffer.
+ * @brief Retrieve the head event.
  *
  * @param[out] event Pointer to a memory location where the HSA runtime stores the event.
  *
@@ -2487,155 +2847,86 @@ hsa_status_t hsa_ext_trigger_timeline_event(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p event is NULL.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  *
  * @retval ::HSA_EXT_STATUS_ERROR_OUT_OF_EVENTS There are no events remaining in this buffer.
  */
-hsa_status_t hsa_ext_get_next_event(
-    hsa_ext_timeline_event_t* event);
-
+hsa_status_t hsa_ext_profiling_event_get_head_event(
+    hsa_ext_profiling_event_t* event);
 
 /**
- * @brief Destroy an event.
+ * @brief Destroy the head event, making the succeeding event the new head if one exists.
  *
- * @param[out] event Event.
+ * @param[in] event Event retrieved from ::hsa_ext_profiling_event_get_head_event
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
- */
-hsa_status_t hsa_ext_destroy_event(
-    hsa_ext_timeline_event_t event);
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p event is NULL.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
+ */    
+hsa_status_t hsa_ext_profiling_event_destroy_head_event(
+    hsa_ext_profiling_event_t* event);
 
 /**
- * @brief Get the ::HSA_SYSTEM_INFO_TIMESTAMP for when the event was triggered.
+ * @brief Get event name for the given producer and event ids.
  *
- * @param[in] event Event.
+ * @param[in] producer_id Producer id. See ::hsa_ext_profiling_event_t for more details.
  *
- * @param[out] timestamp Pointer to a memory location where the HSA runtime stores the timestamp.
+ * @param[in] event_id Event id.
+ *
+ * @param[out] name A NUL-terminated string containing the event name.
+ *
+ * @param[out] name_length Pointer to a memory location where the HSA runtime stores the length of the name in chars.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p timestamp is NULL.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
- */
-hsa_status_t hsa_ext_get_timeline_event_timestamp(
-    hsa_ext_timeline_event_t event,
-    uint64_t* timestamp);
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENT_NOT_REGISTERED The @p event_id has not been registered with ::hsa_ext_profiling_event_register_application_event
+
+ */    
+hsa_status_t hsa_ext_profiling_event_get_name(
+    uint64_t producer_id,
+    uint64_t event_id,
+    char** name,
+    size_t* name_length);
 
 /**
- * @brief Get the ::HSA_SYSTEM_INFO_TIMESTAMP for when the event was triggered.
+ * @brief Get metadata descriptions for the given producer and event ids.
  *
- * @param[in] event Event.
+ * @param[in] producer_id Producer id. See ::hsa_ext_profiling_event_t for more details.
  *
- * @param[out] producer_type Pointer to a memory location where the HSA runtime stores the producer type.
+ * @param[in] event_id Event id.
+ *
+ * @param[out] metadata_descs Pointer to a memory location where the HSA runtime stores an array of metadata field descriptions.
+
+ * @param[out] n_descs Pointer to a memory location where the HSA runtime stores the number of metadata fields.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p producer_type is NULL.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_profiling_event_init function.
  *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
- */
-hsa_status_t hsa_ext_get_timeline_event_producer_type(
-    hsa_ext_timeline_event_t event,
-    hsa_ext_event_producer_t* producer_type);
-
-/**
- * @brief Get the unique event producer identifier for a given application event.
+ * @retval ::HSA_EXT_STATUS_ERROR_EVENT_NOT_REGISTERED The @p event_id has not been registered with ::hsa_ext_profiling_event_register_application_event
  *
- * @param[in] event Event.
- *
- * @param[out] producer_type Pointer to a memory location where the HSA runtime stores the producer type.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p event_producer_id is NULL, or @p event has an event producer type other than ::HSA_EXT_EVENT_PRODUCER_APPLICATION.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
- */
-hsa_status_t hsa_ext_get_application_event_producer_id(
-    hsa_ext_timeline_event_t event,
-    uint64_t *event_producer_id);
-
-/**
- * @brief Get the id of an event.
- *
- * @param[in] event Event.
- *
- * @param[out] id Pointer to a memory location where the HSA runtime stores the id.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p id is NULL.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
- */
-hsa_status_t hsa_ext_get_timeline_event_id(
-    hsa_ext_timeline_event_t event,
-    uint64_t* id);
-
-/**
- * @brief Get the name of an event.
- *
- * @param[in] event Event.
- *
- * @param[out] name A NUL-terminated string containing the event string data. If there is no associated string data, the result is NULL.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p name is NULL.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
- */
-hsa_status_t hsa_ext_get_timeline_event_name(
-    hsa_ext_timeline_event_t event,
-    char** name);
-
-
-/**
- * @brief Get event metadata.
- *
- * @param[in] event Event.
- *
- * @param[out] metadata_list Pointer to a memory location where the HSA runtime stores a pointer to an array of metadata entries.
- *
- * @param[out] n The number of metadata entries in the list.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
- * initialized.
- *
- * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p metadata_list is NULL or @p n is NULL.
- *
- * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_ENABLED The HSA runtime was not initialized with the ::hsa_ext_init_with_timeline_events function.
-
- */
-hsa_status_t hsa_ext_get_timeline_event_metadata(
-    hsa_ext_timeline_event_t event,
-    hsa_ext_event_metadata_t** metadata_list,
-    size_t* n);
-
-
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p metadata_descs is NULL, or @p n_descs is NULL.
+ */    
+hsa_status_t hsa_ext_profiling_event_get_metadata_field_descs(
+    uint64_t producer_id,
+    uint64_t event_id,
+    hsa_ext_event_metadata_field_desc_t** metadata_descs,
+    size_t* n_descs);
+    
+    
 /** @} */
 
 #ifdef __cplusplus

@@ -334,6 +334,13 @@ represented at the time of their contribution:
 \sortitem{AMD}{Xiao, Shucai}
 \sortitem{AMD}{Yao, Ming}
 \sortitem{AMD}{Blinzer, Paul}
+\sortitem{AMD}{Herdeg, Mark}
+\sortitem{AMD}{Hesik, Chris}
+\sortitem{AMD}{McInally, Callan}
+\sortitem{AMD}{Purnomo, Budirijanto}
+\sortitem{AMD}{Mistry, Perhaad}
+\sortitem{AMD}{Tebeka, Yaki}
+\sortitem{AMD}{Grant, Al}
 \sortitem{Qualcomm}{Howes, Lee}
 \sortitem{Qualcomm}{Gaster, Ben}
 \sortitem{Qualcomm}{Bourd, Alex}
@@ -350,6 +357,7 @@ represented at the time of their contribution:
 \sortitem{Imagination}{Glew, Andy}
 \sortitem{Imagination}{McCarthy, James}
 \sortitem{Imagination}{Rankilor, Mark}
+\sortitem{Imagination}{Zaric, Zoran}
 \sortitem{Mediatek}{Bagley, Richard}
 \sortitem{Mediatek}{Ju, Roy}
 \sortitem{Mediatek}{Lo, Trent}
@@ -364,8 +372,16 @@ represented at the time of their contribution:
 \sortitem{Samsung Electronics}{Ryu, Soojung}
 \sortitem{Samsung Electronics}{Llamas, Ignacio}
 \sortitem{Samsung Electronics}{Shebanow, Michael}
+\sortitem{Codeplay}{Brand, Simon (tools spec editor)}
 \sortitem{Codeplay}{Potter, Ralph}
 \sortitem{Codeplay}{Richards, Andrew (workgroup chair)}
+\sortitem{General Processor}{D'Arcy, Paul}
+\sortitem{General Processor}{Glossner, John}
+\sortitem{Northeastern University}{Kaeli, Dave}
+\sortitem{Rice University}{Ahdianto, Laksono}
+\sortitem{National Taiwan University}{Yeh, Medicine}
+\sortitem{SUSE LLC}{Jambor, Martin}
+\sortitem{MultiCore Ware}{Jablin, Tom}
 \end{sorteddescription}
 \clearpage
 \phantomsection
@@ -1936,16 +1952,63 @@ handle from an agent-independent sampler descriptor
 \input{api/altlatex/group-ext-images}
 
 \section{Performance Counter API}\label{sec:perfcount}
-A draft of the performance counter API.
+HSA system components may have performance counters associated with them to expose information for profiler consumption. This API allows users to query the performance counters available in the system and to retrieve their associated values.
+
+Performance counters accumulate over a profiling session. A profiling application will first query the system for the available performance counters. It will then create a session context and enable the desired performance counters. Queries are available for checking if the selected counters can be enabled in the same session. The session should then be enabled in order to commit the necessary hardware, after which it can be started and stopped at the user's request. Some performance counters will be available to sample while a session is running, but others will require the session to be stopped first. This attribute, along with the associated component of the counter and other information is available through an API query. Sessions can be executed concurrently if the implementation supports it.
 
 \subsection{API}
 \input{api/altlatex/group-ext-performance-counters}
 
 \section{Profiling Events API}\label{sec:profevents}
-A draft of the profiling events API.
+This API provides the means to consume events with timestamps and optional metadata from various components in the system, as well as produce events from both host code and HSAIL kernels.
+
+
 
 \subsection{API}
 \input{api/altlatex/group-ext-event-system}
+
+\subsection{Standard Metadata Fields}
+All metadata field names beginning with ``hsa.'' are reserved for standardization.
+
+The following names designate a field with a standard meaning which can be relied on by tools. Producers are not mandated to provide metadata fields with these names, but the value of such a field must correspond to the standard meanings if the field is provided.
+
+\paragraph{hsa.workitemflatabsid} The work-item flattened absolute ID.
+\paragraph{hsa.queueid} ID of the User Mode Queue which the packet was enqueued on.
+\paragraph{hsa.packetid} User Mode Queue packet ID, unique to the User Mode Queue used for the dispatch.
+\paragraph{hsa.started-by} Used to indicate a part of an interval event. Value is the event ID of another event which designates the event at the start of the interval. Should be specified by all events in an interval other than the start event.
+\paragraph{hsa.ended-by} Used to create interval events. Value is the event ID of another event which designates the end of this interval. Should only be specified by the start event of an interval.
+\paragraph{hsa.parent} Used to create hierarchical events. Value is the event ID of another event which designates the logical parent of this event. If the parent event is an interval, the start event should be used as the parent event.
+
+
+\subsection{Generating Events from HSAIL}
+Events can be triggered from within HSAIL kernels. These events must have been pre-registered using the \hsaref{hsa_ext_profiling_event_register_hsail_event} function. In order for these events to be successfully triggered, the ``-hsa_ext_enabse_hsail_events'' flag must be passed in the $options$ parameter of ::hsa_ext_program_finalize.
+
+HSAIL events are triggered when the following pragma is executed:
+
+pragma ``hsa.tools.prof.event.trigger'', eventID [, metadata_value]*;
+
+
+\paragraph{eventID}
+The identifier for the event to trigger. This identifier is that which was passed to \hsaref{hsa_ext_profiling_event_register_hsail_event}. Must be an unsigned 64-bit integer constant or a d register containing the identifier.
+
+\paragraph{metadata_value}
+The position of the metadata value in the list identifies which field in the event it corresponds to. The value can be an integer constant, float constant, register, string or HSA metadata placeholder.
+
+HSA metadata placeholders are constructs of the form $(``hsa.placeholder\_name'')$ which will be evaluated to the relevant value when the event is triggered. The supported standard placeholder names are:
+
+\subparagraph{hsa.workitemflatabsid} The work-item flattened absolute ID. Equivalent to using the return value of the workitemflatabsid HSAIL instruction as a value.
+\subparagraph{hsa.queueid} ID of the User Mode Queue which the packet was enqueued on.
+\subparagraph{hsa.packetid} User Mode Queue packet ID, unique to the User Mode Queue used for the dispatch. Equivalent to using the return value of the packetid HSAIL instruction as a value.
+
+If the value is a string, it is the responsibility of the user to ensure that the lifetime of the string exceeds that of the event. E.g. string literals are tied to the lifetime of a code object, so the code object must outlive the event in this case.
+
+It is undefined behaviour to provide a value whose type is different from that registered for that metadata field.
+
+Example:
+If the event with id 0 is registered with an i32 field and a f32 field, the following pragma invokes undefined behaviour as the metadata constants are of type u64 and f64 respectively:\\
+pragma ``hsa.tools.prof.event.trigger'', 0, 1, 1.0;\\
+Typed constants or sized floating point constants may be used in this case:\\
+pragma ``hsa.tools.prof.event.trigger'', 0, i32(1), 1.0f;\\
 
 % Deprecated stuff
 % \chapter{Deprecated Declarations}

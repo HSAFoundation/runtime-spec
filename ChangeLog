@@ -6,6 +6,9 @@
 	* Bug 641 - [Instruction Set Architectures and Executables] Pass
 	options to executable validation
 
+2016-01-15  Simon Brand <simon@codeplay.com>
+	* Near-final versions of Performance Counter and Events API
+
 2016-01-15  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 
 	* Bug 616 - [Memory] Allow concurrent read only accesses to
@@ -84,7 +87,6 @@
 	* Added proposed APIs for multiple signal wait
 
 2015-11-01  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
-
 	* Bug 534 - Image extension query issues
 	* Bug 559 - hsa_executable_[agent_]global_variable_define address
 	parameter clarification
