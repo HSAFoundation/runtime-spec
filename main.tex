@@ -1967,9 +1967,20 @@ Performance counters accumulate over a profiling session. A profiling applicatio
 This API provides the means to consume events with timestamps and optional metadata from various components in the system, as well as produce events from both host code and HSAIL kernels.
 
 
-
 \subsection{API}
 \input{api/altlatex/group-ext-event-system}
+
+\subsection {Producer ID}
+\label{prodid}
+The construct represented by the producer ID used in many API functions depends on the producer type. The mapping is as follows:
+
+\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_AGENT_NODE} -> \hsaref{hsa_agent_t} handle\\
+\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_MEMORY_NODE} -> \hsaref{hsa_region_t} handle\\
+\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_CACHE_NODE} -> \hsaref{hsa_cache_t} handle\\
+\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_APPLICATION} -> application event producer id\\
+\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_SIGNAL} -> \hsaref{hsa_signal_t} handle\\
+\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_RUNTIME_API} -> irrelevant\\
+
 
 \subsection{Standard Metadata Fields}
 All metadata field names beginning with ``hsa.'' are reserved for standardization. 
@@ -1985,7 +1996,7 @@ The following names designate a field with a standard meaning which can be relie
 
 
 \subsection{Generating Events from HSAIL}
-Events can be triggered from within HSAIL kernels. These events must have been pre-registered using the \hsaref{hsa_ext_profiling_event_register_hsail_event} function. In order for these events to be successfully triggered, the ``-hsa_ext_enabse_hsail_events'' flag must be passed in the $options$ parameter of ::hsa_ext_program_finalize.
+Events can be triggered from within HSAIL kernels. These events must have been pre-registered using the \hsaref{hsa_ext_profiling_event_register_application_event} function using the producer id 0, which is reserved for HSAIL events. In order for these events to be successfully triggered, the ``-hsa_ext_enable_hsail_events'' flag must be passed in the $options$ parameter of ::hsa_ext_program_finalize.
 
 HSAIL events are triggered when the following pragma is executed:
 
@@ -1993,7 +2004,7 @@ pragma ``hsa.tools.prof.event.trigger'', eventID [, metadata_value]*;
 
 
 \paragraph{eventID}
-The identifier for the event to trigger. This identifier is that which was passed to \hsaref{hsa_ext_profiling_event_register_hsail_event}. Must be an unsigned 64-bit integer constant or a d register containing the identifier.
+The identifier for the event to trigger. This identifier is that which was passed to \hsaref{hsa_ext_profiling_event_register_application_event}. Must be an unsigned 64-bit integer constant or a d register containing the identifier.
 
 \paragraph{metadata_value}
 The position of the metadata value in the list identifies which field in the event it corresponds to. The value can be an integer constant, float constant, register, string or HSA metadata placeholder. 
