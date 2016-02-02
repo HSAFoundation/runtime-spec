@@ -519,8 +519,8 @@ responsible for initializing the HSA runtime, selecting target devices, creating
 execution queues, managing memory. The language runtime may use other HSA
 runtime features as well. A runtime implementation may provide optional
 extensions. Applications can query the runtime to determine which extensions are
-available. This document describes the extensions for Finalization, Linking,
-Images, Performance Counters and Profiling Events.
+available. This document describes extensions such as Finalization, Images, and
+Profiling.
 
 The API for the HSA runtime is standard across all HSA vendors. This means that
 languages that use the HSA runtime can execute on different vendors' platforms
@@ -875,18 +875,6 @@ multiple reasons:
 \\
 
 \input{api/altlatex/group-signals}
-
-\section{Multi-signal wait}
-This section contains two alternative APIs for dealing with the problem of
-waiting on multiple signals until at least one of them satisfies a given
-condition. The first approach is reduced to a single function (either
-\hsaref{hsa_signals_wait_any_scacquire} or
-\hsaref{hsa_signals_wait_any_relaxed}, depending on the desired memory
-order). The second API approach uses the abstraction of a signal group, includes
-all the declarations starting at \hsaref{hsa_signal_group_t}.
-\subsection{API}
-\input{api/altlatex/group-multi-signal-wait}
-
 
 \section{Queues} \label{sec:queues}
 
@@ -1458,6 +1446,11 @@ deallocator cannot be used to release memory allocated using standard libraries
 
 \subsection{Global memory}\label{sec:memory:global}
 
+\danger\:\textit{Some of the concepts explained in this section may be
+  significantly changed in future versions of the specification. In particular,
+  the Foundation is revising the semantics, terminology, and application
+  interfaces of coarse-grained memory.}
+
 Regions associated with the global segment are divided into two broad
 categories: fine-grained and coarse-grained. The main difference between these
 memory types is that fine-grained memory is directly accessible to all the
@@ -1612,105 +1605,112 @@ region.
 \subsection{API}
 \input{api/altlatex/group-memory}
 
+% \section{Other}
+% \subsection{API}
+% \input{api/altlatex/group-alternative-memory}
+
 
 \section{Instruction Set Architectures and Executables}\label{sec:codeobjects}
 
-% When the application populates a kernel dispatch packet, it must specify a
-% kernel object, a handle to the machine code to be executed. Kernel object
-% handles are created by first compiling the kernel source down to an HSA runtime,
-% ISA-specific representation called \textit{code object}, and then loading the
-% code object into another HSA runtime object, the \textit{executable}. The
-% application can performs queries on the executable object using the HSA runtime
-% API in order to obtain the kernel object.
+When the application populates a kernel dispatch packet, it must specify a
+kernel object, a handle to the machine code to be executed. Kernel object
+handles are created by first compiling the kernel source down to a
+vendor-specific, ISA-specific representation called \textit{code object}, and
+then loading the code object into another HSA runtime object (the
+\textit{executable}) using a third object called \textit{code object
+  reader}. The application can performs queries on the executable object using
+the HSA runtime API in order to obtain the kernel object.
 
-% \begin{figure}[b]
-%   \centering
-%   \tikzstyle{obj}=[rectangle,draw,fill=black!15,align=center,minimum width=3cm,minimum height=.75cm]
-%   \tikzstyle{emptyobj}=[circle,fill=black,align=center,minimum width=.1cm]
-%   \tikzstyle{outobj}=[rectangle,draw,fill=black!5,align=center,minimum width=3cm,minimum height=.75cm]
-%   \tikzstyle{storage}=[cylinder,draw, fill=black!5,shape border rotate=90,aspect=0.7, minimum height=1.7cm,minimum width=1.5cm,]
-%   \begin{tikzpicture}[thick,auto, node distance=1.5cm]
-%     \scriptsize
-%     \node[emptyobj] (finalization) {};
-%     \node[obj,below=2cm of finalization] (codeobject) {\hsaref{hsa_code_object_t}};
-%     \node[outobj,right=4cm of codeobject] (blob) {memory blob};
-%     \node[storage,right=2cm of blob] (disk) {disk};
-%     \node[obj,below=2.5cm of codeobject] (executable) {hsa_executable_t};
-%     \node[emptyobj,right=5cm of executable] (empty) {};
-%     \node[obj,below=1.5cm of executable] (executable_symbol) {hsa_executable_symbol_t};
-%     \node[obj,right=5cm of executable_symbol] (kernel) {kernel object};
-%     \path[->]
+\begin{figure}[b]
+  \centering
+  \tikzstyle{obj}=[rectangle,draw,fill=black!15,align=center,minimum width=3cm,minimum height=.75cm]
+  \tikzstyle{emptyobj}=[circle,fill=black,align=center,minimum width=.1cm]
+  \tikzstyle{outobj}=[rectangle,draw,fill=black!5,align=center,minimum width=3cm,minimum height=.75cm]
+  \tikzstyle{storage}=[cylinder,draw, fill=black!5,shape border rotate=90,aspect=0.2, minimum height=1cm,minimum width=1.5cm, text width=1.5cm, align=center]
+  \begin{tikzpicture}[thick,auto, node distance=1.5cm]
+    \scriptsize
 
-%        (finalization) edge node[anchor=center,fill=white,opacity=1]{(1) compilation process} (codeobject)
+    \node[emptyobj] (finalization) {};
+    \node[outobj,above right = 1.5cm and 5cm of finalization] (blob) {code object \\ (in memory)};
+    \node[storage,below  = 2cm  of blob] (disk) {code object \\ (in file)};
+    \node[obj, right=13cm of finalization] (object_reader) {code object reader};
 
-%        (codeobject.east) edge[bend left] node[align=center,above] {(2) \hsaref{hsa_code_object_serialize}} (blob.west)
-%        (blob.west) edge[bend left] node[align=center,below] {(2) \hsaref{hsa_code_object_deserialize}} (codeobject.east)
+    \node[emptyobj, below =5cm of finalization] (create_exe) {};
+    \node[obj,right=5cm of create_exe] (executable) {hsa_executable_t};
+    \node[obj,right=13cm of create_exe] (executable_symbol) {hsa_executable_symbol_t};
+    \node[obj,below=2cm of executable_symbol] (kernel) {kernel object};
+    \path[->]
 
-%        (blob.east) edge[bend left] node[align=center,above] {write} (disk.west)
-%        (disk.west) edge[bend left] node[align=center,below] {read} (blob.east)
+       (finalization) edge node[anchor=center,fill=white,opacity=1]{(1) compilation process} (blob)
+       (finalization) edge node[anchor=center,fill=white,opacity=1]{(1) compilation process} (disk)
+       (blob) edge node[anchor=center,fill=white,opacity=1]{(2) \hsaref{hsa_code_object_reader_create_from_memory}} (object_reader)
+       (disk) edge node[anchor=center,fill=white,opacity=1]{(2) \hsaref{hsa_code_object_reader_create_from_file}} (object_reader)
 
-%        (codeobject) edge node[anchor=center,fill=white,opacity=1]{(4) \hsaref{hsa_executable_load_code_object}}(executable)
-%        (empty) edge node[anchor=center,fill=white,opacity=1]{(3) \hsaref{hsa_executable_create}}(executable)
-%        (executable) edge node[anchor=center,fill=white,opacity=1]{(5) \hsaref{hsa_executable_get_symbol}}(executable_symbol)
-%        (executable_symbol) edge node[anchor=center,fill=white,opacity=1]{(6) \hsaref{hsa_executable_symbol_get_info}}(kernel)
-%     ;
-%   \end{tikzpicture}
-%   \caption{Retrieving a kernel object handle from a code object. The functions
-%     \textit{write} and \textit{read} represent operating system calls to write
-%     and read a number of bytes to a file.}
-%   \label{fig:codeobject_workflow}
-% \end{figure}
+       (create_exe) edge node[anchor=center,fill=white,opacity=1]{(3) \hsaref{hsa_executable_create_alt}}(executable)
 
-% The following algorithm is one example of the stages that could be passed
-% through to generate a kernel object and assumes use of the HSAIL finalization
-% extension described in Section~\ref{sec:finalizer}. Other methods for producing
-% a code object are valid but are not directly described in this document.
-% \begin{enumerate}
-% \item The application is in possesion of one or more HSAIL modules that are the
-%   result of compiling a high-level language such as OpenMP or OpenCL. One of the
-%   HSAIL modules contains the kernel to be executed. Manipulation of BRIG is out
-%   of the scope of the HSA runtime API, so the application must resort to
-%   external libraries in order to locate a kernel in an HSAIL module. Using the
-%   HSA runtime extension described in Section~\ref{sec:finalizer}, the
-%   application finalizes the HSAIL program, which results on a code descriptor
-%   handle of type \hsaref{hsa_code_object_t}.
-% \item Code object handles are ISA-specific representations that contain the code
-%   for a set of kernels and indirect functions. The application can obtain a code
-%   object not only by finalizing an HSAIL program, but also by compiling a
-%   vendor-specific intermediate representation. Code objects can be serialized
-%   (\hsaref{hsa_code_object_serialize}) and deserialized
-%   (\hsaref{hsa_code_object_deserialize}), which enables the application to
-%   perform offline compilation. Each code object is associated with multiple
-%   symbols (\hsaref{hsa_code_symbol_t}), which are the representation of a
-%   variable, kernel, or indirect function in the original source program. The
-%   application cannot use the kernel symbols contained in a code object to
-%   populate the \hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field in the
-%   kernel dispatch packet. Instead, the application must use an
-%   \textit{executable kernel symbol}, which is part of an executable.
+       (object_reader.south) edge[bend left] node[anchor=center,fill=white, opacity=1] {(4) \hsaref{hsa_executable_load_program_code_object} or \hsaref{hsa_executable_load_agent_code_object}} (executable.north)
 
-% \item The application creates an executable handle using
-%   \hsaref{hsa_executable_create}. The HSA runtime uses the executable handle
-%   \hsaref{hsa_executable_t} to load a set of code object handles, possibly
-%   associated with different instruction set architectures.
-% \item The code object is added (and loaded) to the executable by invoking
-%   \hsaref{hsa_executable_load_code_object}.
-% \item The application queries the executable in order to retrieve the executable
-%   symbol corresponding to the given kernel and agent. This can be achieved
-%   by passing the kernel's name, the kernel's module name, and the agent to
-%   \hsaref{hsa_executable_get_symbol}.
-% \item Executable symbols that represent kernels expose the attribute
-%   \hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT}, which is a handle to the
-%   machine code that is ultimately used to launch a kernel. The application uses
-%   the getter function \hsaref{hsa_executable_symbol_get_info} to retrieve the
-%   value of executable symbol attributes.
-% \item The application uses the kernel object value to populate the
-%   \hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field of a kernel dispatch
-%   packet. The application may use some other information in the symbol (for
-%   example, the kernel's memory usage) to fill other fields of the kernel
-%   dispatch packet.
-% \end{enumerate}
+       %(executable) edge[loop below, looseness=10] node[below, opacity=1]{(5) \hsaref{hsa_executable_freeze}}(executable)
+       (executable) edge node[anchor=center,fill=white,opacity=1]{(5) \hsaref{hsa_executable_get_symbol}}(executable_symbol)
+       (executable_symbol) edge node[anchor=center,fill=white,opacity=1]{(6) \hsaref{hsa_executable_symbol_get_info}}(kernel)
+    ;
+  \end{tikzpicture}
+  \caption{Retrieving a kernel object handle from a code object.}
+  \label{fig:codeobject_workflow}
+\end{figure}
 
-% This basic workflow is represented in Figure \ref{fig:codeobject_workflow}.
+The following algorithm is one example of the stages that could be passed
+through to generate a kernel object and assumes use of the HSAIL finalization
+extension described in Section~\ref{sec:finalizer}. Other methods for producing
+a code object are valid but are not directly described in this document.
+\begin{enumerate}
+\item The application is in possesion of one or more HSAIL modules that are the
+  result of compiling a high-level language such as OpenMP or OpenCL. One of the
+  HSAIL modules contains the kernel to be executed. Manipulation of BRIG is out
+  of the scope of the HSA runtime API, so the application must resort to
+  external libraries in order to locate a kernel in an HSAIL module. Using the
+  HSA runtime extension described in Section~\ref{sec:finalizer}, the
+  application finalizes the HSAIL program, which results on a code object, a
+  vendor-specific representation of the program. Code objects are ISA-specific
+  representations that can be stored in memory or disk, and contain the code for
+  a set of kernels and indirect functions. The application can obtain a code
+  object not only by finalizing an HSAIL program, but also by compiling a
+  vendor-specific intermediate representation.
+
+\item Code objects can be stored in memory or in a file. The application must
+  use a \textit{code object reader} to access the code object and eventually
+  load it into an executable (see step 4). The application must use the
+  functions \hsaref{hsa_code_object_reader_create_from_memory} and
+  \hsaref{hsa_code_object_reader_create_from_file} to create a code object
+  reader that is associated with a unique code object that is resident in memory
+  or disk.
+
+\item The application creates an executable object using
+  \hsaref{hsa_executable_create_alt}.
+
+\item The code object is added (and loaded) to the executable created in the
+  previous step by invoking \hsaref{hsa_executable_load_program_code_object} and
+  \hsaref{hsa_executable_load_agent_code_object}.
+
+\item The application queries the executable in order to retrieve the executable
+  symbol corresponding to the given kernel and agent. This can be achieved
+  by passing the kernel's name, the kernel's module name, and the agent to
+  \hsaref{hsa_executable_get_symbol}.
+
+\item Executable symbols that represent kernels expose the attribute
+  \hsaref{HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT}, which is a handle to the
+  machine code that is ultimately used to launch a kernel. The application uses
+  the getter function \hsaref{hsa_executable_symbol_get_info} to retrieve the
+  value of executable symbol attributes.
+
+  The application uses the kernel object value to populate the
+  \hsaref{hsa_kernel_dispatch_packet_t.kernel_object} field of a kernel dispatch
+  packet. The application may use some other information in the symbol (for
+  example, the kernel's memory usage) to fill other fields of the kernel
+  dispatch packet.
+\end{enumerate}
+
+This basic workflow is represented in Figure \ref{fig:codeobject_workflow}.
 
 \subsection{API}
 \input{api/altlatex/group-instruction-set-architecture}
@@ -1730,11 +1730,9 @@ Extensions to the HSA core runtime API can be HSA-approved, or vendor-specific.
 HSA-approved extensions are not required to be supported by a conforming HSA
 implementation, but are expected to be widely available; they define
 functionality that is likely to move into the core API in a future version of
-the HSA specification. Currently, there are four HSA-approved extensions:
-Finalization (discussed in Section~\ref{sec:finalizer}), Images (discussed in
-Section~\ref{sec:images}), Performance Counters (discussed in 
-Section~\ref{sec:perfcount}), and Profiling Events (discussed in 
-Section~\ref{sec:profevents}).
+the HSA specification. Two examples of HSA-approved extensions are Finalization
+(discussed in Section~\ref{sec:finalizer}), and Images (discussed in
+Section~\ref{sec:images}).
 
 Extensions approved by the HSA Foundation can be promoted to the core API in
 later versions. When this occurs, the extension specification is added to the
@@ -1749,28 +1747,29 @@ as a transition aid.
 Each extension must be assigned a name of the form:
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
 \item \textit{hsa_ext_} (HSA-approved extension)
-\item \textit{hsa_}<\textit{vendor(s) name}>_<\textit{label}> (other)
+\item \textit{hsa_ven_}<\textit{vendor(s) name}>_<\textit{label}> (other)
 \end{itemize}
 The label is one or more words separated by underscores, providing a short name
 for the extension. A label must be short, meaningful, and should not collide
 with the vendor name, the \textit{hsa} token, or the \textit{ext} token. Vendor
 names must be registered with the HSA Foundation, must be unique, and may be
-abbreviated to improve the readability of the symbols. An extension name must
-not contain upper case characters. For instance, if vendor \textit{HAL} wants to
-create an extension related to label \textit{foo}, the resulting extension name
-is \textit{hsa_hal_foo}. The corresponding HSAIL name for a vendor-specific
+abbreviated to improve the readability of the symbols. A vendor name must not
+contain any underscore character. An extension name must not contain upper case
+characters. For instance, if vendor \textit{HAL} wants to create an extension
+related to label \textit{foo}, the resulting extension name is
+\textit{hsa_ven_hal_foo}. The corresponding HSAIL name for a vendor-specific
 extension is <\textit{vendor(s) name}>::<\textit{label}>.
 
 All the functions and types declared in the extension must be prefixed by the
 extension name, and follow HSA naming conventions. For example, a
-vendor-specific extension \textit{hsa_hal_foo} could declare the following
+vendor-specific extension \textit{hsa_ven_hal_foo} could declare the following
 identifiers:
 \begin{lstlisting}
-hsa_status_t hsa_hal_foo_do_something();
+hsa_status_t hsa_ven_hal_foo_do_something();
 
 typedef enum {
-    HSA_HAL_FOO_CATEGORY_VALUE = 1,
-} hsa_hal_foo_category_t;
+    HSA_VEN_HAL_FOO_CATEGORY_VALUE = 1,
+} hsa_ven_hal_foo_category_t;
 \end{lstlisting}
 
 An extension can add new enumeration constants to an existing core
@@ -1781,22 +1780,22 @@ assigned by the HSA Foundation.
 
 Every extension must create a preprocessor definition that matches the extension
 name. The value associated with the identifier encodes the version number. For
-example, the \textit{hsa_hal_foo} extension (version 1.1) would include the
+example, the \textit{hsa_ven_hal_foo} extension (version 1.1) would include the
 following preprocessing directive in the header:
 \begin{lstlisting}
-#define hsa_hal_foo 001001
+#define hsa_ven_hal_foo 001001
 \end{lstlisting}
 
 If the extension API exposes any functions, the extension interface must declare
 a function table (structure) in which each field is a pointer to a
 function exported by the extension. The function pointer table must have as many
 entries as functions are exported by the extension API. For example, the header
-associated with the extension \textit{hsa_hal_foo} would contain the following
+associated with the extension \textit{hsa_ven_hal_foo} would contain the following
 declaration:
 \begin{lstlisting}
-typedef struct hsa_hal_foo_pfn_s {
-  hsa_status_t (*hsa_hal_foo_pfn_do_something)();
-} hsa_hal_foo_pfn_t;
+typedef struct hsa_ven_hal_foo_pfn_s {
+  hsa_status_t (*hsa_ven_hal_foo_pfn_do_something)();
+} hsa_ven_hal_foo_pfn_t;
 \end{lstlisting}
 
 The HSA Foundation assigns a unique integer ID in the [0, 0x400) interval to
@@ -1804,7 +1803,7 @@ each extension. The identifier remains the same throughout all the versions of
 the same extension. In the HSA runtime API, the application uses the identifier
 to refer to a specific extension. Identifiers are listed in the
 \hsaref{hsa_extension_t} enumeration. For example, the extension
-\textit{hsa_hal_foo} would add the enumeration constant HSA_EXTENSION_HAL_FOO
+\textit{hsa_ven_hal_foo} would add the enumeration constant HSA_EXTENSION_HAL_FOO
 associated with a unique constant expression (the identifier).
 
 \subsection{Extension support: HSA runtime and agents}
@@ -1823,15 +1822,13 @@ implementations may choose to also export its functions statically from the
 object libraries implementing those functions. However, portable applications
 cannot rely on this behavior. In the following code snippet, the application
 invokes an extension function once the HSA runtime has populated the function
-pointer table corresponding to the version 1.0 of the \textit{hsa_hal_foo}
+pointer table corresponding to the version 1.0 of the \textit{hsa_ven_hal_foo}
 extension.
 
 \lstinputfunlisting[1]{extension_example}
 
 An agent indicates which extensions it supports in the
-\hsaref{HSA_AGENT_INFO_EXTENSIONS} bit-mask attribute. The agent may support
-an extension even if the implementation does not support it (see
-\hsaref{HSA_SYSTEM_INFO_EXTENSIONS}), and vice versa. The application can query
+\hsaref{HSA_AGENT_INFO_EXTENSIONS} bit-mask attribute. The application can query
 if a version of the extension is supported by an agent using
 \hsaref{hsa_agent_extension_supported}.
 
@@ -1881,7 +1878,6 @@ if a version of the extension is supported by an agent using
 %   \label{fig:finalization}
 % \end{figure}
 
-\newpage
 \subsection{API}
 \input{api/altlatex/group-ext-alt-finalizer-extensions}
 \input{api/altlatex/group-ext-alt-finalizer-program}
@@ -1983,7 +1979,7 @@ The construct represented by the producer ID used in many API functions depends 
 
 
 \subsection{Standard Metadata Fields}
-All metadata field names beginning with ``hsa.'' are reserved for standardization. 
+All metadata field names beginning with ``hsa.'' are reserved for standardization.
 
 The following names designate a field with a standard meaning which can be relied on by tools. Producers are not mandated to provide metadata fields with these names, but the value of such a field must correspond to the standard meanings if the field is provided.
 
@@ -2000,14 +1996,14 @@ Events can be triggered from within HSAIL kernels. These events must have been p
 
 HSAIL events are triggered when the following pragma is executed:
 
-pragma ``hsa.tools.prof.event.trigger'', eventID [, metadata_value]*;  
+pragma ``hsa.tools.prof.event.trigger'', eventID [, metadata_value]*;
 
 
 \paragraph{eventID}
 The identifier for the event to trigger. This identifier is that which was passed to \hsaref{hsa_ext_profiling_event_register_application_event}. Must be an unsigned 64-bit integer constant or a d register containing the identifier.
 
 \paragraph{metadata_value}
-The position of the metadata value in the list identifies which field in the event it corresponds to. The value can be an integer constant, float constant, register, string or HSA metadata placeholder. 
+The position of the metadata value in the list identifies which field in the event it corresponds to. The value can be an integer constant, float constant, register, string or HSA metadata placeholder.
 
 HSA metadata placeholders are constructs of the form $(``hsa.placeholder\_name'')$ which will be evaluated to the relevant value when the event is triggered. The supported standard placeholder names are:
 
@@ -2155,11 +2151,11 @@ pragma ``hsa.tools.prof.event.trigger'', 0, i32(1), 1.0f;\\
 
 \bibitem{prm}
 \newblock{HSA Programmer's Reference Manual.}
-\newblock{v1.0, HSA Foundation.}
+\newblock{v1.1, HSA Foundation.}
 
 \bibitem{sar}
 \newblock{HSA Platform System Architecture Specification.}
-\newblock{v1.0, HSA Foundation.}
+\newblock{v1.1, HSA Foundation.}
 
 \end{thebibliography}
 % add bibliography to Table of Contents

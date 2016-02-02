@@ -1,5 +1,34 @@
+2016-01-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 612 - [Extensions] Extension support rules for system and
+	agent
+	* Bug 627 - [Extensions] Update list of supported extensions
+	* Bug 641 - [Instruction Set Architectures and Executables] Pass
+	options to executable validation
+
 2016-01-15  Simon Brand <simon@codeplay.com>
 	* Near-final versions of Performance Counter and Events API
+
+2016-01-15  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 616 - [Memory] Allow concurrent read only accesses to
+	coarse-grained memory => removed hsa_memory_assign_agents
+	proposal, since the discussion is now postponed beyond v1.1
+	* Added warning about the possibility of changes in the semantics,
+	terminology, and application interfaces related with memory
+	* Added text in "Instruction Set Architectures and Executables"
+	section
+	* Restored two 1.00 functions whose signature was modified during
+	the update to the finalizer API, hsa_executable_create and
+	hsa_isa_get_info
+
+2016-01-12  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
+
+	* Bug 563 - [Signals] Add wait_any API in order to wait for
+	multiple signals at once
+	* Bug 568 - [Finalizer] BRIG headers currently not being
+	distributed - should they become part of the Runtime bundle?
+	* Bug 633 - Definition of handle equality
 
 2015-12-18  Mario Mendez-Lojo  <mario.mendezlojo@amd.com>
 

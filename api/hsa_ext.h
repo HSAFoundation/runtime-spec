@@ -143,7 +143,8 @@ hsa_status_t HSA_API hsa_ext_isa_get_info(
  */
 typedef struct hsa_ext_code_object_writer_s {
   /**
-   * Opaque handle.
+   *  Opaque handle. Two handles reference the same object of the enclosing type
+   *  if and only if they are equal.
    */
   uint64_t handle;
 } hsa_ext_code_object_writer_t;
@@ -247,7 +248,8 @@ typedef BrigModule_t hsa_ext_module_t;
  */
 typedef struct hsa_ext_program_s {
   /**
-   * Opaque handle.
+   *  Opaque handle. Two handles reference the same object of the enclosing type
+   *  if and only if they are equal.
    */
   uint64_t handle;
 } hsa_ext_program_t;
@@ -262,7 +264,8 @@ typedef struct hsa_ext_program_s {
  * @param[in] default_float_rounding_mode Default floating-point rounding mode
  * used in the HSAIL program.
  *
- * @param[in] options Vendor-specific options. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. May be NULL.
  *
  * @param[out] program Memory location where the HSA runtime stores the newly
  * created HSAIL program handle.
@@ -430,8 +433,8 @@ hsa_status_t HSA_API hsa_ext_program_get_info(
  *
  * @param[in] program Valid program handle to finalize.
  *
- * @param[in] options Standard and vendor-specific options. Must be
- * NULL-terminated characted array. Uknown options are ignored. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. May be NULL.
  *
  * @param[out] code_object_writer Valid code object writer handle.
  *
@@ -469,8 +472,8 @@ hsa_status_t HSA_API hsa_ext_program_code_object_finalize(
  *
  * @param[in] isa Valid instruction set architecture handle to finalize for.
  *
- * @param[in] options Standard and vendor-specific options. Must be
- * NULL-terminated characted array. Uknown options are ignored. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. May be NULL.
  *
  * @param[out] code_object_writer Valid code object writer handle.
  *
@@ -653,7 +656,8 @@ typedef struct hsa_ext_control_directives_s {
  * @param[in] control_directives Low-level control directives that influence
  * the finalization process.
  *
- * @param[in] options Vendor-specific options. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. May be NULL.
  *
  * @param[in] code_object_type Type of code object to produce.
  *
@@ -740,7 +744,8 @@ typedef struct hsa_ext_finalizer_1_00_pfn_s {
  */
 typedef struct hsa_ext_image_s {
   /**
-   * Opaque handle.
+   *  Opaque handle. For a given agent, two handles reference the same object of
+   *  the enclosing type if and only if they are equal.
    */
     uint64_t handle;
 
@@ -1351,7 +1356,8 @@ hsa_status_t HSA_API hsa_ext_image_clear(
  */
 typedef struct hsa_ext_sampler_s {
   /**
-   * Opaque handle.
+   *  Opaque handle. For a given agent, two handles reference the same object of
+   *  the enclosing type if and only if they are equal.
    */
     uint64_t handle;
 } hsa_ext_sampler_t;

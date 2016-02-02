@@ -48,6 +48,7 @@ dist : checkversion diff main.pdf
 	$(CP) ChangeLog $(TMPDIST)
 	$(CP) api/hsa.h $(TMPDIST)/include/hsa
 	$(CP) api/hsa_ext.h $(TMPDIST)/include/hsa
+	$(CP) api/hsa_brig.h $(TMPDIST)/include/hsa
 	cd public && zip -r -9 $(DISTNAME) $(DISTNAME)
 	$(RM) $(TMPDIST)
 
