@@ -193,7 +193,12 @@ typedef enum {
     /**
      * The signal group is invalid.
      */
-    HSA_STATUS_ERROR_INVALID_SIGNAL_GROUP = 0x1024
+    HSA_STATUS_ERROR_INVALID_SIGNAL_GROUP = 0x1024,
+    /**
+     * The HSA runtime is not in the configuration state.
+     */
+    HSA_STATUS_ERROR_INVALID_RUNTIME_STATE = 0x1025
+
 } hsa_status_t;
 
 /**
@@ -3877,7 +3882,9 @@ typedef enum {
  * code objects can be loaded, and no variables can be defined.
  *
  * @param[in] options Standard and vendor-specific options. Unknown options are
- * ignored. A standard option begins with the "-hsa_" prefix. Must be a
+ * ignored. A standard option begins with the "-hsa_" prefix. Options beginning
+ * with the "-hsa_ext_<extension_name>_" prefix are reserved for extensions. A
+ * vendor-specific option begins with the "-<vendor_name>_" prefix. Must be a
  * NUL-terminated string. May be NULL.
  *
  * @param[out] executable Memory location where the HSA runtime stores newly
@@ -3910,9 +3917,10 @@ hsa_status_t HSA_API hsa_executable_create(
  * not allowed).
  *
  * @param[in] options Standard and vendor-specific options. Unknown options are
- * ignored. A standard option begins with the "-hsa_" prefix. A standard
- * options begins with the "-hsa_" prefix. Must be a NUL-terminated string. May
- * be NULL.
+ * ignored. A standard option begins with the "-hsa_" prefix. Options beginning
+ * with the "-hsa_ext_<extension_name>_" prefix are reserved for extensions. A
+ * vendor-specific option begins with the "-<vendor_name>_" prefix. Must be a
+ * NUL-terminated string. May be NULL.
  *
  * @param[out] executable Memory location where the HSA runtime stores newly
  * created executable handle. The initial state of the executable is
@@ -3986,9 +3994,11 @@ typedef struct hsa_loaded_code_object_s {
  * code object to load. If a code object reader is destroyed before all the
  * associated executables are destroyed, the behavior is undefined.
  *
- * @param[in] options Standard and vendor-specific options. Must be a
- * NULL-terminated characted array. Unknown options are ignored. A standard
- * options begins with the "-hsa_" prefix. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. Options beginning
+ * with the "-hsa_ext_<extension_name>_" prefix are reserved for extensions. A
+ * vendor-specific option begins with the "-<vendor_name>_" prefix. Must be a
+ * NUL-terminated string. May be NULL.
  *
  * @param[out] loaded_code_object Pointer to a memory location where the HSA
  * runtime stores the loaded code object handle. May be NULL.
@@ -4046,9 +4056,11 @@ hsa_status_t HSA_API hsa_executable_load_program_code_object(
  * to load. If a code object reader is destroyed before all the associated
  * executables are destroyed, the behavior is undefined.
  *
- * @param[in] options Standard and vendor-specific options. Must be a
- * NULL-terminated characted array. Unknown options are ignored. A standard
- * options begins with the "-hsa_" prefix. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. Options beginning
+ * with the "-hsa_ext_<extension_name>_" prefix are reserved for extensions. A
+ * vendor-specific option begins with the "-<vendor_name>_" prefix. Must be a
+ * NUL-terminated string. May be NULL.
  *
  * @param[out] loaded_code_object Pointer to a memory location where the HSA
  * runtime stores the loaded code object handle. May be NULL.
@@ -4094,9 +4106,11 @@ hsa_status_t HSA_API hsa_executable_load_agent_code_object(
  *
  * @param[in] executable Executable.
  *
- * @param[in] options Standard and vendor-specific options. Must be a
- * NULL-terminated characted array. Unknown options are ignored. A standard
- * options begins with the "-hsa_" prefix. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. Options beginning
+ * with the "-hsa_ext_<extension_name>_" prefix are reserved for extensions. A
+ * vendor-specific option begins with the "-<vendor_name>_" prefix. Must be a
+ * NUL-terminated string. May be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
@@ -4339,10 +4353,12 @@ hsa_status_t HSA_API hsa_executable_validate(
  *
  * @param[in] executable Executable. Must be in frozen state.
  *
- * @param[in] options Standard and vendor-specific options. Must be a
- * NULL-terminated characted array. Unknown options are ignored. A standard
- * options begins with the "-hsa_" prefix. May be NULL.
-
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. Options beginning
+ * with the "-hsa_ext_<extension_name>_" prefix are reserved for extensions. A
+ * vendor-specific option begins with the "-<vendor_name>_" prefix. Must be a
+ * NUL-terminated string. May be NULL.
+ *
  * @param[out] result Memory location where the HSA runtime stores the
  * validation result. If the executable passes validation, the result is 0.
  *
@@ -4802,8 +4818,11 @@ typedef struct hsa_callback_data_s {
  * @param[in] callback_data Application data that is passed to @p
  * alloc_callback. May be NULL.
  *
- * @param[in] options Standard and vendor-specific options. A standard option
- * begins with the "-hsa_" prefix. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. Options beginning
+ * with the "-hsa_ext_<extension_name>_" prefix are reserved for extensions. A
+ * vendor-specific option begins with the "-<vendor_name>_" prefix. Must be a
+ * NUL-terminated string. May be NULL.
  *
  * @param[out] serialized_code_object Memory location where the HSA runtime
  * stores a pointer to the serialized code object. Must not be NULL.
@@ -4847,8 +4866,11 @@ hsa_status_t HSA_API hsa_code_object_serialize(
  * @param[in] serialized_code_object_size The size (in bytes) of @p
  * serialized_code_object. Must not be 0.
  *
- * @param[in] options Standard and vendor-specific options. A standard option
- * begins with the "-hsa_" prefix. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. Options beginning
+ * with the "-hsa_ext_<extension_name>_" prefix are reserved for extensions. A
+ * vendor-specific option begins with the "-<vendor_name>_" prefix. Must be a
+ * NUL-terminated string. May be NULL.
  *
  * @param[out] code_object Memory location where the HSA runtime stores the
  * deserialized code object.
@@ -4996,8 +5018,11 @@ hsa_status_t HSA_API hsa_code_object_get_info(
  * must exceed that of the executable: if @p code_object is destroyed before @p
  * executable, the behavior is undefined.
  *
- * @param[in] options Standard and vendor-specific options. A standard option
- * begins with the "-hsa_" prefix. May be NULL.
+ * @param[in] options Standard and vendor-specific options. Unknown options are
+ * ignored. A standard option begins with the "-hsa_" prefix. Options beginning
+ * with the "-hsa_ext_<extension_name>_" prefix are reserved for extensions. A
+ * vendor-specific option begins with the "-<vendor_name>_" prefix. Must be a
+ * NUL-terminated string. May be NULL.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *

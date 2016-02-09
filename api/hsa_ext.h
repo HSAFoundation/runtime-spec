@@ -2529,22 +2529,63 @@ typedef struct hsa_ext_profiling_event_metadata_field_desc_s {
 } hsa_ext_profiling_event_metadata_field_desc_t;
 
 /**
- * @brief Initialize the profiling events system. This must be called
+ * @brief Initialize the event producer with the given identifier and type for producing profiling events. Must be called prior to ::hsa_ext_profiling_event_init. This function should be called while the runtime is in the configuration state; support for initializing whilst not in the configuration state is optional.
  *
- * @param[in] producer_mask Mask of event producers to enable for profiling event collection. This is a bit-field of ::hsa_ext_profiling_event_producer_t values. Any unknown set bits are ignored.
+ * @param[in] producer_type Type of the event producer.
+ *
+ * @param[in] producer_id Event producer identifier. See section \\ref{prodid} for details.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_RUNTIME_STATE (Optional) The HSA runtime is not in the configuration state.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_ALREADY_INITIALIZED The profiling events system has already been initialized and has not been shut down with ::hsa_ext_profiling_event_shut_down.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_CANNOT_USE_PRODUCERS The producer requested cannot be initialized for profiling events.
+ */
+hsa_status_t hsa_ext_profiling_event_init_producer(
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id);
+
+/**
+ * @brief Initialize all event producers of the given type for producing profiling events. Must be called prior to ::hsa_ext_profiling_event_init. This function should be called while the runtime is in the configuration state; support for initializing whilst not in the configuration state is optional.
+ *
+ * @param[in] producer_type Type of the event producer.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_RUNTIME_STATE (Optional) The HSA runtime is not in the configuration state.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_ALREADY_INITIALIZED The profiling events system has already been initialized and has not been shut down with ::hsa_ext_profiling_event_shut_down.
+ *
+ * @retval ::HSA_EXT_STATUS_ERROR_CANNOT_USE_PRODUCERS Some of the producers requested cannot be initialized for profiling events.
+ */
+hsa_status_t hsa_ext_profiling_event_init_all_of_producer_type(
+    hsa_ext_profiling_event_producer_t producer_type);
+
+    
+/**
+ * @brief Initialize the profiling events system. This function should be called while the runtime is in the configuration state; support for initializing whilst not in the configuration state is optional.
  *
  * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
  *
  * @retval ::HSA_STATUS_ERROR_OUT_OF_RESOURCES There is failure to allocate
  * the resources required by the implementation.
  *
+ * @retval ::HSA_STATUS_ERROR_INVALID_RUNTIME_STATE (Optional) The HSA runtime is not in the configuration state.
+ *
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  *
  * @retval ::HSA_EXT_STATUS_ERROR_ALREADY_INITIALIZED The profiling events system has already been initialized and has not been shut down with ::hsa_ext_profiling_event_shut_down.
  */
-hsa_status_t hsa_ext_profiling_event_init(
-    uint32_t producer_mask);
+hsa_status_t hsa_ext_profiling_event_init();
 
 /**
  * @brief Shut down the profiling events system.
@@ -2562,7 +2603,7 @@ hsa_status_t hsa_ext_profiling_event_init(
 hsa_status_t hsa_ext_profiling_event_shut_down();
     
 /**
- * @brief Set a new producer type mask for coarse-grained filtering of events. This replaces the one set through :: hsa_ext_profiling_event_init.
+ * @brief Set a producer type mask for coarse-grained filtering of events.
  *
  * @param[in] producer_mask Mask of event producers to enable for profiling event collection. This is a bit-field of ::hsa_ext_profiling_event_producer_t values. Any unknown set bits are ignored.
  *

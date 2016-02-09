@@ -729,6 +729,39 @@ counter. When the reference counter is less than one, the runtime object ceases
 to exist, and any reference to it (or to any resources created while it was
 active) results in undefined behavior.
 
+After being initialized for the first time, the runtime is in the \textit{configuration 
+state}. Certain functions are only callable whilst the runtime is in the 
+configuration state. When a runtime function other than any of the following 
+functions is called, the runtime is no longer in the configuration state:
+
+\begin{itemize}[itemsep=0pt,topsep=0pt,partopsep=0pt]
+\item \hsaref{hsa_init}
+\item \hsaref{hsa_system_get_info}
+\item \hsaref{hsa_extension_get_name}
+\item \hsaref{hsa_system_extension_supported}
+\item \hsaref{hsa_system_get_extension_table}
+\item \hsaref{hsa_agent_get_info}
+\item \hsaref{hsa_iterate_agents}
+\item \hsaref{hsa_agent_get_exception_policies}
+\item \hsaref{hsa_cache_get_info}
+\item \hsaref{hsa_agent_iterate_caches}
+\item \hsaref{hsa_agent_extension_supported}
+\item \hsaref{hsa_region_get_info}
+\item \hsaref{hsa_agent_iterate_regions}
+\item \hsaref{hsa_isa_from_name}
+\item \hsaref{hsa_agent_iterate_isas}
+\item \hsaref{hsa_isa_get_info}
+\item \hsaref{hsa_isa_get_info_alt}
+\item \hsaref{hsa_isa_get_exception_policies}
+\item \hsaref{hsa_isa_get_round_method}
+\item \hsaref{hsa_wavefront_get_info}
+\item \hsaref{hsa_isa_iterate_wavefronts}
+\item \hsaref{hsa_isa_compatible}
+\end{itemize}
+
+Specifications for extension functions can state that the described function
+does not cause the runtime to exit the configuration state.
+
 \subsection{API}
 \input{api/altlatex/group-initshutdown}
 
