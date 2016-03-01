@@ -485,6 +485,8 @@ hsa_status_t HSA_API hsa_extension_get_name(
     const char **name);
 
 /**
+ * @deprecated
+ *
  * @brief Query if a given version of an extension is supported by the HSA
  * implementation.
  *
@@ -513,6 +515,38 @@ hsa_status_t hsa_system_extension_supported(
     bool* result);
 
 /**
+ * @brief Query if a given version of an extension is supported by the HSA
+ * implementation. All minor versions from 0 up to the returned @p version_minor
+ * must be supported by the implementation.
+ *
+ * @param[in] extension Extension identifier.
+ *
+ * @param[in] version_major Major version number.
+ *
+ * @param[out] version_minor Minor version number.
+ *
+ * @param[out] result Pointer to a memory location where the HSA runtime stores
+ * the result of the check. The result is true if the specified version of the
+ * extension is supported, and false otherwise.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p extension is not a valid
+ * extension, or @p version_minor is NULL, or @p result is NULL.
+ */
+hsa_status_t hsa_system_major_extension_supported(
+    uint16_t extension,
+    uint16_t version_major,
+    uint16_t *version_minor,
+    bool* result);
+    
+
+/**
+ * @deprecated
+ *
  * @brief Retrieve the function pointers corresponding to a given version of an
  * extension. Portable applications are expected to invoke the extension API
  * using the returned function pointers
@@ -548,6 +582,46 @@ hsa_status_t hsa_system_get_extension_table(
     uint16_t version_major,
     uint16_t version_minor,
     void *table);
+
+/**
+ * @brief Retrieve the function pointers corresponding to a given major version
+ * of an extension. Portable applications are expected to invoke the extension
+ * API using the returned function pointers.
+ *
+ * @details The application is responsible for verifying that the given major
+ * version of the extension is supported by the HSA implementation (see
+ * ::hsa_system_major_extension_supported). If the given combination of extension
+ * and major version is not supported by the implementation, the behavior is
+ * undefined. Additionally if the length doesn't allow space for a full minor
+ * version, it is implementation defined if only some of the function pointers for
+ * that minor version get written.
+ *
+ * @param[in] extension Extension identifier.
+ *
+ * @param[in] version_major Major version number for which to retrieve the
+ * function pointer table.
+ *
+ * @param[in] table_length Size in bytes of the function pointer table to be
+ * populated. The implementation will not write more than this many bytes to the
+ * table.
+ *
+ * @param[out] table Pointer to an application-allocated function pointer table
+ * that is populated by the HSA runtime. Must not be NULL. The memory associated
+ * with table can be reused or freed after the function returns.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p extension is not a valid
+ * extension, or @p table is NULL.
+ */
+hsa_status_t hsa_system_get_major_extension_table(
+    uint16_t extension,
+    uint16_t version_major,
+    size_t table_length,
+    void *table);    
 
 /**
  * @brief Opaque handle representing an agent, a device that participates in
@@ -1031,6 +1105,8 @@ hsa_status_t HSA_API hsa_agent_iterate_caches(
     void* data);
 
 /**
+ * @deprecated
+ *
  * @brief Query if a given version of an extension is supported by an agent
  *
  * @param[in] extension Extension identifier.
@@ -1063,6 +1139,42 @@ hsa_status_t hsa_agent_extension_supported(
     uint16_t version_major,
     uint16_t version_minor,
     bool* result);
+
+/**
+ * @brief Query if a given version of an extension is supported by an agent. All
+ * minor versions from 0 up to the returned @p version_minor must be supported.
+ *
+ * @param[in] extension Extension identifier.
+ *
+ * @param[in] agent Agent.
+ *
+ * @param[in] version_major Major version number.
+ *
+ * @param[out] version_minor Minor version number.
+ *
+ * @param[out] result Pointer to a memory location where the HSA runtime stores
+ * the result of the check. The result is true if the specified version of the
+ * extension is supported, and false otherwise. The result must be false if
+ * ::hsa_system_extension_supported returns false for the same extension
+ * version.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_AGENT The agent is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p extension is not a valid
+ * extension, or @p version_minor is NULL, or @p result is NULL.
+ */
+hsa_status_t hsa_agent_major_extension_supported(
+    uint16_t extension,
+    hsa_agent_t agent,
+    uint16_t version_major,
+    uint16_t *version_minor,
+    bool* result);
+    
 
 /** @} */
 
@@ -1891,6 +2003,12 @@ hsa_status_t HSA_API hsa_signal_group_destroy(
  * compare_values must not be smaller than the number of signals in @p
  * signal_group; any extra elements are ignored. Must not be NULL.
  *
+ * @param[in] wait_state_hint Hint used by the application to indicate the
+ * preferred waiting state. The actual waiting state is decided by the HSA runtime
+ * and may not match the provided hint. A value of ::HSA_WAIT_STATE_ACTIVE may
+ * improve the latency of response to a signal update by avoiding rescheduling
+ * overhead.
+ *
  * @param[out] signal Signal in the group that satisfied the associated
  * condition. If several signals satisfied their condition, the function can
  * return any of those signals. Must not be NULL.
@@ -1909,6 +2027,7 @@ hsa_status_t HSA_API hsa_signal_group_wait_any_scacquire(
     hsa_signal_group_t signal_group,
     const hsa_signal_condition_t *conditions,
     const hsa_signal_value_t *compare_values,
+    hsa_wait_state_t wait_state_hint,
     hsa_signal_t *signal,
     hsa_signal_value_t *value);
 
@@ -1919,6 +2038,7 @@ hsa_status_t HSA_API hsa_signal_group_wait_any_relaxed(
     hsa_signal_group_t signal_group,
     const hsa_signal_condition_t *conditions,
     const hsa_signal_value_t *compare_values,
+    hsa_wait_state_t wait_state_hint,
     hsa_signal_t *signal,
     hsa_signal_value_t *value);
 
@@ -4592,18 +4712,24 @@ typedef enum {
    */
   HSA_EXECUTABLE_SYMBOL_INFO_IS_DEFINITION = 17,
   /**
+   * @deprecated
+   *
    * The allocation kind of the variable. The value of this attribute is
    * undefined if the symbol is not a variable.  The type of this attribute is
    * ::hsa_variable_allocation_t.
    */
   HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ALLOCATION = 6,
   /**
+   * @deprecated
+   *
    * The segment kind of the variable. The value of this attribute is undefined
    * if the symbol is not a variable. The type of this attribute is
    * ::hsa_variable_segment_t.
    */
   HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_SEGMENT = 7,
   /**
+   * @deprecated
+   *
    * Alignment of the symbol in memory. The value of this attribute is undefined
    * if the symbol is not a variable. The type of this attribute is uint32_t.
    *
@@ -4612,6 +4738,8 @@ typedef enum {
    */
   HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ALIGNMENT = 8,
   /**
+   * @deprecated
+   *
    * Size of the variable. The value of this attribute is undefined if
    * the symbol is not a variable. The type of this attribute is uint32_t.
    *
@@ -4620,6 +4748,8 @@ typedef enum {
    */
   HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_SIZE = 9,
   /**
+   * @deprecated
+   *
    * Indicates whether the variable is constant. The value of this attribute is
    * undefined if the symbol is not a variable. The type of this attribute is
    * bool.

@@ -368,9 +368,7 @@ represented at the time of their contribution:
 \sortitem{Via Alliance Technologies}{Hong, Mike}
 \sortitem{Sandia National Laboratories}{Stark, Dylan}
 \sortitem{Sandia National Laboratories}{Hammond, Simon D.}
-\sortitem{Samsung Electronics}{Kohli, Soma}
 \sortitem{Samsung Electronics}{Ryu, Soojung}
-\sortitem{Samsung Electronics}{Llamas, Ignacio}
 \sortitem{Samsung Electronics}{Shebanow, Michael}
 \sortitem{Codeplay}{Brand, Simon (tools spec editor)}
 \sortitem{Codeplay}{Potter, Ralph}
@@ -759,8 +757,8 @@ functions is called, the runtime is no longer in the configuration state:
 \item \hsaref{hsa_isa_compatible}
 \end{itemize}
 
-Specifications for extension functions can state that the described function
-does not cause the runtime to exit the configuration state.
+Extensions can specify functions which do not cause the runtime to exit the 
+configuration state. 
 
 \subsection{API}
 \input{api/altlatex/group-initshutdown}
@@ -1777,21 +1775,23 @@ as a transition aid.
 
 \subsection{Extension requirements}
 
-Each extension must be assigned a name of the form:
+HSA defined extension names are of the form:
+
 \begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
-\item \textit{hsa_ext_} (HSA-approved extension)
-\item \textit{hsa_ven_}<\textit{vendor(s) name}>_<\textit{label}> (other)
+\item hsa_ext_\textit{<label>}
 \end{itemize}
-The label is one or more words separated by underscores, providing a short name
-for the extension. A label must be short, meaningful, and should not collide
-with the vendor name, the \textit{hsa} token, or the \textit{ext} token. Vendor
-names must be registered with the HSA Foundation, must be unique, and may be
-abbreviated to improve the readability of the symbols. A vendor name must not
-contain any underscore character. An extension name must not contain upper case
-characters. For instance, if vendor \textit{HAL} wants to create an extension
-related to label \textit{foo}, the resulting extension name is
-\textit{hsa_ven_hal_foo}. The corresponding HSAIL name for a vendor-specific
-extension is <\textit{vendor(s) name}>::<\textit{label}>.
+
+Vendor defined extension names must be of the form:
+
+\begin{itemize}[itemsep=1pt,topsep=3pt,partopsep=0pt]
+\item hsa_ven_\textit{<vendor>}_\textit{<label>}
+\end{itemize}
+
+Extension names must not contain upper case characters.
+
+\textit{label} is one or more words separated by underscores, providing a short meaningful name for the extension. Vendor extension labels do not need to be registered with the HSA Foundation.
+
+\textit{vendor} is a single word, providing the name of the vendor. This name may be abbreviated to improve readability, and will not contain underscores. Extension vendor names must be registered with the HSA Foundation, and must be unique.
 
 All the functions and types declared in the extension must be prefixed by the
 extension name, and follow HSA naming conventions. For example, a
@@ -1819,12 +1819,12 @@ following preprocessing directive in the header:
 #define hsa_ven_hal_foo 001001
 \end{lstlisting}
 
-If the extension API exposes any functions, the extension interface must declare
-a function table (structure) in which each field is a pointer to a
-function exported by the extension. The function pointer table must have as many
-entries as functions are exported by the extension API. For example, the header
-associated with the extension \textit{hsa_ven_hal_foo} would contain the following
-declaration:
+If the extension API exposes any functions, the extension interface must declare a 
+function table (structure) per major version in which each field is a pointer to a
+function exported by the extension. The function pointer table must have as many 
+entries as functions are exported by the extension API and each minor version may 
+only add extra functions at the end. For example, the header associated with the 
+extension \textit{hsa_ven_hal_foo} would contain the following declaration:
 \begin{lstlisting}
 typedef struct hsa_ven_hal_foo_pfn_s {
   hsa_status_t (*hsa_ven_hal_foo_pfn_do_something)();
@@ -1844,26 +1844,27 @@ associated with a unique constant expression (the identifier).
 The HSA runtime indicates which extensions it supports in the
 \hsaref{HSA_SYSTEM_INFO_EXTENSIONS} bit-mask attribute. If bit $i$ is set in the
 bit-mask, then the extension with an ID of $i$ is supported by the
-implementation. Because the bit-mask does not expose any information about which
-revision of the extension is supported, the application must query the function
-\hsaref{hsa_system_extension_supported} when needed.
+implementation. Because the bit-mask does not expose any information about which 
+revision of the extension is supported, the application must query the functions 
+\hsaref{hsa_system_extension_supported} or 
+\hsaref{hsa_system_major_extension_supported} when needed.
 
 A portable application must use the function pointers exported by an extension
 to invoke its API. The application can retrieve a copy of the extension function
-pointer table by calling \hsaref{hsa_system_get_extension_table}. Some HSA
-implementations may choose to also export its functions statically from the
-object libraries implementing those functions. However, portable applications
-cannot rely on this behavior. In the following code snippet, the application
-invokes an extension function once the HSA runtime has populated the function
-pointer table corresponding to the version 1.0 of the \textit{hsa_ven_hal_foo}
-extension.
+pointer table by calling \hsaref{hsa_system_get_extension_table} or 
+\hsaref{hsa_system_get_major_extension_table}. Some HSA implementations may choose 
+to also export its functions statically from the object libraries implementing those
+ functions. However, portable applications cannot rely on this behavior. In the 
+following code snippet, the application invokes an extension function once the HSA 
+runtime has populated the function pointer table corresponding to the version 1.0 of 
+the \textit{hsa_ven_hal_foo} extension.
 
 \lstinputfunlisting[1]{extension_example}
 
 An agent indicates which extensions it supports in the
 \hsaref{HSA_AGENT_INFO_EXTENSIONS} bit-mask attribute. The application can query
 if a version of the extension is supported by an agent using
-\hsaref{hsa_agent_extension_supported}.
+\hsaref{hsa_agent_extension_supported} or \hsaref{hsa_agent_major_extension_supported}.
 
 \section{HSAIL Finalization}\label{sec:finalizer}
 
@@ -1918,6 +1919,12 @@ if a version of the extension is supported by an agent using
 
 \section{Images and Samplers}\label{sec:images}
 
+For detailed information about images and samplers, refer to the
+\textit{Image Instructions} chapter of the HSA Programmer's Reference
+Manual~\cite{prm}. See the \textit{HSA Memory Consistency Model}
+chapter of the HSA System Architecture~\cite{sar} for details on the
+HSA memory model for images.
+
 The HSA runtime uses an opaque image handle (\hsaref{hsa_ext_image_t}) to
 represent images. The image handle references the image data in memory and
 stores information about resource layout and other properties. HSA decouples
@@ -1929,57 +1936,106 @@ An image \textit{format} is specified using a channel type and a channel
 order. The channel type describes how the data is to be interpreted along with
 the bit size, and the channel order describes the number and the order of memory
 components. Not all image channel types and channel order combinations are valid
-on an agent, but an agent must support a minimum set of image
-formats. For more information, refer to the HSA Programmer's Reference
-Manual~\cite{prm}. An application can use \hsaref{hsa_ext_image_get_capability}
-to obtain the image format capabilities for a given combination of agent,
-geometry, and image format.
+on an agent, but an agent that supports the image extension must support a minimum
+set of image formats.
 
-An implementation-independent image format descriptor
-(\hsaref{hsa_ext_image_descriptor_t}) is composed of a geometry along with the
-image format. The image descriptor is used to inquire the runtime for the
-agent-specific image data size and alignment details by calling
-\hsaref{hsa_ext_image_data_get_info} for the purpose of determining the
-implementation's storage requirements. The memory requirements
-(\hsaref{hsa_ext_image_data_info_t}) include the size of the memory needed as
-well as any alignment constraints. An application can either allocate new memory
-for storing the image data, or use an existing buffer. Before the image data is
-used, an agent-specific image handle must be created using it and if necessary,
-cleared and prepared according to the intended use.
+An implementation independent image descriptor
+(\hsaref{hsa_ext_image_descriptor_t}) is composed of a geometry, the
+number of elements in each image dimension for that geometry, the
+number of image layers if the geometry is an image array, and an image
+format.
 
-The function \hsaref{hsa_ext_image_create} creates an agent-specific image
-from an image format descriptor, an application-allocated buffer that conforms
-to the requirements provided by \hsaref{hsa_ext_image_data_get_info}, and access
-permissions. The returned handle can used by the HSAIL operations
-\refhsl{rdimage}, \refhsl{ldimage}, and \refhsl{stimage}.
+When an image is created it can be chosen whether to treat the image
+data memory as having an opaque image data layout, or whether to
+specify an explicit image data layout.
 
-While the image data is technically accessible from its pointer in the raw form,
-the data layout and organization is agent-specific and should be treated as
-opaque. The internal implementation of an optimal image data organization could
-vary depending on the attributes of the image format descriptor. As a result,
-there are no guarantees on the data layout when accessed from another agent. The
-only reliable way to import or export image data from optimally organized images
-is to copy their data to and from a linearly organized data layout in memory, as
-specified by the image's format attributes.
+An image with an opaque image data layout can only be accessed by
+image operations using image handles from a single agent, and the
+image data cannot be meaningfully accessed using regular memory
+operations as its layout is implementation specific. The
+implementation can vary the image data layout depending on the agent,
+attributes of the image descriptor, and access permissions for
+optimal performance. The only defined way to import or export image
+data to or from an image with an opaque image data layout is to copy
+the data to and from a linearly organized data layout in memory by
+calling \hsaref{hsa_ext_image_export} and
+\hsaref{hsa_ext_image_import}. The one exception is that an image with
+the \hsaref{HSA_EXT_IMAGE_GEOMETRY_1D} will always use the linear image data
+layout.
+
+In contrast, an image with an explcit image data layout can be
+accessed by image operations using image handles created for multiple
+agents if they support the same image data layouts, image formats, and
+access permissions. Also, if the image data layout has a known layout,
+it is possible to directly access it using regular memory operations,
+provided the memory model synchronization requirements are met. 
+
+The size and alignment of the memory to allocate for use as image data
+(\hsaref{hsa_ext_image_data_get_info}) can be determined by calling
+\hsaref{hsa_ext_image_data_get_info} for images with an opaque image
+data and \hsaref{hsa_ext_image_data_get_info_with_layout} for an image
+with an explicit image data layout. The image size and format is
+specified by an image descriptor
+(\hsaref{hsa_ext_image_descriptor_t}). In the case of an image with an
+explicit image data layout, the image layout is specified by an image data
+layout (\hsaref{hsa_ext_image_data_layout_t}) and image data row and
+spice pitch.
+
+Regular global memory must be allocated to store the image data. An
+application can either allocate new memory, or use an existing
+buffer. The memory must be visible to the agents that will access the
+image.
+
+The function \hsaref{hsa_ext_image_create} creates an agent specific
+image handle for an image with an opaque image data layout from an
+image format descriptor, an application allocated image data buffer
+that conforms to the requirements provided by
+\hsaref{hsa_ext_image_data_get_info}, and access permission.
+
+The function \hsaref{hsa_ext_image_create_with_layout} creates an
+agent specific image handle for an image with an explicit image data
+layout from an image format descriptor, an application allocated image
+data buffer that conforms to the requirements provided by
+\hsaref{hsa_ext_image_data_get_info_with_layout}, access permission,
+image data layout, and image data row and slice pitch.
+
+An image handle can be used by HSAIL instructions \refhsl{rdimage},
+\refhsl{ldimage}, \refhsl{stimage}, and \refhsl{queryimage} executed
+by a kernel executing on the agent specified when the image handle was
+created.
+
+An application can use \hsaref{hsa_ext_image_get_capability} for
+images with an opaque image data layout and
+\hsaref{hsa_ext_image_get_capability_with_layout} for images with an
+explicit image data layout to obtain the image access permision
+capabilities for a given combination of agent, geometry, image format,
+and, for for images with an explcit image data layout, image layout.
 
 The HSA runtime provides interfaces to allow operations on images. Image data
 transfer to and from memory with a linear layout can be performed using
 \hsaref{hsa_ext_image_export} and \hsaref{hsa_ext_image_import} respectively. A
 portion of an image could be copied to another image using
 \hsaref{hsa_ext_image_copy}. An image can be cleared using
-\hsaref{hsa_ext_image_clear}. It is the application's responsibility to ensure
-proper synchronization and preparation of images on accesses from other image
-operations. The HSA System Architecture~\cite{sar} details the HSA memory
-model for images.
+\hsaref{hsa_ext_image_clear}.
 
-An agent-specific sampler handle (\hsaref{hsa_ext_sampler_t}) is used by the
+It is the application's responsibility to ensure proper memory model
+synchronization and preparation of images on accesses from other image
+operations. 
+
+An agent specific sampler handle (\hsaref{hsa_ext_sampler_t}) is used by the
 HSAIL language to describe how images are processed by the \refhsl{rdimage}
-HSAIL operation. The function \hsaref{hsa_ext_sampler_create} creates a sampler
-handle from an agent-independent sampler descriptor
+HSAIL instruction. The function \hsaref{hsa_ext_sampler_create} creates a sampler
+handle from an agent independent sampler descriptor
 (\hsaref{hsa_ext_sampler_descriptor_t}).
 
-\subsection{API}
-\input{api/altlatex/group-ext-images}
+The following functions do not cause the runtime to exit the configuration state:
+
+\begin{itemize}
+\item hsa_ext_image_get_capability
+\item hsa_ext_image_get_capability_with_layout
+\item hsa_ext_image_data_get_info
+\item hsa_ext_image_data_get_info_with_layout
+\end{itemize}
 
 \subsection{API}
 \input{api/altlatex/group-ext-images}
@@ -1987,7 +2043,68 @@ handle from an agent-independent sampler descriptor
 \section{Performance Counter API}\label{sec:perfcount}
 HSA system components may have performance counters associated with them to expose information for profiler consumption. This API allows users to query the performance counters available in the system and to retrieve their associated values.
 
-Performance counters accumulate over a profiling session. A profiling application will first query the system for the available performance counters. It will then create a session context and enable the desired performance counters. Queries are available for checking if the selected counters can be enabled in the same session. The session should then be enabled in order to commit the necessary hardware, after which it can be started and stopped at the user's request. Some performance counters will be available to sample while a session is running, but others will require the session to be stopped first. This attribute, along with the associated component of the counter and other information is available through an API query. Sessions can be executed concurrently if the implementation supports it.
+Performance counters accumulate over a profiling session. A profiling application will first query the system for the available performance counters. 
+
+\begin{lstlisting}
+  hsa_ext_perf_counter_init();
+
+  uint32_t n_counters = 0;
+  hsa_ext_perf_counter_get_num(&n_counters);
+\end{lstlisting}
+
+It will then create a session context and enable the desired performance counters. 
+
+\begin{lstlisting}
+  hsa_ext_perf_counter_session_ctx_t ctx;
+  hsa_ext_perf_counter_session_context_create(&ctx);
+
+  // Enable the first float counter we find
+  size_t counter_idx = 0;
+  for (size_t i = 0; i < n_counters; ++i ) {
+    hsa_ext_perf_counter_type_t counter_type;
+    hsa_ext_perf_counter_get_info(i, HSA_EXT_PERF_COUNTER_INFO_TYPE, (void*)&counter_type);
+    if (counter_type == HSA_EXT_PERF_COUNTER_TYPE_FLOAT) {
+      hsa_ext_perf_counter_enable(ctx, i);
+      counter_idx = i;
+      break;
+    }
+  }
+\end{lstlisting}
+
+
+Queries are available for checking if the selected counters can be enabled in the same session. 
+
+\begin{lstlisting}
+  bool valid = false;
+  hsa_ext_perf_counter_session_context_valid(ctx, &valid);
+\end{lstlisting}
+
+The session should then be enabled in order to commit the necessary hardware, after which it can be started and stopped at the user's request.
+
+\begin{lstlisting}
+  hsa_ext_perf_counter_session_enable(ctx);
+  hsa_ext_perf_counter_session_start(ctx);
+  // Do some sleeping, wait for user input, etc.
+  hsa_ext_perf_counter_session_stop(ctx);
+
+  float result;
+  hsa_ext_perf_counter_read_float(ctx, counter_idx, &result);
+  
+  // Clean up
+  hsa_ext_perf_counter_session_disable(ctx);
+  hsa_ext_perf_counter_session_destroy(ctx);
+  hsa_ext_perf_counter_shut_down();
+\end{lstlisting}
+
+Some performance counters will be available to sample while a session is running, but others will require the session to be stopped first. This attribute, along with the associated component of the counter and other information is available through the \hsaref{hsa_ext_perf_counter_get_info} function. Sessions can be executed concurrently if the implementation supports it.
+
+The following functions do not cause the runtime to exit the configuration state:
+
+\begin{itemize}
+\item hsa_ext_perf_counter_get_num
+\item hsa_ext_perf_counter_get_info
+\item hsa_ext_perf_counter_iterate_associations
+\end{itemize}
 
 \subsection{API}
 \input{api/altlatex/group-ext-performance-counters}
@@ -1995,17 +2112,93 @@ Performance counters accumulate over a profiling session. A profiling applicatio
 \section{Profiling Events API}\label{sec:profevents}
 This API provides the means to consume events with timestamps and optional metadata from various components in the system, as well as produce events from both host code and HSAIL kernels.
 
+The following functions do not cause the runtime to exit the configuration state:
 
-\subsection{API}
-\input{api/altlatex/group-ext-event-system}
+\begin{itemize}
+\item hsa_ext_profiling_event_init_producer
+\item hsa_ext_profiling_event_init_all_of_producer_type
+\item hsa_ext_profiling_event_init
+\end{itemize}
+
+
+\subsection{Consuming Events}
+The profiling events system must first be initialized for any components which events should be collected for. This must be done while the runtime is in the configuration state.
+
+\begin{lstlisting}
+  hsa_agent_t agent = /*Agent retrieved through normal runtime API functions*/;
+  // Init single agent
+  hsa_ext_profiling_event_init_producer(HSA_EXT_PROFILING_EVENT_PRODUCER_AGENT, agent.handle);
+
+  // Init all caches
+  hsa_ext_profiling_event_init_all_of_producer_type(HSA_EXT_PROFILING_EVENT_PRODUCER_CACHE);
+
+  // Finalize initialization
+  hsa_ext_profiling_event_init();
+\end{lstlisting}
+
+Now that all the desired components have been initialized, event filters can be set up. Events are collected from all initialized components by default, but they can be filtered out for individual components and for all components of a given producer type.
+
+\begin{lstlisting}
+  // Filter out collection for a given agent
+  hsa_ext_profiling_event_disable_for_producer(HSA_EXT_PROFILING_EVENT_PRODUCER_AGENT, agent.handle);
+
+  // Filter out collection for all caches
+  hsa_ext_profiling_event_disable_all_for_producer_type(HSA_EXT_PROFILING_EVENT_PRODUCER_CACHE);
+
+  // Re-enable collection for single agent
+  hsa_ext_profiling_event_enable_for_producer(HSA_EXT_PROFILING_EVENT_PRODUCER_AGENT, agent.handle);
+
+  // Re-enable collection for all caches
+  hsa_ext_profiling_event_enable_all_for_producer_type(HSA_EXT_PROFILING_EVENT_PRODUCER_CACHE);
+\end{lstlisting}
+
+Once the profiling events system has been initialized, events can be retrieved from the runtime. Events are consumed one at a time by getting the first available event, then destroying it when processing has finished.
+
+\begin{lstlisting}
+  hsa_ext_profiling_event_t event;
+
+  while (true) {
+    hsa_ext_profiling_get_head_event(&event);
+
+    // Process event here
+
+    hsa_ext_profiling_event_destroy_head_event(&event);
+  }
+\end{lstlisting}
+
+\subsection{Producing Events}
+Alongside HSA system components, events can be generated from HSAIL and host code, e.g. high level language runtimes or libraries. These events are called \textit{application events}.
+
+To produce application events, the producer and events which it produces must first be registered.
+
+\begin{lstlisting}
+  uint64_t producer_id;
+  hsa_ext_profiling_event_register_application_event_producer(``Example'', ``An example producer'', &producer_id);
+
+  uint64_t event_id = 42; //Event IDs are chosen by the producer
+  hsa_ext_profiling_event_metadata_field_desc_t metadata;
+  metadata.data_name = ``Example metadata'';
+  metadata.name_length = 16;
+  metadata.metadata_type = HSA_EXT_PROFILING_EVENT_METADATA_TYPE_FLOAT;
+  hsa_ext_profiling_event_register_application_event(producer_id, event_id,
+  ``example'', 7, ``An example event'', 16, &metadata, 1);
+\end{lstlisting}
+
+This event can then be triggered using the \hsaref{hsa_ext_profiling_event_trigger_application_event} function.
+
+\begin{lstlisting}
+  struct { float data; } md;
+  md.data = 24.0;
+  hsa_ext_profiling_event_trigger_application_event(producer_id, event_id, (void*)&md);
+\end{lstlisting}
 
 \subsection {Producer ID}
 \label{prodid}
 The construct represented by the producer ID used in many API functions depends on the producer type. The mapping is as follows:
 
-\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_AGENT_NODE} -> \hsaref{hsa_agent_t} handle\\
-\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_MEMORY_NODE} -> \hsaref{hsa_region_t} handle\\
-\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_CACHE_NODE} -> \hsaref{hsa_cache_t} handle\\
+\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_AGENT} -> \hsaref{hsa_agent_t} handle\\
+\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_MEMORY} -> \hsaref{hsa_region_t} handle\\
+\hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_CACHE} -> \hsaref{hsa_cache_t} handle\\
 \hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_APPLICATION} -> application event producer id\\
 \hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_SIGNAL} -> \hsaref{hsa_signal_t} handle\\
 \hsaref{HSA_EXT_PROFILING_EVENT_PRODUCER_RUNTIME_API} -> irrelevant\\
@@ -2025,11 +2218,11 @@ The following names designate a field with a standard meaning which can be relie
 
 
 \subsection{Generating Events from HSAIL}
-Events can be triggered from within HSAIL kernels. These events must have been pre-registered using the \hsaref{hsa_ext_profiling_event_register_application_event} function using the producer id 0, which is reserved for HSAIL events. In order for these events to be successfully triggered, the ``-hsa_ext_enable_hsail_events'' flag must be passed in the $options$ parameter of ::hsa_ext_program_finalize.
+Events can be triggered from within HSAIL kernels. These events must have been pre-registered using the \hsaref{hsa_ext_profiling_event_register_application_event} function using the producer id 0, which is reserved for HSAIL events. In order for these events to be successfully triggered, the ``-hsa_ext_profiling_event_enable_hsail_events'' flag must be passed in the $options$ parameter of \hsaref{hsa_ext_program_finalize}.
 
 HSAIL events are triggered when the following pragma is executed:
 
-pragma ``hsa.tools.prof.event.trigger'', eventID [, metadata_value]*;
+pragma ``hsa.tools.profiling.event.trigger'', eventID [, metadata_value]*;
 
 
 \paragraph{eventID}
@@ -2053,6 +2246,10 @@ If the event with id 0 is registered with an i32 field and a f32 field, the foll
 pragma ``hsa.tools.prof.event.trigger'', 0, 1, 1.0;\\
 Typed constants or sized floating point constants may be used in this case:\\
 pragma ``hsa.tools.prof.event.trigger'', 0, i32(1), 1.0f;\\
+
+\subsection{API}
+\input{api/altlatex/group-ext-event-system}
+
 
 % Deprecated stuff
 % \chapter{Deprecated Declarations}

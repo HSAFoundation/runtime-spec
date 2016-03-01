@@ -24,14 +24,15 @@ hsa_status_t (*hsa_hal_foo_pfn_do_something)();
 } hsa_hal_foo_pfn_t;
 
 void extension_example(hsa_agent_t agent) {
-bool system_support, agent_support;
-hsa_system_extension_supported(HSA_EXTENSION_HAL_FOO, 1, 0, &system_support);
-hsa_agent_extension_supported(HSA_EXTENSION_HAL_FOO, agent, 1, 0, &agent_support);
-if (system_support && agent_support) {
-    hsa_hal_foo_pfn_t pfns;
-    hsa_system_get_extension_table(HSA_EXTENSION_HAL_FOO, 1, 0, &pfns);
-    pfns.hsa_hal_foo_pfn_do_something();
-}
+    bool system_support, agent_support;
+    uint16_t system_minor, agent_minor;
+    hsa_system_major_extension_supported(HSA_EXTENSION_HAL_FOO, 1, &system_minor, &system_support);
+    hsa_agent_major_extension_supported(HSA_EXTENSION_HAL_FOO, agent, 1, &agent_minor, &agent_support);
+    if (system_support && agent_support) {
+        hsa_hal_foo_pfn_t pfns;
+        hsa_system_get_major_extension_table(HSA_EXTENSION_HAL_FOO, 1, sizeof(pfns), &pfns);
+        pfns.hsa_hal_foo_pfn_do_something();
+    }
 }
 
 void initialize_packet(hsa_kernel_dispatch_packet_t* packet) {
