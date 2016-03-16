@@ -187,75 +187,75 @@ typedef enum {
     HSA_BRIG_EXPRESSION_OPERATION_FIRST_USER_DEFINED = 32768
 } hsa_brig_expression_operation_t;
 
-typedef uint8_t hsa_brig_image_channel_order8_t;
+typedef uint8_t hsa_ext_brig_image_channel_order8_t;
 typedef enum {
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_A = 0,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_R = 1,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_RX = 2,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_RG = 3,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_RGX = 4,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_RA = 5,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_RGB = 6,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_RGBX = 7,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_RGBA = 8,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_BGRA = 9,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_ARGB = 10,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_ABGR = 11,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_SRGB = 12,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_SRGBX = 13,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_SRGBA = 14,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_SBGRA = 15,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_INTENSITY = 16,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_LUMINANCE = 17,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_DEPTH = 18,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_DEPTH_STENCIL = 19,
-    HSA_BRIG_IMAGE_CHANNEL_ORDER_FIRST_USER_DEFINED = 128
-} hsa_brig_image_channel_order_t;
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_A = 0,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_R = 1,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_RX = 2,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_RG = 3,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_RGX = 4,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_RA = 5,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_RGB = 6,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_RGBX = 7,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_RGBA = 8,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_BGRA = 9,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_ARGB = 10,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_ABGR = 11,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_SRGB = 12,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_SRGBX = 13,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_SRGBA = 14,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_SBGRA = 15,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_INTENSITY = 16,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_LUMINANCE = 17,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_DEPTH = 18,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_DEPTH_STENCIL = 19,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_ORDER_FIRST_USER_DEFINED = 128
+} hsa_ext_brig_image_channel_order_t;
 
-typedef uint8_t hsa_brig_image_channel_type8_t;
+typedef uint8_t hsa_ext_brig_image_channel_type8_t;
 typedef enum {
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_SNORM_INT8 = 0,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_SNORM_INT16 = 1,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_UNORM_INT8 = 2,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_UNORM_INT16 = 3,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_UNORM_INT24 = 4,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_UNORM_SHORT_555 = 5,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_UNORM_SHORT_565 = 6,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_UNORM_INT_101010 = 7,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_SIGNED_INT8 = 8,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_SIGNED_INT16 = 9,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_SIGNED_INT32 = 10,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_UNSIGNED_INT8 = 11,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_UNSIGNED_INT16 = 12,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_UNSIGNED_INT32 = 13,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_HALF_FLOAT = 14,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_FLOAT = 15,
-    HSA_BRIG_IMAGE_CHANNEL_TYPE_FIRST_USER_DEFINED = 128
-} hsa_brig_image_channel_type_t;
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_SNORM_INT8 = 0,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_SNORM_INT16 = 1,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_UNORM_INT8 = 2,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_UNORM_INT16 = 3,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_UNORM_INT24 = 4,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_UNORM_SHORT_555 = 5,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_UNORM_SHORT_565 = 6,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_UNORM_INT_101010 = 7,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_SIGNED_INT8 = 8,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_SIGNED_INT16 = 9,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_SIGNED_INT32 = 10,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_UNSIGNED_INT8 = 11,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_UNSIGNED_INT16 = 12,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_UNSIGNED_INT32 = 13,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_HALF_FLOAT = 14,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_FLOAT = 15,
+    HSA_EXT_BRIG_IMAGE_CHANNEL_TYPE_FIRST_USER_DEFINED = 128
+} hsa_ext_brig_image_channel_type_t;
 
-typedef uint8_t hsa_brig_image_geometry8_t;
+typedef uint8_t hsa_ext_brig_image_geometry8_t;
 typedef enum {
-    HSA_BRIG_IMAGE_GEOMETRY_1D = 0,
-    HSA_BRIG_IMAGE_GEOMETRY_2D = 1,
-    HSA_BRIG_IMAGE_GEOMETRY_3D = 2,
-    HSA_BRIG_IMAGE_GEOMETRY_1DA = 3,
-    HSA_BRIG_IMAGE_GEOMETRY_2DA = 4,
-    HSA_BRIG_IMAGE_GEOMETRY_1DB = 5,
-    HSA_BRIG_IMAGE_GEOMETRY_2DDEPTH = 6,
-    HSA_BRIG_IMAGE_GEOMETRY_2DADEPTH = 7,
-    HSA_BRIG_IMAGE_GEOMETRY_FIRST_USER_DEFINED = 128
-} hsa_brig_image_geometry_t;
+    HSA_EXT_BRIG_IMAGE_GEOMETRY_1D = 0,
+    HSA_EXT_BRIG_IMAGE_GEOMETRY_2D = 1,
+    HSA_EXT_BRIG_IMAGE_GEOMETRY_3D = 2,
+    HSA_EXT_BRIG_IMAGE_GEOMETRY_1DA = 3,
+    HSA_EXT_BRIG_IMAGE_GEOMETRY_2DA = 4,
+    HSA_EXT_BRIG_IMAGE_GEOMETRY_1DB = 5,
+    HSA_EXT_BRIG_IMAGE_GEOMETRY_2DDEPTH = 6,
+    HSA_EXT_BRIG_IMAGE_GEOMETRY_2DADEPTH = 7,
+    HSA_EXT_BRIG_IMAGE_GEOMETRY_FIRST_USER_DEFINED = 128
+} hsa_ext_brig_image_geometry_t;
 
-typedef uint8_t hsa_brig_image_query8_t;
+typedef uint8_t hsa_ext_brig_image_query8_t;
 typedef enum {
-    HSA_BRIG_IMAGE_QUERY_WIDTH = 0,
-    HSA_BRIG_IMAGE_QUERY_HEIGHT = 1,
-    HSA_BRIG_IMAGE_QUERY_DEPTH = 2,
-    HSA_BRIG_IMAGE_QUERY_ARRAY = 3,
-    HSA_BRIG_IMAGE_QUERY_CHANNELORDER = 4,
-    HSA_BRIG_IMAGE_QUERY_CHANNELTYPE = 5,
-    HSA_BRIG_IMAGE_QUERY_FIRST_USER_DEFINED = 128
-} hsa_brig_image_query_t;
+    HSA_EXT_BRIG_IMAGE_QUERY_WIDTH = 0,
+    HSA_EXT_BRIG_IMAGE_QUERY_HEIGHT = 1,
+    HSA_EXT_BRIG_IMAGE_QUERY_DEPTH = 2,
+    HSA_EXT_BRIG_IMAGE_QUERY_ARRAY = 3,
+    HSA_EXT_BRIG_IMAGE_QUERY_CHANNELORDER = 4,
+    HSA_EXT_BRIG_IMAGE_QUERY_CHANNELTYPE = 5,
+    HSA_EXT_BRIG_IMAGE_QUERY_FIRST_USER_DEFINED = 128
+} hsa_ext_brig_image_query_t;
 
 typedef enum {
     HSA_BRIG_KIND_NONE = 0x0000,
@@ -569,36 +569,36 @@ typedef enum {
     HSA_BRIG_ROUND_INTEGER_SIGNALING_MINUS_INFINITY_SAT = 21
 } hsa_brig_round_t;
 
-typedef uint8_t hsa_brig_sampler_addressing8_t;
+typedef uint8_t hsa_ext_brig_sampler_addressing8_t;
 typedef enum {
-    HSA_BRIG_SAMPLER_ADDRESSING_UNDEFINED = 0,
-    HSA_BRIG_SAMPLER_ADDRESSING_CLAMP_TO_EDGE = 1,
-    HSA_BRIG_SAMPLER_ADDRESSING_CLAMP_TO_BORDER = 2,
-    HSA_BRIG_SAMPLER_ADDRESSING_REPEAT = 3,
-    HSA_BRIG_SAMPLER_ADDRESSING_MIRRORED_REPEAT = 4,
-    HSA_BRIG_SAMPLER_ADDRESSING_FIRST_USER_DEFINED = 128
-} hsa_brig_sampler_addressing_t;
+    HSA_EXT_BRIG_SAMPLER_ADDRESSING_UNDEFINED = 0,
+    HSA_EXT_BRIG_SAMPLER_ADDRESSING_CLAMP_TO_EDGE = 1,
+    HSA_EXT_BRIG_SAMPLER_ADDRESSING_CLAMP_TO_BORDER = 2,
+    HSA_EXT_BRIG_SAMPLER_ADDRESSING_REPEAT = 3,
+    HSA_EXT_BRIG_SAMPLER_ADDRESSING_MIRRORED_REPEAT = 4,
+    HSA_EXT_BRIG_SAMPLER_ADDRESSING_FIRST_USER_DEFINED = 128
+} hsa_ext_brig_sampler_addressing_t;
 
-typedef uint8_t hsa_brig_sampler_coord_normalization8_t;
+typedef uint8_t hsa_ext_brig_sampler_coord_normalization8_t;
 typedef enum {
-    HSA_BRIG_SAMPLER_COORD_NORMALIZATION_UNNORMALIZED = 0,
-    HSA_BRIG_SAMPLER_COORD_NORMALIZATION_NORMALIZED = 1
-} hsa_brig_sampler_coord_normalization_t;
+    HSA_EXT_BRIG_SAMPLER_COORD_NORMALIZATION_UNNORMALIZED = 0,
+    HSA_EXT_BRIG_SAMPLER_COORD_NORMALIZATION_NORMALIZED = 1
+} hsa_ext_brig_sampler_coord_normalization_t;
 
-typedef uint8_t hsa_brig_sampler_filter8_t;
+typedef uint8_t hsa_ext_brig_sampler_filter8_t;
 typedef enum {
-    HSA_BRIG_SAMPLER_FILTER_NEAREST = 0,
-    HSA_BRIG_SAMPLER_FILTER_LINEAR = 1,
-    HSA_BRIG_SAMPLER_FILTER_FIRST_USER_DEFINED = 128
-} hsa_brig_sampler_filter_t;
+    HSA_EXT_BRIG_SAMPLER_FILTER_NEAREST = 0,
+    HSA_EXT_BRIG_SAMPLER_FILTER_LINEAR = 1,
+    HSA_EXT_BRIG_SAMPLER_FILTER_FIRST_USER_DEFINED = 128
+} hsa_ext_brig_sampler_filter_t;
 
-typedef uint8_t hsa_brig_sampler_query8_t;
+typedef uint8_t hsa_ext_brig_sampler_query8_t;
 typedef enum {
-    HSA_BRIG_SAMPLER_QUERY_ADDRESSING = 0,
-    HSA_BRIG_SAMPLER_QUERY_COORD = 1,
-    HSA_BRIG_SAMPLER_QUERY_FILTER = 2,
-    HSA_BRIG_SAMPLER_QUERY_FIRST_USER_DEFINED = 128
-} hsa_brig_sampler_query_t;
+    HSA_EXT_BRIG_SAMPLER_QUERY_ADDRESSING = 0,
+    HSA_EXT_BRIG_SAMPLER_QUERY_COORD = 1,
+    HSA_EXT_BRIG_SAMPLER_QUERY_FILTER = 2,
+    HSA_EXT_BRIG_SAMPLER_QUERY_FIRST_USER_DEFINED = 128
+} hsa_ext_brig_sampler_query_t;
 
 typedef uint32_t hsa_brig_section_index32_t;
 typedef enum {
@@ -996,14 +996,14 @@ typedef struct hsa_brig_inst_cvt_s {
     hsa_brig_round8_t round;
 } hsa_brig_inst_cvt_t;
 
-typedef struct hsa_brig_inst_image_s {
+typedef struct hsa_ext_brig_inst_image_s {
     hsa_brig_inst_base_t base;
     hsa_brig_type16_t image_type;
     hsa_brig_type16_t coord_type;
-    hsa_brig_image_geometry8_t geometry;
+    hsa_ext_brig_image_geometry8_t geometry;
     uint8_t equiv_class;
     uint16_t reserved;
-} hsa_brig_inst_image_t;
+} hsa_ext_brig_inst_image_t;
 
 typedef struct hsa_brig_inst_lane_s {
     hsa_brig_inst_base_t base;
@@ -1027,7 +1027,7 @@ typedef struct hsa_brig_inst_mem_fence_s {
     hsa_brig_memory_order8_t memory_order;
     hsa_brig_memory_scope8_t global_segment_memory_scope;
     hsa_brig_memory_scope8_t group_segment_memory_scope;
-    hsa_brig_memory_scope8_t image_segment_memory_scope;
+    uint8_t reserved;
 } hsa_brig_inst_mem_fence_t;
 
 typedef struct hsa_brig_inst_mod_s {
@@ -1038,18 +1038,18 @@ typedef struct hsa_brig_inst_mod_s {
     uint8_t reserved;
 } hsa_brig_inst_mod_t;
 
-typedef struct hsa_brig_inst_query_image_s {
+typedef struct hsa_ext_brig_inst_query_image_s {
     hsa_brig_inst_base_t base;
     hsa_brig_type16_t image_type;
-    hsa_brig_image_geometry8_t geometry;
-    hsa_brig_image_query8_t query;
-} hsa_brig_inst_query_image_t;
+    hsa_ext_brig_image_geometry8_t geometry;
+    hsa_ext_brig_image_query8_t query;
+} hsa_ext_brig_inst_query_image_t;
 
-typedef struct hsa_brig_inst_query_sampler_s {
+typedef struct hsa_ext_brig_inst_query_sampler_s {
     hsa_brig_inst_base_t base;
-    hsa_brig_sampler_query8_t query;
+    hsa_ext_brig_sampler_query8_t query;
     uint8_t reserved[3];
-} hsa_brig_inst_query_sampler_t;
+} hsa_ext_brig_inst_query_sampler_t;
 
 typedef struct hsa_brig_inst_queue_s {
     hsa_brig_inst_base_t base;
@@ -1121,18 +1121,18 @@ typedef struct hsa_brig_operand_constant_expression_s {
     hsa_brig_data_offset_operand_list32_t operands;
 } hsa_brig_operand_constant_expression_t;
 
-typedef struct hsa_brig_operand_constant_image_s {
+typedef struct hsa_ext_brig_operand_constant_image_s {
     hsa_brig_base_t base;
     hsa_brig_type16_t type;
-    hsa_brig_image_geometry8_t geometry;
-    hsa_brig_image_channel_order8_t channel_order;
-    hsa_brig_image_channel_type8_t channel_type;
+    hsa_ext_brig_image_geometry8_t geometry;
+    hsa_ext_brig_image_channel_order8_t channel_order;
+    hsa_ext_brig_image_channel_type8_t channel_type;
     uint8_t reserved[3];
     hsa_brig_uint64_t width;
     hsa_brig_uint64_t height;
     hsa_brig_uint64_t depth;
     hsa_brig_uint64_t array;
-} hsa_brig_operand_constant_image_t;
+} hsa_ext_brig_operand_constant_image_t;
 
 typedef struct hsa_brig_operand_constant_operand_list_s {
     hsa_brig_base_t base;
@@ -1141,14 +1141,14 @@ typedef struct hsa_brig_operand_constant_operand_list_s {
     hsa_brig_data_offset_operand_list32_t elements;
 } hsa_brig_operand_constant_operand_list_t;
 
-typedef struct hsa_brig_operand_constant_sampler_s {
+typedef struct hsa_ext_brig_operand_constant_sampler_s {
     hsa_brig_base_t base;
     hsa_brig_type16_t type;
-    hsa_brig_sampler_coord_normalization8_t coord;
-    hsa_brig_sampler_filter8_t filter;
-    hsa_brig_sampler_addressing8_t addressing;
+    hsa_ext_brig_sampler_coord_normalization8_t coord;
+    hsa_ext_brig_sampler_filter8_t filter;
+    hsa_ext_brig_sampler_addressing8_t addressing;
     uint8_t reserved[3];
-} hsa_brig_operand_constant_sampler_t;
+} hsa_ext_brig_operand_constant_sampler_t;
 
 typedef struct hsa_brig_operand_operand_list_s {
     hsa_brig_base_t base;

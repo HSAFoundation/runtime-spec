@@ -4687,6 +4687,8 @@ typedef enum {
    */
   HSA_EXECUTABLE_SYMBOL_INFO_MODULE_NAME = 4,
   /**
+   * @deprecated
+   *
    * Agent associated with this symbol. If the symbol is a variable, the
    * value of this attribute is only defined if
    * ::HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ALLOCATION is
@@ -4867,6 +4869,8 @@ hsa_status_t HSA_API hsa_executable_symbol_get_info(
     void *value);
 
 /**
+ * @deprecated
+ *
  * @brief Iterate over the symbols in a executable, and invoke an
  * application-defined callback on every iteration.
  *
@@ -4891,6 +4895,67 @@ hsa_status_t HSA_API hsa_executable_symbol_get_info(
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p callback is NULL.
 */
 hsa_status_t HSA_API hsa_executable_iterate_symbols(
+    hsa_executable_t executable,
+    hsa_status_t (*callback)(hsa_executable_t exec, hsa_executable_symbol_t symbol, void* data),
+    void* data);
+
+/**
+ * @brief Iterate over the symbols with agent allocation in an executable for a given agent,
+ * and invoke an application-defined callback on every iteration.
+ *
+ * @param[in] executable Executable.
+ *
+ * @param[in] agent Agent.
+ *
+ * @param[in] callback Callback to be invoked once per executable symbol. The
+ * HSA runtime passes three arguments to the callback: the executable, a symbol,
+ * and the application data.  If @p callback returns a status other than
+ * ::HSA_STATUS_SUCCESS for a particular iteration, the traversal stops and
+ * ::hsa_executable_iterate_symbols returns that status value.
+ *
+ * @param[in] data Application data that is passed to @p callback on every
+ * iteration. May be NULL.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_EXECUTABLE Th executable is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p callback is NULL.
+*/
+hsa_status_t HSA_API hsa_executable_iterate_agent_symbols(
+    hsa_executable_t executable,
+    hsa_agent_t agent,
+    hsa_status_t (*callback)(hsa_executable_t exec, hsa_executable_symbol_t symbol, void* data),
+    void* data);
+
+/**
+ * @brief Iterate over the symbols with program allocation in an executable, and invoke an
+ * application-defined callback on every iteration.
+ *
+ * @param[in] executable Executable.
+ *
+ * @param[in] callback Callback to be invoked once per executable symbol. The
+ * HSA runtime passes three arguments to the callback: the executable, a symbol,
+ * and the application data.  If @p callback returns a status other than
+ * ::HSA_STATUS_SUCCESS for a particular iteration, the traversal stops and
+ * ::hsa_executable_iterate_symbols returns that status value.
+ *
+ * @param[in] data Application data that is passed to @p callback on every
+ * iteration. May be NULL.
+ *
+ * @retval ::HSA_STATUS_SUCCESS The function has been executed successfully.
+ *
+ * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
+ * initialized.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_EXECUTABLE Th executable is invalid.
+ *
+ * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p callback is NULL.
+*/
+hsa_status_t HSA_API hsa_executable_iterate_program_symbols(
     hsa_executable_t executable,
     hsa_status_t (*callback)(hsa_executable_t exec, hsa_executable_symbol_t symbol, void* data),
     void* data);

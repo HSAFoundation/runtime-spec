@@ -693,10 +693,12 @@ hsa_status_t HSA_API hsa_ext_program_finalize(
     hsa_code_object_type_t code_object_type,
     hsa_code_object_t *code_object);
 
-/** @} */
 
 #define hsa_ext_finalizer_1_00
 
+/**
+ * @brief The function pointer table for the finalizer v1.00 extension. Can be returned by ::hsa_system_get_extension_table or ::hsa_system_get_major_extension_table.
+ */
 typedef struct hsa_ext_finalizer_1_00_pfn_s {
   hsa_status_t (*hsa_ext_program_create)(
     hsa_machine_model_t machine_model,
@@ -735,21 +737,10 @@ typedef struct hsa_ext_finalizer_1_00_pfn_s {
 
 #define hsa_ext_finalizer_1
 
+/**
+ * @brief The function pointer table for the finalizer v1 extension. Can be returned by ::hsa_system_get_extension_table or ::hsa_system_get_major_extension_table.
+ */
 typedef struct hsa_ext_finalizer_1_pfn_s {
-  hsa_status_t (*hsa_ext_code_object_writer_create_from_file)(
-    hsa_file_t file,
-    hsa_ext_code_object_writer_t *code_object_writer);
-
-  hsa_status_t (*hsa_ext_code_object_writer_create_from_memory)(
-    hsa_status_t (*memory_allocate)(size_t size, size_t align, void **ptr,
-                                    void *data),
-    void *data,
-    hsa_ext_code_object_writer_t *code_object_writer);
-    
-  hsa_status_t (*hsa_ext_code_object_writer_destroy)(
-    hsa_ext_code_object_writer_t code_object_writer);
-    
-    
   hsa_status_t (*hsa_ext_program_create)(
     hsa_machine_model_t machine_model,
     hsa_profile_t profile,
@@ -775,6 +766,28 @@ typedef struct hsa_ext_finalizer_1_pfn_s {
     hsa_ext_program_info_t attribute,
     void *value);
 
+  hsa_status_t (*hsa_ext_program_finalize)(
+    hsa_ext_program_t program,
+    hsa_isa_t isa,
+    int32_t call_convention,
+    hsa_ext_control_directives_t control_directives,
+    const char *options,
+    hsa_code_object_type_t code_object_type,
+    hsa_code_object_t *code_object);
+    
+  hsa_status_t (*hsa_ext_code_object_writer_create_from_file)(
+    hsa_file_t file,
+    hsa_ext_code_object_writer_t *code_object_writer);
+
+  hsa_status_t (*hsa_ext_code_object_writer_create_from_memory)(
+    hsa_status_t (*memory_allocate)(size_t size, size_t align, void **ptr,
+                                    void *data),
+    void *data,
+    hsa_ext_code_object_writer_t *code_object_writer);
+    
+  hsa_status_t (*hsa_ext_code_object_writer_destroy)(
+    hsa_ext_code_object_writer_t code_object_writer);
+    
   hsa_status_t (*hsa_ext_program_code_object_finalize)(
     hsa_ext_program_t program,
     const char *options,
@@ -785,21 +798,118 @@ typedef struct hsa_ext_finalizer_1_pfn_s {
     hsa_isa_t isa,
     const char *options,
     hsa_ext_code_object_writer_t code_object_writer);
-
-    
-  hsa_status_t (*hsa_ext_program_finalize)(
-    hsa_ext_program_t program,
-    hsa_isa_t isa,
-    int32_t call_convention,
-    hsa_ext_control_directives_t control_directives,
-    const char *options,
-    hsa_code_object_type_t code_object_type,
-    hsa_code_object_t *code_object);
 } hsa_ext_finalizer_1_pfn_t;
-    
+
+/** @} */
+
 /** \defgroup ext-images Images and Samplers
  *  @{
  */
+
+/**
+ * @brief Enumeration constants added to ::hsa_status_t by this extension.
+ *
+ * @remark Additions to hsa_status_t
+ */
+enum {
+    /**
+     * Image format is not supported.
+     */
+    HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED = 0x3000,
+    /**
+     * Image size is not supported.
+     */
+    HSA_EXT_STATUS_ERROR_IMAGE_SIZE_UNSUPPORTED = 0x3001,
+    /**
+     * Image pitch is not supported or invalid.
+     */
+    HSA_EXT_STATUS_ERROR_IMAGE_PITCH_UNSUPPORTED = 0x3002,
+    /**
+     * Sampler descriptor is not supported or invalid.
+     */
+    HSA_EXT_STATUS_ERROR_SAMPLER_DESCRIPTOR_UNSUPPORTED = 0x3003
+};
+
+/**
+ * @brief Enumeration constants added to ::hsa_agent_info_t by this
+ * extension.
+ *
+ * @remark Additions to hsa_agent_info_t
+ */
+enum {
+  /**
+   * Maximum number of elements in 1D images. Must be at least 16384. The type
+   * of this attribute is size_t.
+   */
+  HSA_EXT_AGENT_INFO_IMAGE_1D_MAX_ELEMENTS = 0x3000,
+  /**
+   * Maximum number of elements in 1DA images. Must be at least 16384. The type
+   * of this attribute is size_t.
+   */
+  HSA_EXT_AGENT_INFO_IMAGE_1DA_MAX_ELEMENTS = 0x3001,
+  /**
+   * Maximum number of elements in 1DB images. Must be at least 65536. The type
+   * of this attribute is size_t.
+   */
+  HSA_EXT_AGENT_INFO_IMAGE_1DB_MAX_ELEMENTS = 0x3002,
+  /**
+   * Maximum dimensions (width, height) of 2D images, in image elements. The X
+   * and Y maximums must be at least 16384. The type of this attribute is
+   * size_t[2].
+   */
+  HSA_EXT_AGENT_INFO_IMAGE_2D_MAX_ELEMENTS = 0x3003,
+  /**
+   * Maximum dimensions (width, height) of 2DA images, in image elements. The X
+   * and Y maximums must be at least 16384. The type of this attribute is
+   * size_t[2].
+   */
+  HSA_EXT_AGENT_INFO_IMAGE_2DA_MAX_ELEMENTS = 0x3004,
+  /**
+   * Maximum dimensions (width, height) of 2DDEPTH images, in image
+   * elements. The X and Y maximums must be at least 16384. The type of this
+   * attribute is size_t[2].
+   */
+  HSA_EXT_AGENT_INFO_IMAGE_2DDEPTH_MAX_ELEMENTS = 0x3005,
+  /**
+   * Maximum dimensions (width, height) of 2DADEPTH images, in image
+   * elements. The X and Y maximums must be at least 16384. The type of this
+   * attribute is size_t[2].
+   */
+  HSA_EXT_AGENT_INFO_IMAGE_2DADEPTH_MAX_ELEMENTS = 0x3006,
+  /**
+   * Maximum dimensions (width, height, depth) of 3D images, in image
+   * elements. The maximum along any dimension must be at least 2048. The type
+   * of this attribute is size_t[3].
+   */
+  HSA_EXT_AGENT_INFO_IMAGE_3D_MAX_ELEMENTS = 0x3007,
+  /**
+   * Maximum number of image layers in a image array. Must be at least 2048. The
+   * type of this attribute is size_t.
+   */
+  HSA_EXT_AGENT_INFO_IMAGE_ARRAY_MAX_LAYERS = 0x3008,
+  /**
+   * Maximum number of read-only image handles that can be created for an agent at any one
+   * time. Must be at least 128. The type of this attribute is size_t.
+   */
+  HSA_EXT_AGENT_INFO_MAX_IMAGE_RD_HANDLES = 0x3009,
+  /**
+   * Maximum number of write-only and read-write image handles (combined) that
+   * can be created for an agent at any one time. Must be at least 64. The type of this
+   * attribute is size_t.
+   */
+  HSA_EXT_AGENT_INFO_MAX_IMAGE_RORW_HANDLES = 0x300A,
+  /**
+   * Maximum number of sampler handlers that can be created for an agent at any one
+   * time. Must be at least 16. The type of this attribute is size_t.
+   */
+  HSA_EXT_AGENT_INFO_MAX_SAMPLER_HANDLERS = 0x300B,
+  /**
+   * Image pitch alignment. The agent only supports linear image data
+   * layouts with a row pitch that is a multiple of this value. Must be
+   * a power of 2. The type of this attribute is size_t.
+   */
+  HSA_EXT_AGENT_INFO_IMAGE_LINEAR_ROW_PITCH_ALIGNMENT = 0x300C
+};
 
 /**
  * @brief Image handle, populated by ::hsa_ext_image_create or
@@ -1910,116 +2020,13 @@ hsa_status_t HSA_API hsa_ext_sampler_destroy(
     hsa_agent_t agent,
     hsa_ext_sampler_t sampler);
 
-/**
- * @brief Enumeration constants added to ::hsa_status_t by this extension.
- *
- * @remark Additions to hsa_status_t
- */
-enum {
-    /**
-     * Image format is not supported.
-     */
-    HSA_EXT_STATUS_ERROR_IMAGE_FORMAT_UNSUPPORTED = 0x3000,
-    /**
-     * Image size is not supported.
-     */
-    HSA_EXT_STATUS_ERROR_IMAGE_SIZE_UNSUPPORTED = 0x3001,
-    /**
-     * Image pitch is not supported or invalid.
-     */
-    HSA_EXT_STATUS_ERROR_IMAGE_PITCH_UNSUPPORTED = 0x3002,
-    /**
-     * Sampler descriptor is not supported or invalid.
-     */
-    HSA_EXT_STATUS_ERROR_SAMPLER_DESCRIPTOR_UNSUPPORTED = 0x3003
-};
+
+#define hsa_ext_images_1_00
 
 /**
- * @brief Enumeration constants added to ::hsa_agent_info_t by this
- * extension.
- *
- * @remark Additions to hsa_agent_info_t
+ * @brief The function pointer table for the images v1.00 extension. Can be returned by ::hsa_system_get_extension_table or ::hsa_system_get_major_extension_table.
  */
-enum {
-  /**
-   * Maximum number of elements in 1D images. Must be at least 16384. The type
-   * of this attribute is size_t.
-   */
-  HSA_EXT_AGENT_INFO_IMAGE_1D_MAX_ELEMENTS = 0x3000,
-  /**
-   * Maximum number of elements in 1DA images. Must be at least 16384. The type
-   * of this attribute is size_t.
-   */
-  HSA_EXT_AGENT_INFO_IMAGE_1DA_MAX_ELEMENTS = 0x3001,
-  /**
-   * Maximum number of elements in 1DB images. Must be at least 65536. The type
-   * of this attribute is size_t.
-   */
-  HSA_EXT_AGENT_INFO_IMAGE_1DB_MAX_ELEMENTS = 0x3002,
-  /**
-   * Maximum dimensions (width, height) of 2D images, in image elements. The X
-   * and Y maximums must be at least 16384. The type of this attribute is
-   * size_t[2].
-   */
-  HSA_EXT_AGENT_INFO_IMAGE_2D_MAX_ELEMENTS = 0x3003,
-  /**
-   * Maximum dimensions (width, height) of 2DA images, in image elements. The X
-   * and Y maximums must be at least 16384. The type of this attribute is
-   * size_t[2].
-   */
-  HSA_EXT_AGENT_INFO_IMAGE_2DA_MAX_ELEMENTS = 0x3004,
-  /**
-   * Maximum dimensions (width, height) of 2DDEPTH images, in image
-   * elements. The X and Y maximums must be at least 16384. The type of this
-   * attribute is size_t[2].
-   */
-  HSA_EXT_AGENT_INFO_IMAGE_2DDEPTH_MAX_ELEMENTS = 0x3005,
-  /**
-   * Maximum dimensions (width, height) of 2DADEPTH images, in image
-   * elements. The X and Y maximums must be at least 16384. The type of this
-   * attribute is size_t[2].
-   */
-  HSA_EXT_AGENT_INFO_IMAGE_2DADEPTH_MAX_ELEMENTS = 0x3006,
-  /**
-   * Maximum dimensions (width, height, depth) of 3D images, in image
-   * elements. The maximum along any dimension must be at least 2048. The type
-   * of this attribute is size_t[3].
-   */
-  HSA_EXT_AGENT_INFO_IMAGE_3D_MAX_ELEMENTS = 0x3007,
-  /**
-   * Maximum number of image layers in a image array. Must be at least 2048. The
-   * type of this attribute is size_t.
-   */
-  HSA_EXT_AGENT_INFO_IMAGE_ARRAY_MAX_LAYERS = 0x3008,
-  /**
-   * Maximum number of read-only image handles that can be created for an agent at any one
-   * time. Must be at least 128. The type of this attribute is size_t.
-   */
-  HSA_EXT_AGENT_INFO_MAX_IMAGE_RD_HANDLES = 0x3009,
-  /**
-   * Maximum number of write-only and read-write image handles (combined) that
-   * can be created for an agent at any one time. Must be at least 64. The type of this
-   * attribute is size_t.
-   */
-  HSA_EXT_AGENT_INFO_MAX_IMAGE_RORW_HANDLES = 0x300A,
-  /**
-   * Maximum number of sampler handlers that can be created for an agent at any one
-   * time. Must be at least 16. The type of this attribute is size_t.
-   */
-  HSA_EXT_AGENT_INFO_MAX_SAMPLER_HANDLERS = 0x300B,
-  /**
-   * Image pitch alignment. The agent only supports linear image data
-   * layouts with a row pitch that is a multiple of this value. Must be
-   * a power of 2. The type of this attribute is size_t.
-   */
-  HSA_EXT_AGENT_INFO_IMAGE_LINEAR_ROW_PITCH_ALIGNMENT = 0x300C
-};
-
-/** @} */
-
-#define hsa_ext_images_1_01
-
-typedef struct hsa_ext_images_1_01_pfn_s {
+typedef struct hsa_ext_images_1_00_pfn_s {
 
   hsa_status_t (*hsa_ext_image_get_capability)(
     hsa_agent_t agent,
@@ -2083,35 +2090,13 @@ typedef struct hsa_ext_images_1_01_pfn_s {
     hsa_agent_t agent,
     hsa_ext_sampler_t sampler);
 
-  hsa_status_t (*hsa_ext_image_get_capability_with_layout)(
-    hsa_agent_t agent,
-    hsa_ext_image_geometry_t geometry,
-    const hsa_ext_image_format_t *image_format,
-    hsa_ext_image_data_layout_t image_data_layout,
-    uint32_t *capability_mask);
-
-  hsa_status_t (*hsa_ext_image_data_get_info_with_layout)(
-    const hsa_ext_image_descriptor_t *image_descriptor,
-    hsa_access_permission_t access_permission,
-    hsa_ext_image_data_layout_t image_data_layout,
-    size_t image_data_row_pitch,
-    size_t image_data_slice_pitch,
-    hsa_ext_image_data_info_t *image_data_info);
-
-  hsa_status_t (*hsa_ext_image_create_with_layout)(
-    hsa_agent_t agent,
-    const hsa_ext_image_descriptor_t *image_descriptor,
-    void *image_data,
-    hsa_access_permission_t access_permission,
-    hsa_ext_image_data_layout_t image_data_layout,
-    size_t image_data_row_pitch,
-    size_t image_data_slice_pitch,
-    hsa_ext_image_t *image);
-
-} hsa_ext_images_1_01_pfn_t;
+} hsa_ext_images_1_00_pfn_t;
 
 #define hsa_ext_images_1
 
+/**
+ * @brief The function pointer table for the images v1 extension. Can be returned by ::hsa_system_get_extension_table or ::hsa_system_get_major_extension_table.
+ */
 typedef struct hsa_ext_images_1_pfn_s {
 
   hsa_status_t (*hsa_ext_image_get_capability)(
@@ -2202,7 +2187,7 @@ typedef struct hsa_ext_images_1_pfn_s {
     hsa_ext_image_t *image);
 
 } hsa_ext_images_1_pfn_t;
-
+/** @} */
     
 /** \defgroup ext-performance-counters Profiling performance counters
  *  @{
@@ -2458,7 +2443,7 @@ typedef struct hsa_ext_perf_counter_session_ctx_s {
  *
  * @retval ::HSA_EXT_STATUS_ERROR_ALREADY_INITIALIZED The performance counter system has already been initialized and has not been shut down with ::hsa_ext_perf_counter_shut_down.
  */
-hsa_status_t hsa_ext_perf_counter_init();
+hsa_status_t HSA_API hsa_ext_perf_counter_init();
 
 /**
  * @brief Shut down the performance counter system.
@@ -2473,7 +2458,7 @@ hsa_status_t hsa_ext_perf_counter_init();
  *
  * @retval ::HSA_EXT_STATUS_ERROR_EVENTS_NOT_INITIALIZED The performance counter system has not been initialized.
  */
-hsa_status_t hsa_ext_perf_counter_shut_down();
+hsa_status_t HSA_API hsa_ext_perf_counter_shut_down();
 
 
 /**
@@ -2512,7 +2497,7 @@ hsa_status_t HSA_API hsa_ext_perf_counter_get_num(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p attribute is an invalid performance counter attribute, or @p value is NULL.
  */
-hsa_status_t hsa_ext_perf_counter_get_info(
+hsa_status_t HSA_API hsa_ext_perf_counter_get_info(
     uint32_t counter_idx,
     hsa_ext_perf_counter_info_t attribute,
     void* value);
@@ -2563,7 +2548,7 @@ hsa_status_t HSA_API hsa_ext_perf_counter_iterate_associations(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p ctx is NULL.
  */
-hsa_status_t hsa_ext_perf_counter_session_context_create(
+hsa_status_t HSA_API hsa_ext_perf_counter_session_context_create(
     hsa_ext_perf_counter_session_ctx_t* ctx);
 
 /**
@@ -2576,7 +2561,7 @@ hsa_status_t hsa_ext_perf_counter_session_context_create(
  * @retval ::HSA_STATUS_ERROR_NOT_INITIALIZED The HSA runtime has not been
  * initialized.
  */
-hsa_status_t hsa_ext_perf_counter_session_context_destroy(
+hsa_status_t HSA_API hsa_ext_perf_counter_session_context_destroy(
     hsa_ext_perf_counter_session_ctx_t ctx);
 
 /**
@@ -2598,7 +2583,7 @@ hsa_status_t hsa_ext_perf_counter_session_context_destroy(
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SESSION_STATE
  * Attempt to enable performance counter during a profiling session.
  */
-hsa_status_t hsa_ext_perf_counter_enable(
+hsa_status_t HSA_API hsa_ext_perf_counter_enable(
     hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx);
 
@@ -2621,7 +2606,7 @@ hsa_status_t hsa_ext_perf_counter_enable(
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SESSION_STATE
  * Attempt to disable performance counter during a profiling session.
  */
-hsa_status_t hsa_ext_perf_counter_disable(
+hsa_status_t HSA_API hsa_ext_perf_counter_disable(
     hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx);
 
@@ -2645,7 +2630,7 @@ hsa_status_t hsa_ext_perf_counter_disable(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p enabled is NULL.
  */
-hsa_status_t hsa_ext_perf_counter_is_enabled(
+hsa_status_t HSA_API hsa_ext_perf_counter_is_enabled(
     hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx,
     bool* enabled);
@@ -2666,7 +2651,7 @@ hsa_status_t hsa_ext_perf_counter_is_enabled(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p result is NULL.
  */
-hsa_status_t hsa_ext_perf_counter_session_context_valid(
+hsa_status_t HSA_API hsa_ext_perf_counter_session_context_valid(
     hsa_ext_perf_counter_session_ctx_t ctx,
     bool* result);
 
@@ -2687,7 +2672,7 @@ hsa_status_t hsa_ext_perf_counter_session_context_valid(
  *
  * @retval ::HSA_STATUS_ERROR_INVALID_ARGUMENT @p ctxs is NULL or @p result is NULL.
  */
-hsa_status_t hsa_ext_perf_counter_session_context_set_valid(
+hsa_status_t HSA_API hsa_ext_perf_counter_session_context_set_valid(
     hsa_ext_perf_counter_session_ctx_t* ctxs,
     size_t n_ctxs,
     bool* result);
@@ -2707,7 +2692,7 @@ hsa_status_t hsa_ext_perf_counter_session_context_set_valid(
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SESSION_STATE
  * This session context has already been enabled with a call to ::hsa_ext_perf_counter_session_enable without being disabled with a call to ::hsa_ext_perf_counter_session_disable
  */
-hsa_status_t hsa_ext_perf_counter_session_enable(
+hsa_status_t HSA_API hsa_ext_perf_counter_session_enable(
     hsa_ext_perf_counter_session_ctx_t ctx);
 
 /**
@@ -2724,7 +2709,7 @@ hsa_status_t hsa_ext_perf_counter_session_enable(
  * This session context has not been enabled with a call to ::hsa_ext_perf_counter_session_enable, or has already been disabled with a call to ::hsa_ext_perf_counter_session_disable without being enabled again.
  *
  */
-hsa_status_t hsa_ext_perf_counter_session_disable(
+hsa_status_t HSA_API hsa_ext_perf_counter_session_disable(
     hsa_ext_perf_counter_session_ctx_t ctx);
 
 /**
@@ -2742,7 +2727,7 @@ hsa_status_t hsa_ext_perf_counter_session_disable(
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SESSION_STATE
  * This session context has not been enabled with a call to ::hsa_ext_perf_counter_session_enable, or has since been disabled with a call to ::hsa_ext_perf_counter_session_disable.
  */
-hsa_status_t hsa_ext_perf_counter_session_start(
+hsa_status_t HSA_API hsa_ext_perf_counter_session_start(
     hsa_ext_perf_counter_session_ctx_t ctx);
 
  /**
@@ -2761,7 +2746,7 @@ hsa_status_t hsa_ext_perf_counter_session_start(
  * @retval ::HSA_EXT_STATUS_ERROR_CANNOT_STOP_SESSION The session cannot be stopped by the system at this time. 
  *
  */
-hsa_status_t hsa_ext_perf_counter_session_stop(
+hsa_status_t HSA_API hsa_ext_perf_counter_session_stop(
     hsa_ext_perf_counter_session_ctx_t ctx);
 
  /**
@@ -2785,7 +2770,7 @@ hsa_status_t hsa_ext_perf_counter_session_stop(
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SAMPLING_CONTEXT
  * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_perf_counter_session_enable and not have been since disabled with a call to ::hsa_ext_perf_counter_session_disable. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_perf_counter_session_stop.
  */
-hsa_status_t hsa_ext_perf_counter_read_uint32(
+hsa_status_t HSA_API hsa_ext_perf_counter_read_uint32(
     hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx,
     uint32_t* result);
@@ -2811,7 +2796,7 @@ hsa_status_t hsa_ext_perf_counter_read_uint32(
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SAMPLING_CONTEXT
  * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_perf_counter_session_enable and not have been since disabled with a call to ::hsa_ext_perf_counter_session_disable. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_perf_counter_session_stop.
  */
-hsa_status_t hsa_ext_perf_counter_read_uint64(
+hsa_status_t HSA_API hsa_ext_perf_counter_read_uint64(
     hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx,
     uint64_t* result);
@@ -2837,7 +2822,7 @@ hsa_status_t hsa_ext_perf_counter_read_uint64(
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SAMPLING_CONTEXT
  * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_perf_counter_session_enable and not have been since disabled with a call to ::hsa_ext_perf_counter_session_disable. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_perf_counter_session_stop.
  */
-hsa_status_t hsa_ext_perf_counter_read_float(
+hsa_status_t HSA_API hsa_ext_perf_counter_read_float(
     hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx,
     float* result);
@@ -2863,10 +2848,96 @@ hsa_status_t hsa_ext_perf_counter_read_float(
  * @retval ::HSA_EXT_STATUS_ERROR_INVALID_SAMPLING_CONTEXT
  * The given performance counter cannot be sampled at this time. If the counter supports sampling whilst the session is running, the session must have been enabled with a call to ::hsa_ext_perf_counter_session_enable and not have been since disabled with a call to ::hsa_ext_perf_counter_session_disable. If the counter does not support sampling whilst the session is running, the session must additionally have been stopped with a call to ::hsa_ext_perf_counter_session_stop.
  */
-hsa_status_t hsa_ext_perf_counter_read_double(
+hsa_status_t HSA_API hsa_ext_perf_counter_read_double(
     hsa_ext_perf_counter_session_ctx_t ctx,
     uint32_t counter_idx,
     double* result);
+
+#define hsa_ext_perf_counter_1
+
+/**
+ * @brief The function pointer table for the performance counter v1 extension. Can be returned by ::hsa_system_get_extension_table or ::hsa_system_get_major_extension_table.
+ */
+typedef struct hsa_ext_perf_counter_1_pfn_s {
+  hsa_status_t (*hsa_ext_perf_counter_init) ();
+    
+  hsa_status_t (*hsa_ext_perf_counter_shut_down) ();
+    
+  hsa_status_t (*hsa_ext_perf_counter_get_num) (
+    uint32_t* result);
+
+  hsa_status_t (*hsa_ext_perf_counter_get_info) (
+    uint32_t counter_idx,
+    hsa_ext_perf_counter_info_t attribute,
+    void* value);
+
+  hsa_status_t (*hsa_ext_perf_counter_iterate_associations) (
+    uint32_t counter_idx,
+    hsa_status_t (*callback)(hsa_ext_perf_counter_assoc_t assoc_type, uint64_t assoc_id,
+                             void* data),
+    void* data);
+    
+
+  hsa_status_t (*hsa_ext_perf_counter_session_context_create) (
+    hsa_ext_perf_counter_session_ctx_t* ctx);
+
+  hsa_status_t (*hsa_ext_perf_counter_session_context_destroy) (
+    hsa_ext_perf_counter_session_ctx_t ctx);
+
+  hsa_status_t (*hsa_ext_perf_counter_enable) (
+    hsa_ext_perf_counter_session_ctx_t ctx,
+    uint32_t counter_idx);
+
+  hsa_status_t (*hsa_ext_perf_counter_disable) (
+    hsa_ext_perf_counter_session_ctx_t ctx,
+    uint32_t counter_idx);
+
+  hsa_status_t (*hsa_ext_perf_counter_is_enabled) (
+    hsa_ext_perf_counter_session_ctx_t ctx,
+    uint32_t counter_idx,
+    bool* enabled);
+
+  hsa_status_t (*hsa_ext_perf_counter_session_context_valid) (
+    hsa_ext_perf_counter_session_ctx_t ctx,
+    bool* result);
+
+  hsa_status_t (*hsa_ext_perf_counter_session_context_set_valid) (
+    hsa_ext_perf_counter_session_ctx_t* ctxs,
+    size_t n_ctxs,
+    bool* result);
+
+  hsa_status_t (*hsa_ext_perf_counter_session_enable) (
+    hsa_ext_perf_counter_session_ctx_t ctx);
+
+  hsa_status_t (*hsa_ext_perf_counter_session_disable) (
+    hsa_ext_perf_counter_session_ctx_t ctx);
+
+  hsa_status_t (*hsa_ext_perf_counter_session_start) (
+    hsa_ext_perf_counter_session_ctx_t ctx);
+
+  hsa_status_t (*hsa_ext_perf_counter_session_stop) (
+    hsa_ext_perf_counter_session_ctx_t ctx);
+
+  hsa_status_t (*hsa_ext_perf_counter_read_uint32) (
+    hsa_ext_perf_counter_session_ctx_t ctx,
+    uint32_t counter_idx,
+    uint32_t* result);
+
+  hsa_status_t (*hsa_ext_perf_counter_read_uint64) (
+    hsa_ext_perf_counter_session_ctx_t ctx,
+    uint32_t counter_idx,
+    uint64_t* result);
+
+  hsa_status_t (*hsa_ext_perf_counter_read_float) (
+    hsa_ext_perf_counter_session_ctx_t ctx,
+    uint32_t counter_idx,
+    float* result);
+
+  hsa_status_t (*hsa_ext_perf_counter_read_double) (
+    hsa_ext_perf_counter_session_ctx_t ctx,
+    uint32_t counter_idx,
+    double* result);
+} hsa_ext_perf_counter_1_pfn_t;
 
 /** @} */
 
@@ -3527,7 +3598,103 @@ hsa_status_t hsa_ext_profiling_event_get_metadata_field_descs(
     uint64_t event_id,
     hsa_ext_event_metadata_field_desc_t** metadata_descs,
     size_t* n_descs);
+
+#define hsa_ext_profiling_event_1
+
+
+/**
+ * @brief The function pointer table for the profiling event v1 extension. Can be returned by ::hsa_system_get_extension_table or ::hsa_system_get_major_extension_table.
+ */
+typedef struct hsa_ext_profiling_event_1_pfn_s {
+  hsa_status_t (*hsa_ext_profiling_event_init_producer) (
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id);
+
+  hsa_status_t (*hsa_ext_profiling_event_init_all_of_producer_type) (
+    hsa_ext_profiling_event_producer_t producer_type);
+
     
+  hsa_status_t (*hsa_ext_profiling_event_init) ();
+
+  hsa_status_t (*hsa_ext_profiling_event_shut_down) ();
+    
+  hsa_status_t (*hsa_ext_profiling_event_register_application_event_producer) (
+    const char* name,
+    const char* description,
+    uint64_t* app_producer_id);
+
+  hsa_status_t (*hsa_ext_profiling_event_deregister_application_event_producer) (
+    uint64_t app_producer_id);    
+
+  hsa_status_t (*hsa_ext_profiling_event_iterate_application_event_producers) (
+    hsa_status_t (*callback)(uint64_t app_producer_id, void* data),
+    void* data);
+
+
+  hsa_status_t (*hsa_ext_profiling_event_producer_get_name) (
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id,
+    const char** name);
+
+  hsa_status_t (*hsa_ext_profiling_event_producer_get_description) (
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id,
+    const char** description);
+
+  hsa_status_t (*hsa_ext_profiling_event_producer_supports_events) (
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id,
+    bool* result);    
+
+  hsa_status_t (*hsa_ext_profiling_event_enable_for_producer) (
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id);
+
+  hsa_status_t (*hsa_ext_profiling_event_disable_for_producer) (
+    hsa_ext_profiling_event_producer_t producer_type,
+    uint64_t producer_id);    
+
+  hsa_status_t (*hsa_ext_profiling_event_enable_all_for_producer_type) (
+    hsa_ext_profiling_event_producer_t producer_type);
+
+  hsa_status_t (*hsa_ext_profiling_event_disable_all_for_producer_type) (
+    hsa_ext_profiling_event_producer_t producer_type);
+
+  hsa_status_t (*hsa_ext_profiling_event_set_buffer_size_hint) (
+    size_t size_hint);
+
+  hsa_status_t (*hsa_ext_profiling_event_register_application_event) (
+    uint64_t app_producer_id,
+    uint64_t event_id,
+    const char* name,
+    size_t name_length,
+    const char* description,
+    size_t description_length,
+    hsa_ext_event_metadata_field_desc_t* metadata_field_descriptions,
+    size_t n_metadata_fields);
+
+  hsa_status_t (*hsa_ext_profiling_event_deregister_application_event) (
+    uint64_t app_producer_id,
+    uint64_t event_id);
+
+  hsa_status_t (*hsa_ext_profiling_event_trigger_application_event) (
+    uint64_t app_producer_id,
+    uint64_t event_id,
+    void* metadata);
+
+  hsa_status_t (*hsa_ext_profiling_event_get_head_event) (
+    hsa_ext_profiling_event_t* event);
+
+  hsa_status_t (*hsa_ext_profiling_event_destroy_head_event) (
+    hsa_ext_profiling_event_t* event);
+
+  hsa_status_t (*hsa_ext_profiling_event_get_metadata_field_descs) (
+    uint64_t producer_id,
+    uint64_t event_id,
+    hsa_ext_event_metadata_field_desc_t** metadata_descs,
+    size_t* n_descs);
+
+} hsa_ext_profiling_event_1_pfn_t;
     
 /** @} */
 

@@ -52,6 +52,13 @@ replacement_directives=[
  ["\\\\[-2mm]" + get_ifdef("HSA_LARGE_MODEL"), 0, get_elif(" defined HSA_LITTLE_ENDIAN"), 0, 1, get_else(), 1, 0, get_endif() + "[2mm]"])
 ]
 
+# check if a type names a function pointer table
+def is_fun_ptr_table (typename):
+  return "_\-pfn_\-t" in typename
+
+# get the #define name for a function pointer table
+def get_define_name (typename):
+  return typename[:-len("_\-pfn_\-t")]
 
 # map from a type name to its unique ID. This is necessary because Doxygen does
 # not generate enough information for 'typedefs' such that we can build internal
@@ -260,10 +267,13 @@ def process_struct_or_union(typedef, tex, defs):
     tex.write(explanation)
     tex.write("}\n")
 
+    
   # name
   tex.write('\\vspace{-4mm}')
   tex.write("\\begin{mylongtable}{p{\\columnwidth}}" + "\n")
   tex.write("\\rule{0pt}{3ex}")
+  # #define for function pointer tables
+  if is_fun_ptr_table(typename): tex.write('\#define ' + get_define_name(typename) + "\\\\\n")
   typ = typedef.find('type').text;
   actname = typedef.find('type/ref').text
   tex.write("typedef " + typ + " " + actname + " \{\\\\\n")
@@ -328,10 +338,11 @@ def process_struct_or_union(typedef, tex, defs):
   tex.write("\n\n")
 
   # data fields
-  tex.write("\\noindent\\textbf{Data Fields}\\\\[-7mm]" + "\n")
-  tex.write("\\begin{longtable}{@{}>{\\hangindent=2em}p{\\textwidth}}" + "\n")
-  tex.write("\\\\[2mm]\n".join(fields))
-  tex.write("\n\\end{longtable}" + "\n\n")
+  if not is_fun_ptr_table(typename): # don't write data fields for function pointer tables
+    tex.write("\\noindent\\textbf{Data Fields}\\\\[-7mm]" + "\n")
+    tex.write("\\begin{longtable}{@{}>{\\hangindent=2em}p{\\textwidth}}" + "\n")
+    tex.write("\\\\[2mm]\n".join(fields))
+    tex.write("\n\\end{longtable}" + "\n\n")
 
   # detailed description
   allpara = typedef.findall('detaileddescription/para')
